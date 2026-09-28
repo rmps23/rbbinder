@@ -28,6 +28,7 @@ create table if not exists public.binders (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   layout text not null default '3x3',
+  page_count integer not null default 2,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

@@ -39,6 +39,9 @@ export type Binder = {
   createdAt: string;
   uniqueCount: number;
   totalQty: number;
+  // Minimum number of pages the binder always shows, regardless of how much
+  // is filled - grows via the "+" button next to the binder pages.
+  pageCount: number;
 };
 
 export type CardsSyncResult = {

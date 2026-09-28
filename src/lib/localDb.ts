@@ -16,6 +16,7 @@ export type LocalBinder = {
   id: string;
   name: string;
   layout: string;
+  pageCount: number;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -49,6 +50,8 @@ async function readDb(): Promise<LocalDb> {
     // Drop binder_cards written by the old card_id-keyed format (pre slot
     // positions) so stale local test data doesn't crash the new shape.
     db.binderCards = db.binderCards.filter((r) => typeof r.position === "number");
+    // Binders created before pageCount existed default to 2 pages.
+    db.binders = db.binders.map((b) => ({ ...b, pageCount: b.pageCount ?? 2 }));
     return db;
   } catch {
     return structuredClone(EMPTY_DB);

@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json().catch(() => null);
-  const patch: { name?: string; layout?: BinderLayout; sortOrder?: number } = {};
+  const patch: { name?: string; layout?: BinderLayout; pageCount?: number; sortOrder?: number } = {};
 
   if (body?.name !== undefined) {
     const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -30,6 +30,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: `layout must be one of ${VALID_LAYOUTS.join(", ")}` }, { status: 400 });
     }
     patch.layout = body.layout;
+  }
+  if (body?.pageCount !== undefined) {
+    if (typeof body.pageCount !== "number" || !Number.isInteger(body.pageCount) || body.pageCount < 1) {
+      return NextResponse.json({ error: "pageCount must be a positive integer" }, { status: 400 });
+    }
+    patch.pageCount = body.pageCount;
   }
   if (body?.sortOrder !== undefined) {
     if (typeof body.sortOrder !== "number") {

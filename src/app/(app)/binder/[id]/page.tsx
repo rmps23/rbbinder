@@ -9,20 +9,72 @@ import { BinderSlotTile } from "@/components/BinderSlotTile";
 import { AddCardModal } from "@/components/AddCardModal";
 import { LayoutSwitcher } from "@/components/LayoutSwitcher";
 import { BINDER_LAYOUTS, GRID_COLS_CLASS } from "@/lib/constants";
-import type { Binder, BinderLayout } from "@/lib/types";
+import type { Binder, BinderLayout, BinderSlots, RiftCard } from "@/lib/types";
+
+type SlotView = { position: number; card: RiftCard | null; qty: number };
+
+function findNextEmptyPosition(start: number, slots: BinderSlots): number {
+  let p = start;
+  while (slots[p] && slots[p].qty > 0) p++;
+  return p;
+}
+
+function BinderPage({
+  slots,
+  cols,
+  holes,
+  onPick,
+  onRemove,
+  onDropCard,
+}: {
+  slots: SlotView[];
+  cols: number;
+  holes: "left" | "right";
+  onPick: (position: number) => void;
+  onRemove: (position: number) => void;
+  onDropCard: (from: number, to: number) => void;
+}) {
+  return (
+    <div className="relative flex-1 rounded-lg bg-[#101319] p-3 shadow-inner">
+      <div
+        className={`pointer-events-none absolute top-1/2 flex -translate-y-1/2 flex-col gap-3 ${
+          holes === "left" ? "right-1" : "left-1"
+        }`}
+      >
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="h-2 w-2 rounded-full bg-black/50 ring-1 ring-white/5" />
+        ))}
+      </div>
+      <div className={`grid ${GRID_COLS_CLASS[cols]} gap-3`}>
+        {slots.map(({ position, card, qty }) => (
+          <BinderSlotTile
+            key={position}
+            position={position}
+            card={card}
+            qty={qty}
+            onPick={() => onPick(position)}
+            onRemove={() => onRemove(position)}
+            onDropCard={onDropCard}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function BinderDetailPage() {
   const params = useParams<{ id: string }>();
   const binderId = params.id;
   const router = useRouter();
   const { cards, sets, loading: cardsLoading } = useAppData();
-  const { slots, loading: slotsLoading, placeCard, setQty } = useBinderCards(binderId);
+  const { slots, loading: slotsLoading, placeCard, clearSlot, swapSlots, insertAtBoundary } = useBinderCards(binderId);
 
   const [binder, setBinder] = useState<Binder | null>(null);
   const [binderLoading, setBinderLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [page, setPage] = useState(0);
+  const [spread, setSpread] = useState(0);
   const [pickerPosition, setPickerPosition] = useState<number | null>(null);
+  const [spineDragOver, setSpineDragOver] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
 
@@ -67,29 +119,45 @@ export default function BinderDetailPage() {
     return positions.length ? Math.max(...positions) : -1;
   }, [slots]);
 
-  // Always leave one extra blank page at the end so there's somewhere to
-  // keep adding cards, like turning to the next empty page of an album.
-  const totalPages = Math.floor(highestPosition / perPage) + 2;
-  const clampedPage = Math.min(page, totalPages - 1);
+  // At least binder.pageCount pages, but always one blank page past the
+  // last filled one too, like turning to the next empty page of an album.
+  const totalPages = Math.max(binder?.pageCount ?? 2, Math.floor(highestPosition / perPage) + 2);
+  const totalSpreads = Math.ceil(totalPages / 2);
+  const clampedSpread = Math.min(spread, totalSpreads - 1);
+  const leftPageIndex = clampedSpread * 2;
+  const rightPageIndex = leftPageIndex + 1;
+  const insertPosition = rightPageIndex * perPage;
 
-  const pageSlots = useMemo(
-    () =>
-      Array.from({ length: perPage }, (_, i) => {
-        const position = clampedPage * perPage + i;
-        const slot = slots[position];
-        const card = slot ? cardById.get(slot.cardId) ?? null : null;
-        return { position, card, qty: slot?.qty ?? 0 };
-      }),
-    [perPage, clampedPage, slots, cardById]
-  );
+  function buildPageSlots(pageIndex: number): SlotView[] {
+    return Array.from({ length: perPage }, (_, i) => {
+      const position = pageIndex * perPage + i;
+      const slot = slots[position];
+      const card = slot ? cardById.get(slot.cardId) ?? null : null;
+      return { position, card, qty: slot?.qty ?? 0 };
+    });
+  }
+
+  const leftSlots = useMemo(() => buildPageSlots(leftPageIndex), [leftPageIndex, perPage, slots, cardById]);
+  const rightSlots = useMemo(() => buildPageSlots(rightPageIndex), [rightPageIndex, perPage, slots, cardById]);
 
   async function changeLayout(newLayout: BinderLayout) {
     setBinder((b) => (b ? { ...b, layout: newLayout } : b));
-    setPage(0);
+    setSpread(0);
     await fetch(`/api/binders/${binderId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ layout: newLayout }),
+    });
+  }
+
+  async function addPage() {
+    const newPageCount = totalPages + 1;
+    setBinder((b) => (b ? { ...b, pageCount: newPageCount } : b));
+    setSpread(Math.ceil(newPageCount / 2) - 1);
+    await fetch(`/api/binders/${binderId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pageCount: newPageCount }),
     });
   }
 
@@ -113,6 +181,13 @@ export default function BinderDetailPage() {
     if (!confirm(`Apagar o binder "${binder.name}"? Esta ação não pode ser desfeita.`)) return;
     await fetch(`/api/binders/${binderId}`, { method: "DELETE" });
     router.push("/");
+  }
+
+  function handleDropOnSpine(e: React.DragEvent) {
+    e.preventDefault();
+    setSpineDragOver(false);
+    const from = Number(e.dataTransfer.getData("text/plain"));
+    if (!Number.isNaN(from)) insertAtBoundary(from, insertPosition);
   }
 
   if (cardsLoading || binderLoading || slotsLoading) {
@@ -168,38 +243,74 @@ export default function BinderDetailPage() {
         </div>
       </div>
       <p className="mb-5 text-sm text-white/50">
-        {binderStats.uniqueCount} cartas únicas · {binderStats.totalQty} cópias neste binder.
+        {binderStats.uniqueCount} cartas únicas · {binderStats.totalQty} cópias neste binder. Arrasta uma carta para
+        outro espaço para a mover, ou para o meio das páginas para a inserires e empurrar as restantes.
       </p>
 
-      <div className={`grid ${GRID_COLS_CLASS[layout.cols]} gap-3`}>
-        {pageSlots.map(({ position, card, qty }) => (
-          <BinderSlotTile
-            key={position}
-            card={card}
-            qty={qty}
-            onChangeQty={(q) => setQty(position, q)}
-            onPick={() => setPickerPosition(position)}
-          />
-        ))}
-      </div>
-
-      <div className="mt-6 flex items-center justify-center gap-4">
+      <div className="mb-3 flex items-center justify-between">
         <button
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={clampedPage === 0}
-          className="rounded-md border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+          onClick={() => setSpread((s) => Math.max(0, s - 1))}
+          disabled={clampedSpread === 0}
+          aria-label="Páginas anteriores"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
         >
-          ← Página anterior
+          ←
         </button>
         <span className="text-sm text-white/50">
-          Página {clampedPage + 1} de {totalPages}
+          Páginas {leftPageIndex + 1}–{rightPageIndex + 1} de {totalPages}
         </span>
         <button
-          onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-          disabled={clampedPage >= totalPages - 1}
-          className="rounded-md border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+          onClick={() => setSpread((s) => Math.min(totalSpreads - 1, s + 1))}
+          disabled={clampedSpread >= totalSpreads - 1}
+          aria-label="Próximas páginas"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
         >
-          Próxima página →
+          →
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="flex-1 rounded-xl border border-white/10 bg-[#07080b] p-2 shadow-2xl sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <BinderPage
+              slots={leftSlots}
+              cols={layout.cols}
+              holes="left"
+              onPick={setPickerPosition}
+              onRemove={clearSlot}
+              onDropCard={swapSlots}
+            />
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setSpineDragOver(true);
+              }}
+              onDragLeave={() => setSpineDragOver(false)}
+              onDrop={handleDropOnSpine}
+              title="Largar aqui para inserir e empurrar as cartas seguintes"
+              className={`hidden shrink-0 items-center justify-center self-stretch rounded transition sm:flex ${
+                spineDragOver ? "w-8 bg-amber-400/20" : "w-6"
+              }`}
+            >
+              <div className="h-full w-px bg-gradient-to-b from-transparent via-black/60 to-transparent" />
+            </div>
+            <BinderPage
+              slots={rightSlots}
+              cols={layout.cols}
+              holes="right"
+              onPick={setPickerPosition}
+              onRemove={clearSlot}
+              onDropCard={swapSlots}
+            />
+          </div>
+        </div>
+        <button
+          onClick={addPage}
+          title="Adicionar página"
+          aria-label="Adicionar página"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-light text-white/70 hover:bg-white/10 hover:text-amber-300"
+        >
+          +
         </button>
       </div>
 
@@ -210,7 +321,7 @@ export default function BinderDetailPage() {
           onClose={() => setPickerPosition(null)}
           onPick={(card) => {
             placeCard(pickerPosition, card.id);
-            setPickerPosition(null);
+            setPickerPosition(findNextEmptyPosition(pickerPosition + 1, slots));
           }}
         />
       )}
