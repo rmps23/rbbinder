@@ -5,7 +5,6 @@ import { useAppData } from "./AppDataProvider";
 import { Filters, FilterState } from "./Filters";
 import { CardTile } from "./CardTile";
 import { PAGE_SIZE } from "@/lib/constants";
-import type { QtyField } from "@/lib/types";
 
 const DEFAULT_FILTERS: FilterState = {
   search: "",
@@ -17,19 +16,15 @@ const DEFAULT_FILTERS: FilterState = {
 };
 
 export function CardBrowser({
-  qtyField,
-  accent,
   onlyOwnedLabel,
   defaultOnlyOwned = false,
   emptyMessage,
 }: {
-  qtyField: QtyField;
-  accent: "amber" | "sky";
   onlyOwnedLabel: string;
   defaultOnlyOwned?: boolean;
   emptyMessage: string;
 }) {
-  const { cards, sets, collection, loading, setQty } = useAppData();
+  const { cards, sets, bulk, loading, setBulkQty } = useAppData();
   const [filters, setFilters] = useState<FilterState>({
     ...DEFAULT_FILTERS,
     onlyOwned: defaultOnlyOwned,
@@ -50,10 +45,10 @@ export function CardBrowser({
       if (filters.typeId && !c.types.includes(filters.typeId)) return false;
       if (filters.rarityId && c.rarity?.id !== filters.rarityId) return false;
       if (filters.domainId && !c.domains.some((d) => d.id === filters.domainId)) return false;
-      if (filters.onlyOwned && (collection[c.id]?.[qtyField] ?? 0) <= 0) return false;
+      if (filters.onlyOwned && (bulk[c.id] ?? 0) <= 0) return false;
       return true;
     });
-  }, [cards, filters, collection, qtyField]);
+  }, [cards, filters, bulk]);
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -78,9 +73,9 @@ export function CardBrowser({
               <CardTile
                 key={card.id}
                 card={card}
-                qty={collection[card.id]?.[qtyField] ?? 0}
-                onChangeQty={(qty) => setQty(card.id, qtyField, qty)}
-                accent={accent}
+                qty={bulk[card.id] ?? 0}
+                onChangeQty={(qty) => setBulkQty(card.id, qty)}
+                accent="sky"
               />
             ))}
           </div>

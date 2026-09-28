@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import type { CollectionMap } from "@/lib/types";
+import type { QtyMap } from "@/lib/types";
 
-export async function GET() {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.from("collection").select("card_id, binder_qty, bulk_qty");
+    const { data, error } = await supabase.from("binder_cards").select("card_id, qty").eq("binder_id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const map: CollectionMap = {};
+    const map: QtyMap = {};
     for (const row of data ?? []) {
-      map[row.card_id] = { binder: row.binder_qty ?? 0, bulk: row.bulk_qty ?? 0 };
+      map[row.card_id] = row.qty ?? 0;
     }
     return NextResponse.json(map);
   } catch (err) {
@@ -24,36 +22,29 @@ export async function GET() {
   }
 }
 
-export async function PATCH(req: NextRequest) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const body = await req.json().catch(() => null);
   const cardId = body?.cardId;
-  const field = body?.field;
   const qty = body?.qty;
 
   if (typeof cardId !== "string" || !cardId) {
     return NextResponse.json({ error: "cardId is required" }, { status: 400 });
-  }
-  if (field !== "binder" && field !== "bulk") {
-    return NextResponse.json({ error: "field must be 'binder' or 'bulk'" }, { status: 400 });
   }
   if (typeof qty !== "number" || !Number.isFinite(qty) || qty < 0) {
     return NextResponse.json({ error: "qty must be a non-negative number" }, { status: 400 });
   }
 
   const safeQty = Math.min(Math.floor(qty), 9999);
-  const column = field === "binder" ? "binder_qty" : "bulk_qty";
 
   try {
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase
-      .from("collection")
-      .upsert({ card_id: cardId, [column]: safeQty, updated_at: new Date().toISOString() }, { onConflict: "card_id" });
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ ok: true, cardId, field, qty: safeQty });
+    const { error } = await supabase.from("binder_cards").upsert(
+      { binder_id: id, card_id: cardId, qty: safeQty, updated_at: new Date().toISOString() },
+      { onConflict: "binder_id,card_id" }
+    );
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, cardId, qty: safeQty });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Supabase is not configured" },

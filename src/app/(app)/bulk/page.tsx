@@ -10,8 +10,6 @@ export default function BulkPage() {
       </p>
       <BulkExport />
       <CardBrowser
-        qtyField="bulk"
-        accent="sky"
         onlyOwnedLabel="Mostrar só cartas com bulk"
         defaultOnlyOwned
         emptyMessage="Ainda não marcaste nenhuma carta como bulk. Desliga o filtro acima para procurar cartas e adicionar."

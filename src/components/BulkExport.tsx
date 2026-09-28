@@ -4,19 +4,19 @@ import { useMemo, useState } from "react";
 import { useAppData } from "./AppDataProvider";
 
 export function BulkExport() {
-  const { cards, collection } = useAppData();
+  const { cards, bulk } = useAppData();
   const [copied, setCopied] = useState(false);
 
   const { list, total, uniqueCount } = useMemo(() => {
     const rows = cards
-      .filter((c) => (collection[c.id]?.bulk ?? 0) > 0)
-      .map((c) => ({ card: c, qty: collection[c.id].bulk }))
+      .filter((c) => (bulk[c.id] ?? 0) > 0)
+      .map((c) => ({ card: c, qty: bulk[c.id] }))
       .sort((a, b) => a.card.name.localeCompare(b.card.name));
 
     const text = rows.map((r) => `${r.qty}x ${r.card.name} (${r.card.publicCode})`).join("\n");
     const total = rows.reduce((sum, r) => sum + r.qty, 0);
     return { list: text, total, uniqueCount: rows.length };
-  }, [cards, collection]);
+  }, [cards, bulk]);
 
   async function copy() {
     if (!list) return;

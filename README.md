@@ -1,18 +1,18 @@
 # RBBinder
 
-Tracker pessoal da tua coleção de **Riftbound TCG** (inglês). Duas secções independentes:
+Tracker pessoal da tua coleção de **Riftbound TCG** (inglês). Duas áreas independentes:
 
-- **Binder** — a tua coleção organizada, define quantas cópias de cada carta tens.
-- **Bulk** — cartas repetidas / disponíveis para trocas, separado do binder, com botão para copiar a lista.
+- **Binders** — cria quantos binders quiseres (ex: "Coleção principal", "Trade binder"), cada um com o seu próprio layout de página (2×2, 3×3, 3×4 ou 4×4, como um álbum a sério) e a sua própria contagem de cópias por carta.
+- **Bulk** — cartas repetidas / disponíveis para trocas, separado dos binders, com botão para copiar a lista.
 
-Dados de todas as 1189 cartas (5 sets: Origins, Proving Grounds, Spiritforged, Unleashed, Vendetta) vêm diretamente do site oficial `playriftbound.com` (inglês). As imagens **não são copiadas** — apontam sempre para o CDN oficial da Riot (`cmsassets.rgpub.io`). Dados e imagens são © Riot Games; este é um projeto pessoal não-oficial.
+Os dados de todas as cartas (nome, set, raridade, domínio, imagem, texto, etc.) vêm diretamente do site oficial `playriftbound.com` (inglês) e ficam guardados na tua base de dados Supabase — não são lidos ao vivo do site em cada visita. Quando a Riot lançar um set novo, usa o botão **"Sincronizar cartas"** no dashboard para atualizar o catálogo sem precisares de mexer em código ou fazer redeploy. As imagens **não são copiadas** — apontam sempre para o CDN oficial da Riot (`cmsassets.rgpub.io`). Dados e imagens são © Riot Games; este é um projeto pessoal não-oficial.
 
 O site inteiro fica protegido por password (uma só, definida por ti) porque vai ficar publicado num URL público do Vercel.
 
-## 1. Criar o projeto Supabase (guarda a tua coleção)
+## 1. Criar o projeto Supabase (guarda a tua coleção e o catálogo de cartas)
 
 1. Cria uma conta grátis em [supabase.com](https://supabase.com) e um novo projeto.
-2. Vai a **SQL Editor** e corre o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) — cria a tabela `collection`.
+2. Vai a **SQL Editor** e corre o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) — cria as tabelas `cards`, `sets`, `binders`, `binder_cards` e `bulk`.
 3. Vai a **Project Settings → API** e guarda:
    - `Project URL` → vai para `SUPABASE_URL`
    - `service_role` key (não a `anon`!) → vai para `SUPABASE_SERVICE_ROLE_KEY`
@@ -41,7 +41,7 @@ npm install
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) — vai pedir a password definida em `SITE_PASSWORD`.
+Abre [http://localhost:3000](http://localhost:3000) — vai pedir a password definida em `SITE_PASSWORD`. No dashboard, clica em **"Sincronizar cartas"** para carregar o catálogo pela primeira vez, depois cria o teu primeiro binder.
 
 ## 4. Deploy no Vercel
 
@@ -50,21 +50,19 @@ Abre [http://localhost:3000](http://localhost:3000) — vai pedir a password def
 3. Em **Settings → Environment Variables**, adiciona as mesmas 4 variáveis do `.env.local`.
 4. Deploy.
 
-Não precisas de nenhuma configuração extra — não há base de dados local nem ficheiros a persistir no servidor, tudo o que é permanente vive no Supabase.
+Não precisas de nenhuma configuração extra — não há ficheiros a persistir no servidor, tudo o que é permanente vive no Supabase (catálogo de cartas incluído).
 
 ## Atualizar a lista de cartas (novos sets)
 
-Os dados das cartas estão em `public/data/cards.json` (gerado, não editar à mão). Quando a Riot lançar um novo set, corre:
-
-```bash
-npm run fetch:cards
-```
-
-Isto vai buscar os dados atualizados diretamente ao site oficial e sobrescrever `public/data/cards.json` e `public/data/sets.json`. Depois faz commit e volta a fazer deploy.
+No dashboard, clica em **"Sincronizar cartas"**. Isto vai buscar os dados atualizados diretamente ao site oficial, guardá-los na tabela `cards`/`sets` do Supabase, e mostrar quantas cartas/sets novos foram adicionados. Funciona tanto localmente como já em produção — não precisas de correr scripts nem fazer redeploy.
 
 ## Estrutura
 
-- `scripts/fetch-cards.mjs` — descarrega os dados oficiais das cartas (nome, set, raridade, domínio, imagem, texto, etc).
-- `src/app/(app)/` — páginas protegidas (Dashboard, Binder, Bulk), partilham o mesmo layout com o provider de dados.
-- `src/app/api/collection` — API que lê/escreve a tua coleção no Supabase (`binder_qty` e `bulk_qty` por carta).
+- `src/lib/riftboundCatalog.ts` — vai buscar os dados oficiais das cartas ao `playriftbound.com` (nome, set, raridade, domínio, imagem, texto, etc).
+- `src/app/api/cards/sync` — endpoint chamado pelo botão "Sincronizar cartas"; atualiza as tabelas `cards`/`sets` no Supabase.
+- `src/app/api/cards` — devolve o catálogo de cartas guardado no Supabase.
+- `src/app/api/binders` — CRUD dos binders (criar, listar, renomear, mudar layout, apagar).
+- `src/app/api/binders/[id]/cards` — quantidades de cada carta dentro de um binder específico.
+- `src/app/api/bulk` — quantidades da pilha de bulk (separada dos binders).
+- `src/app/(app)/` — páginas protegidas (Dashboard, `/binder/[id]`, Bulk), partilham o mesmo layout com o provider de dados.
 - `src/app/login` + `src/proxy.ts` — gate de password simples para todo o site.

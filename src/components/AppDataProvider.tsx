@@ -1,14 +1,14 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import type { CollectionMap, QtyField, RiftCard, SetInfo } from "@/lib/types";
+import type { QtyMap, RiftCard, SetInfo } from "@/lib/types";
 
 type AppData = {
   cards: RiftCard[];
   sets: SetInfo[];
-  collection: CollectionMap;
+  bulk: QtyMap;
   loading: boolean;
-  setQty: (cardId: string, field: QtyField, qty: number) => void;
+  setBulkQty: (cardId: string, qty: number) => void;
 };
 
 const Ctx = createContext<AppData | null>(null);
@@ -16,7 +16,7 @@ const Ctx = createContext<AppData | null>(null);
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [cards, setCards] = useState<RiftCard[]>([]);
   const [sets, setSets] = useState<SetInfo[]>([]);
-  const [collection, setCollection] = useState<CollectionMap>({});
+  const [bulk, setBulk] = useState<QtyMap>({});
   const [loading, setLoading] = useState(true);
   const pending = useRef<Map<string, number>>(new Map());
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -24,21 +24,14 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [cardsRes, setsRes, collectionRes] = await Promise.all([
-        fetch("/data/cards.json"),
-        fetch("/data/sets.json"),
-        fetch("/api/collection"),
-      ]);
+      const [cardsRes, bulkRes] = await Promise.all([fetch("/api/cards"), fetch("/api/bulk")]);
       if (cancelled) return;
-      const [cardsJson, setsJson, collectionJson] = await Promise.all([
-        cardsRes.json(),
-        setsRes.json(),
-        collectionRes.ok ? collectionRes.json() : Promise.resolve({}),
-      ]);
+      const cardsJson = cardsRes.ok ? await cardsRes.json() : { cards: [], sets: [] };
+      const bulkJson = bulkRes.ok ? await bulkRes.json() : {};
       if (cancelled) return;
-      setCards(cardsJson);
-      setSets(setsJson);
-      setCollection(collectionJson);
+      setCards(cardsJson.cards ?? []);
+      setSets(cardsJson.sets ?? []);
+      setBulk(bulkJson);
       setLoading(false);
     }
     load();
@@ -47,45 +40,39 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const flush = useCallback((cardId: string, field: QtyField) => {
-    const key = `${cardId}:${field}`;
-    const existingTimer = timers.current.get(key);
+  const flush = useCallback((cardId: string) => {
+    const existingTimer = timers.current.get(cardId);
     if (existingTimer) clearTimeout(existingTimer);
 
     const timer = setTimeout(async () => {
-      const qty = pending.current.get(key);
-      pending.current.delete(key);
-      timers.current.delete(key);
+      const qty = pending.current.get(cardId);
+      pending.current.delete(cardId);
+      timers.current.delete(cardId);
       if (qty === undefined) return;
       try {
-        await fetch("/api/collection", {
+        await fetch("/api/bulk", {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ cardId, field, qty }),
+          body: JSON.stringify({ cardId, qty }),
         });
       } catch {
         // best-effort; optimistic UI already reflects the change locally
       }
     }, 350);
-    timers.current.set(key, timer);
+    timers.current.set(cardId, timer);
   }, []);
 
-  const setQty = useCallback(
-    (cardId: string, field: QtyField, qty: number) => {
+  const setBulkQty = useCallback(
+    (cardId: string, qty: number) => {
       const safeQty = Math.max(0, Math.min(9999, Math.floor(qty)));
-      setCollection((prev) => {
-        const current = prev[cardId] ?? { binder: 0, bulk: 0 };
-        return { ...prev, [cardId]: { ...current, [field]: safeQty } };
-      });
-      pending.current.set(`${cardId}:${field}`, safeQty);
-      flush(cardId, field);
+      setBulk((prev) => ({ ...prev, [cardId]: safeQty }));
+      pending.current.set(cardId, safeQty);
+      flush(cardId);
     },
     [flush]
   );
 
-  return (
-    <Ctx.Provider value={{ cards, sets, collection, loading, setQty }}>{children}</Ctx.Provider>
-  );
+  return <Ctx.Provider value={{ cards, sets, bulk, loading, setBulkQty }}>{children}</Ctx.Provider>;
 }
 
 export function useAppData() {

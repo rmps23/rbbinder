@@ -20,8 +20,25 @@ export type RiftCard = {
 
 export type SetInfo = { id: string; name: string; cardCount: number };
 
-export type QtyField = "binder" | "bulk";
+// card_id -> quantity owned
+export type QtyMap = Record<string, number>;
 
-export type CollectionEntry = { binder: number; bulk: number };
+export type BinderLayout = "2x2" | "3x3" | "3x4" | "4x4";
 
-export type CollectionMap = Record<string, CollectionEntry>;
+export type Binder = {
+  id: string;
+  name: string;
+  layout: BinderLayout;
+  sortOrder: number;
+  createdAt: string;
+  uniqueCount: number;
+  totalQty: number;
+};
+
+export type CardsSyncResult = {
+  ok: true;
+  totalCards: number;
+  totalSets: number;
+  newCards: number;
+  newSets: string[];
+};
