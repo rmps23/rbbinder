@@ -9,6 +9,7 @@ type AppData = {
   bulk: QtyMap;
   loading: boolean;
   setBulkQty: (cardId: string, qty: number) => void;
+  reloadCards: () => void;
 };
 
 const Ctx = createContext<AppData | null>(null);
@@ -18,6 +19,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [sets, setSets] = useState<SetInfo[]>([]);
   const [bulk, setBulk] = useState<QtyMap>({});
   const [loading, setLoading] = useState(true);
+  const [cardsVersion, setCardsVersion] = useState(0);
   const pending = useRef<Map<string, number>>(new Map());
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -38,7 +40,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cardsVersion]);
+
+  const reloadCards = useCallback(() => setCardsVersion((v) => v + 1), []);
 
   const flush = useCallback((cardId: string) => {
     const existingTimer = timers.current.get(cardId);
@@ -72,7 +76,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     [flush]
   );
 
-  return <Ctx.Provider value={{ cards, sets, bulk, loading, setBulkQty }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ cards, sets, bulk, loading, setBulkQty, reloadCards }}>{children}</Ctx.Provider>
+  );
 }
 
 export function useAppData() {

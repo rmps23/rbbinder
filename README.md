@@ -9,6 +9,12 @@ Os dados de todas as cartas (nome, set, raridade, domínio, imagem, texto, etc.)
 
 O site inteiro fica protegido por password (uma só, definida por ti) porque vai ficar publicado num URL público do Vercel.
 
+## Testar localmente sem Supabase
+
+Se `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` não estiverem definidas, a app guarda tudo (cartas, binders, bulk) automaticamente num ficheiro local `.data/local-db.json` (nunca é enviado para o git). Isto serve só para testares o site — criar binders, sincronizar cartas, definir quantidades — sem precisares de conta Supabase. Basta `npm install && npm run dev` e definir `SITE_PASSWORD`/`SESSION_SECRET` no `.env.local` (passo 2).
+
+Antes de fazeres deploy no Vercel tens de configurar o Supabase real (passo 1) — o sistema de ficheiros lá é efémero, por isso o modo local não funciona em produção.
+
 ## 1. Criar o projeto Supabase (guarda a tua coleção e o catálogo de cartas)
 
 1. Cria uma conta grátis em [supabase.com](https://supabase.com) e um novo projeto.

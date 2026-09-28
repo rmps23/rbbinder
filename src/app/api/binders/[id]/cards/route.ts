@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import type { QtyMap } from "@/lib/types";
+import { getBinderCards, setBinderCardQty } from "@/lib/repo";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.from("binder_cards").select("card_id, qty").eq("binder_id", id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-    const map: QtyMap = {};
-    for (const row of data ?? []) {
-      map[row.card_id] = row.qty ?? 0;
-    }
-    return NextResponse.json(map);
+    return NextResponse.json(await getBinderCards(id));
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Supabase is not configured" },
+      { error: err instanceof Error ? err.message : "Failed to load binder cards" },
       { status: 500 }
     );
   }
@@ -38,16 +29,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const safeQty = Math.min(Math.floor(qty), 9999);
 
   try {
-    const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from("binder_cards").upsert(
-      { binder_id: id, card_id: cardId, qty: safeQty, updated_at: new Date().toISOString() },
-      { onConflict: "binder_id,card_id" }
-    );
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await setBinderCardQty(id, cardId, safeQty);
     return NextResponse.json({ ok: true, cardId, qty: safeQty });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Supabase is not configured" },
+      { error: err instanceof Error ? err.message : "Failed to update binder card" },
       { status: 500 }
     );
   }

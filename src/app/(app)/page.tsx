@@ -18,7 +18,7 @@ function StatCard({ label, value, accent }: { label: string; value: string | num
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { cards, bulk, loading: appLoading } = useAppData();
+  const { cards, bulk, loading: appLoading, reloadCards } = useAppData();
 
   const [binders, setBinders] = useState<Binder[]>([]);
   const [bindersLoading, setBindersLoading] = useState(true);
@@ -83,8 +83,7 @@ export default function DashboardPage() {
       if (data.newSets.length) parts.push(`novo(s) set(s): ${data.newSets.join(", ")}`);
       parts.push(`${data.totalCards} cartas no total`);
       setSyncResult(parts.join(" · "));
-      // cards catalog changed server-side; a full reload keeps AppDataProvider simple
-      if (data.newCards > 0) router.refresh();
+      if (data.newCards > 0) reloadCards();
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Falha ao sincronizar");
     } finally {
