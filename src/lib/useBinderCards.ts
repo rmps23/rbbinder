@@ -82,11 +82,13 @@ export function useBinderCards(binderId: string) {
     [push]
   );
 
-  // Drag-and-drop onto the gutter between two pages: the dragged card is
-  // pulled out of its slot and inserted right at the page boundary, and
-  // every filled slot from that point onward is pushed one position along.
+  // Drag-and-drop between two cards (or onto the gutter between pages): the
+  // dragged card is pulled out of its slot and inserted right at that
+  // point, and every filled slot from there onward is pushed one position
+  // along. Dropping right where the card already sits is a no-op.
   const insertAtBoundary = useCallback(
     (from: number, insertPosition: number) => {
+      if (insertPosition === from || insertPosition === from + 1) return;
       setSlotsState((prev) => {
         const moving = prev[from];
         if (!moving) return prev;

@@ -8,16 +8,20 @@ import { useBinderCards } from "@/lib/useBinderCards";
 import { BinderSlotTile } from "@/components/BinderSlotTile";
 import { AddCardModal } from "@/components/AddCardModal";
 import { LayoutSwitcher } from "@/components/LayoutSwitcher";
+import { FilterState } from "@/components/Filters";
 import { BINDER_LAYOUTS, GRID_COLS_CLASS } from "@/lib/constants";
 import type { Binder, BinderLayout, BinderSlots, RiftCard } from "@/lib/types";
 
 type SlotView = { position: number; card: RiftCard | null; qty: number };
 
-function findNextEmptyPosition(start: number, slots: BinderSlots): number {
-  let p = start;
-  while (slots[p] && slots[p].qty > 0) p++;
-  return p;
-}
+const DEFAULT_FILTERS: FilterState = {
+  search: "",
+  setId: "",
+  typeId: "",
+  rarityId: "",
+  domainId: "",
+  onlyOwned: false,
+};
 
 function BinderPage({
   slots,
@@ -26,6 +30,7 @@ function BinderPage({
   onPick,
   onRemove,
   onDropCard,
+  onInsertAt,
 }: {
   slots: SlotView[];
   cols: number;
@@ -33,6 +38,7 @@ function BinderPage({
   onPick: (position: number) => void;
   onRemove: (position: number) => void;
   onDropCard: (from: number, to: number) => void;
+  onInsertAt: (from: number, insertPosition: number) => void;
 }) {
   return (
     <div className="relative flex-1 rounded-lg bg-[#101319] p-3 shadow-inner">
@@ -55,6 +61,7 @@ function BinderPage({
             onPick={() => onPick(position)}
             onRemove={() => onRemove(position)}
             onDropCard={onDropCard}
+            onInsertAt={onInsertAt}
           />
         ))}
       </div>
@@ -77,6 +84,27 @@ export default function BinderDetailPage() {
   const [spineDragOver, setSpineDragOver] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+
+  // Remembers the last filters used in the "add card" popup for this
+  // specific binder, so re-opening it doesn't lose your search/set/type.
+  const filtersKey = `rbbinder:addFilters:${binderId}`;
+  const [addFilters, setAddFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(filtersKey);
+      if (raw) setAddFilters({ ...DEFAULT_FILTERS, ...JSON.parse(raw) });
+    } catch {
+      // localStorage unavailable - just fall back to defaults
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(filtersKey, JSON.stringify(addFilters));
+    } catch {
+      // best-effort only
+    }
+  }, [filtersKey, addFilters]);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,6 +218,23 @@ export default function BinderDetailPage() {
     if (!Number.isNaN(from)) insertAtBoundary(from, insertPosition);
   }
 
+  // Places the queued cards (built up in the popup) one after another,
+  // starting at the slot that was clicked to open it, skipping over
+  // whatever's already filled - including slots filled earlier in this
+  // same batch, before React state has had a chance to update.
+  function commitQueue(queue: RiftCard[]) {
+    if (pickerPosition === null) return;
+    let pos = pickerPosition;
+    const reserved = new Set<number>();
+    for (const card of queue) {
+      while ((slots[pos] && slots[pos].qty > 0) || reserved.has(pos)) pos++;
+      placeCard(pos, card.id);
+      reserved.add(pos);
+      pos++;
+    }
+    setPickerPosition(null);
+  }
+
   if (cardsLoading || binderLoading || slotsLoading) {
     return <p className="py-10 text-center text-white/40">A carregar binder...</p>;
   }
@@ -244,7 +289,8 @@ export default function BinderDetailPage() {
       </div>
       <p className="mb-5 text-sm text-white/50">
         {binderStats.uniqueCount} cartas únicas · {binderStats.totalQty} cópias neste binder. Arrasta uma carta para
-        outro espaço para a mover, ou para o meio das páginas para a inserires e empurrar as restantes.
+        cima de outra para trocarem, ou para a margem esquerda/direita dela (ou para o meio das páginas) para a
+        inserires ali e empurrar as restantes.
       </p>
 
       <div className="mb-3 flex items-center justify-between">
@@ -279,6 +325,7 @@ export default function BinderDetailPage() {
               onPick={setPickerPosition}
               onRemove={clearSlot}
               onDropCard={swapSlots}
+              onInsertAt={insertAtBoundary}
             />
             <div
               onDragOver={(e) => {
@@ -301,6 +348,7 @@ export default function BinderDetailPage() {
               onPick={setPickerPosition}
               onRemove={clearSlot}
               onDropCard={swapSlots}
+              onInsertAt={insertAtBoundary}
             />
           </div>
         </div>
@@ -318,11 +366,11 @@ export default function BinderDetailPage() {
         <AddCardModal
           cards={cards}
           sets={sets}
+          initialPosition={pickerPosition}
+          filters={addFilters}
+          onFiltersChange={setAddFilters}
+          onCommit={commitQueue}
           onClose={() => setPickerPosition(null)}
-          onPick={(card) => {
-            placeCard(pickerPosition, card.id);
-            setPickerPosition(findNextEmptyPosition(pickerPosition + 1, slots));
-          }}
         />
       )}
     </div>

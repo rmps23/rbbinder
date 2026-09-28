@@ -5,6 +5,8 @@ import { useState } from "react";
 import type { RiftCard } from "@/lib/types";
 import { rarityColor } from "@/lib/style";
 
+type DropZone = "before" | "after" | "swap";
+
 export function BinderSlotTile({
   position,
   card,
@@ -12,6 +14,7 @@ export function BinderSlotTile({
   onPick,
   onRemove,
   onDropCard,
+  onInsertAt,
 }: {
   position: number;
   card: RiftCard | null;
@@ -19,32 +22,29 @@ export function BinderSlotTile({
   onPick: () => void;
   onRemove: () => void;
   onDropCard: (fromPosition: number, toPosition: number) => void;
+  onInsertAt: (fromPosition: number, insertPosition: number) => void;
 }) {
   const [imgError, setImgError] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault();
-    setDragOver(true);
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setDragOver(false);
-    const from = Number(e.dataTransfer.getData("text/plain"));
-    if (!Number.isNaN(from)) onDropCard(from, position);
-  }
+  const [dropZone, setDropZone] = useState<DropZone | null>(null);
 
   if (!card) {
     return (
       <button
         type="button"
         onClick={onPick}
-        onDragOver={handleDragOver}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDropZone("swap");
+        }}
+        onDragLeave={() => setDropZone(null)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDropZone(null);
+          const from = Number(e.dataTransfer.getData("text/plain"));
+          if (!Number.isNaN(from) && from !== position) onDropCard(from, position);
+        }}
         className={`flex aspect-[744/1039] w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed transition ${
-          dragOver
+          dropZone
             ? "border-amber-400 bg-amber-400/10 text-amber-300"
             : "border-white/10 bg-[#0d0f14]/40 text-white/15 hover:border-amber-400/50 hover:text-amber-400/70"
         }`}
@@ -55,6 +55,26 @@ export function BinderSlotTile({
     );
   }
 
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relX = (e.clientX - rect.left) / rect.width;
+    if (relX < 0.25) setDropZone("before");
+    else if (relX > 0.75) setDropZone("after");
+    else setDropZone("swap");
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const zone = dropZone;
+    setDropZone(null);
+    const from = Number(e.dataTransfer.getData("text/plain"));
+    if (Number.isNaN(from) || from === position) return;
+    if (zone === "before") onInsertAt(from, position);
+    else if (zone === "after") onInsertAt(from, position + 1);
+    else onDropCard(from, position);
+  }
+
   return (
     <div
       draggable
@@ -63,10 +83,10 @@ export function BinderSlotTile({
         e.dataTransfer.effectAllowed = "move";
       }}
       onDragOver={handleDragOver}
-      onDragLeave={() => setDragOver(false)}
+      onDragLeave={() => setDropZone(null)}
       onDrop={handleDrop}
       className={`group relative aspect-[744/1039] w-full cursor-grab overflow-hidden rounded-lg border bg-[#0a0c10] transition active:cursor-grabbing ${
-        dragOver ? "border-amber-400 ring-2 ring-amber-400/50" : "border-white/10"
+        dropZone === "swap" ? "border-amber-400 ring-2 ring-amber-400/50" : "border-white/10"
       }`}
     >
       {card.image.url && !imgError ? (
@@ -83,6 +103,13 @@ export function BinderSlotTile({
         <div className="flex h-full items-center justify-center p-2 text-center text-xs text-white/40">
           {card.name}
         </div>
+      )}
+
+      {dropZone === "before" && (
+        <span className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-amber-400 shadow-[0_0_8px_2px_rgba(251,191,36,0.6)]" />
+      )}
+      {dropZone === "after" && (
+        <span className="pointer-events-none absolute inset-y-0 right-0 w-1.5 bg-amber-400 shadow-[0_0_8px_2px_rgba(251,191,36,0.6)]" />
       )}
 
       <span
