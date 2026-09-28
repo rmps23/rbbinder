@@ -92,8 +92,8 @@ export default function DashboardPage() {
   }
 
   const bulkValues = Object.values(bulk);
-  const bulkTotal = bulkValues.reduce((sum, q) => sum + q, 0);
-  const bulkUnique = bulkValues.filter((q) => q > 0).length;
+  const bulkTotal = bulkValues.reduce((sum, entry) => sum + entry.normal + entry.foil, 0);
+  const bulkUnique = bulkValues.filter((entry) => entry.normal > 0 || entry.foil > 0).length;
 
   if (appLoading || bindersLoading) {
     return <p className="py-10 text-center text-white/40">A carregar coleção...</p>;

@@ -1,14 +1,14 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import type { QtyMap, RiftCard, SetInfo } from "@/lib/types";
+import type { BulkMap, BulkVariant, RiftCard, SetInfo } from "@/lib/types";
 
 type AppData = {
   cards: RiftCard[];
   sets: SetInfo[];
-  bulk: QtyMap;
+  bulk: BulkMap;
   loading: boolean;
-  setBulkQty: (cardId: string, qty: number) => void;
+  setBulkQty: (cardId: string, variant: BulkVariant, qty: number) => void;
   reloadCards: () => void;
 };
 
@@ -17,10 +17,10 @@ const Ctx = createContext<AppData | null>(null);
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [cards, setCards] = useState<RiftCard[]>([]);
   const [sets, setSets] = useState<SetInfo[]>([]);
-  const [bulk, setBulk] = useState<QtyMap>({});
+  const [bulk, setBulk] = useState<BulkMap>({});
   const [loading, setLoading] = useState(true);
   const [cardsVersion, setCardsVersion] = useState(0);
-  const pending = useRef<Map<string, number>>(new Map());
+  const pending = useRef<Map<string, { cardId: string; variant: BulkVariant; qty: number }>>(new Map());
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
@@ -44,34 +44,38 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
   const reloadCards = useCallback(() => setCardsVersion((v) => v + 1), []);
 
-  const flush = useCallback((cardId: string) => {
-    const existingTimer = timers.current.get(cardId);
+  const flush = useCallback((key: string) => {
+    const existingTimer = timers.current.get(key);
     if (existingTimer) clearTimeout(existingTimer);
 
     const timer = setTimeout(async () => {
-      const qty = pending.current.get(cardId);
-      pending.current.delete(cardId);
-      timers.current.delete(cardId);
-      if (qty === undefined) return;
+      const entry = pending.current.get(key);
+      pending.current.delete(key);
+      timers.current.delete(key);
+      if (entry === undefined) return;
       try {
         await fetch("/api/bulk", {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ cardId, qty }),
+          body: JSON.stringify(entry),
         });
       } catch {
         // best-effort; optimistic UI already reflects the change locally
       }
     }, 350);
-    timers.current.set(cardId, timer);
+    timers.current.set(key, timer);
   }, []);
 
   const setBulkQty = useCallback(
-    (cardId: string, qty: number) => {
+    (cardId: string, variant: BulkVariant, qty: number) => {
       const safeQty = Math.max(0, Math.min(9999, Math.floor(qty)));
-      setBulk((prev) => ({ ...prev, [cardId]: safeQty }));
-      pending.current.set(cardId, safeQty);
-      flush(cardId);
+      setBulk((prev) => {
+        const current = prev[cardId] ?? { normal: 0, foil: 0 };
+        return { ...prev, [cardId]: { ...current, [variant]: safeQty } };
+      });
+      const key = `${cardId}:${variant}`;
+      pending.current.set(key, { cardId, variant, qty: safeQty });
+      flush(key);
     },
     [flush]
   );

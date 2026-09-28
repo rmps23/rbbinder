@@ -8,22 +8,24 @@ import { QuantityStepper } from "./QuantityStepper";
 
 export function CardTile({
   card,
-  qty,
-  onChangeQty,
-  accent,
+  normalQty,
+  foilQty,
+  onChangeNormal,
+  onChangeFoil,
 }: {
   card: RiftCard;
-  qty: number;
-  onChangeQty: (qty: number) => void;
-  accent: "amber" | "sky";
+  normalQty: number;
+  foilQty: number;
+  onChangeNormal: (qty: number) => void;
+  onChangeFoil: (qty: number) => void;
 }) {
   const [imgError, setImgError] = useState(false);
-  const owned = qty > 0;
+  const owned = normalQty > 0 || foilQty > 0;
 
   return (
     <div
       className={`group flex flex-col overflow-hidden rounded-lg border bg-[#14171f] transition ${
-        owned ? "border-amber-400/40" : "border-white/10"
+        owned ? "border-sky-400/40" : "border-white/10"
       }`}
     >
       <div className="relative aspect-[744/1039] w-full bg-[#0a0c10]">
@@ -47,16 +49,32 @@ export function CardTile({
           title={card.rarity?.label ?? ""}
         />
         {owned && (
-          <span className="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
-            x{qty}
-          </span>
+          <div className="absolute left-1.5 top-1.5 flex gap-1">
+            {normalQty > 0 && (
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-black/75 px-1.5 text-xs font-bold text-sky-300 ring-1 ring-white/10">
+                {normalQty}
+              </span>
+            )}
+            {foilQty > 0 && (
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-black/75 px-1.5 text-xs font-bold text-fuchsia-300 ring-1 ring-white/10">
+                ✦{foilQty}
+              </span>
+            )}
+          </div>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1.5 p-2">
         <p className="line-clamp-2 text-xs font-semibold leading-tight text-white/90">{card.name}</p>
         <p className="text-[10px] text-white/40">{card.publicCode}</p>
-        <div className="mt-auto pt-1">
-          <QuantityStepper value={qty} onChange={onChangeQty} accent={accent} />
+        <div className="mt-auto flex flex-col gap-1 pt-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-medium text-white/40">Normal</span>
+            <QuantityStepper value={normalQty} onChange={onChangeNormal} accent="sky" />
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-medium text-white/40">Foil</span>
+            <QuantityStepper value={foilQty} onChange={onChangeFoil} accent="fuchsia" />
+          </div>
         </div>
       </div>
     </div>

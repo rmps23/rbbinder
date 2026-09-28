@@ -22,7 +22,7 @@ export type LocalBinder = {
   updatedAt: string;
 };
 export type LocalBinderCard = { binderId: string; position: number; cardId: string; qty: number; updatedAt: string };
-export type LocalBulk = { cardId: string; qty: number; updatedAt: string };
+export type LocalBulk = { cardId: string; normalQty: number; foilQty: number; updatedAt: string };
 
 export type LocalDb = {
   cards: LocalCard[];
@@ -52,6 +52,12 @@ async function readDb(): Promise<LocalDb> {
     db.binderCards = db.binderCards.filter((r) => typeof r.position === "number");
     // Binders created before pageCount existed default to 2 pages.
     db.binders = db.binders.map((b) => ({ ...b, pageCount: b.pageCount ?? 2 }));
+    // Bulk rows written before the normal/foil split get treated as normal copies.
+    db.bulk = db.bulk.map((r) => ({
+      ...r,
+      normalQty: r.normalQty ?? (r as unknown as { qty?: number }).qty ?? 0,
+      foilQty: r.foilQty ?? 0,
+    }));
     return db;
   } catch {
     return structuredClone(EMPTY_DB);

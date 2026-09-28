@@ -20,8 +20,10 @@ export type RiftCard = {
 
 export type SetInfo = { id: string; name: string; cardCount: number };
 
-// card_id -> quantity owned
-export type QtyMap = Record<string, number>;
+// card_id -> how many normal/foil copies are in the bulk pile
+export type BulkVariant = "normal" | "foil";
+export type BulkEntry = { normal: number; foil: number };
+export type BulkMap = Record<string, BulkEntry>;
 
 // A binder page is a flat grid of slots/pockets. A slot either holds a
 // card (+ how many copies sit in that pocket) or is empty. Keyed by a flat

@@ -6,6 +6,10 @@ import { Filters, FilterState } from "./Filters";
 import { CardTile } from "./CardTile";
 import { PAGE_SIZE } from "@/lib/constants";
 import { isAlternateArt } from "@/lib/cardUtils";
+import type { RiftCard } from "@/lib/types";
+
+// Proving Grounds isn't tracked for bulk/trades.
+const EXCLUDED_SETS = new Set(["OGS"]);
 
 const DEFAULT_FILTERS: FilterState = {
   search: "",
@@ -33,13 +37,16 @@ export function CardBrowser({
   });
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
+  const availableCards = useMemo(() => cards.filter((c) => !EXCLUDED_SETS.has(c.set.id)), [cards]);
+  const availableSets = useMemo(() => sets.filter((s) => !EXCLUDED_SETS.has(s.id)), [sets]);
+
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [filters]);
 
   const filtered = useMemo(() => {
     const search = filters.search.trim().toLowerCase();
-    return cards.filter((c) => {
+    return availableCards.filter((c) => {
       if (search && !c.name.toLowerCase().includes(search) && !c.publicCode.toLowerCase().includes(search)) {
         return false;
       }
@@ -49,12 +56,25 @@ export function CardBrowser({
       if (filters.domainId && !c.domains.some((d) => d.id === filters.domainId)) return false;
       if (filters.altArt === "hide" && isAlternateArt(c)) return false;
       if (filters.altArt === "only" && !isAlternateArt(c)) return false;
-      if (filters.onlyOwned && (bulk[c.id] ?? 0) <= 0) return false;
+      const entry = bulk[c.id];
+      if (filters.onlyOwned && !((entry?.normal ?? 0) > 0 || (entry?.foil ?? 0) > 0)) return false;
       return true;
     });
-  }, [cards, filters, bulk]);
+  }, [availableCards, filters, bulk]);
 
   const visible = filtered.slice(0, visibleCount);
+
+  // Cards are already sorted by set, so grouping the visible slice just
+  // means starting a new group whenever the set changes.
+  const groups = useMemo(() => {
+    const result: { setId: string; setName: string; cards: RiftCard[] }[] = [];
+    for (const card of visible) {
+      const last = result[result.length - 1];
+      if (last && last.setId === card.set.id) last.cards.push(card);
+      else result.push({ setId: card.set.id, setName: card.set.name, cards: [card] });
+    }
+    return result;
+  }, [visible]);
 
   if (loading) {
     return <p className="py-10 text-center text-white/40">A carregar cartas...</p>;
@@ -62,7 +82,7 @@ export function CardBrowser({
 
   return (
     <div>
-      <Filters sets={sets} state={filters} onChange={setFilters} onlyOwnedLabel={onlyOwnedLabel} />
+      <Filters sets={availableSets} state={filters} onChange={setFilters} onlyOwnedLabel={onlyOwnedLabel} />
 
       <p className="mb-3 text-sm text-white/40">
         {filtered.length} carta{filtered.length === 1 ? "" : "s"}
@@ -72,15 +92,25 @@ export function CardBrowser({
         <p className="py-10 text-center text-white/40">{emptyMessage}</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {visible.map((card) => (
-              <CardTile
-                key={card.id}
-                card={card}
-                qty={bulk[card.id] ?? 0}
-                onChangeQty={(qty) => setBulkQty(card.id, qty)}
-                accent="sky"
-              />
+          <div className="space-y-6">
+            {groups.map((group) => (
+              <div key={group.setId}>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
+                  {group.setName}
+                </h3>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                  {group.cards.map((card) => (
+                    <CardTile
+                      key={card.id}
+                      card={card}
+                      normalQty={bulk[card.id]?.normal ?? 0}
+                      foilQty={bulk[card.id]?.foil ?? 0}
+                      onChangeNormal={(qty) => setBulkQty(card.id, "normal", qty)}
+                      onChangeFoil={(qty) => setBulkQty(card.id, "foil", qty)}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
           {visibleCount < filtered.length && (

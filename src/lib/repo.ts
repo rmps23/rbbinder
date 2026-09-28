@@ -8,7 +8,7 @@
 import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "./supabaseAdmin";
 import { readLocalDb, withLocalDb } from "./localDb";
-import type { Binder, BinderLayout, BinderSlots, QtyMap, RiftCard, SetInfo } from "./types";
+import type { Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo } from "./types";
 
 const CHUNK_SIZE = 200;
 
@@ -125,38 +125,48 @@ export async function upsertCardsAndSets(cards: RiftCard[], sets: SetInfo[]): Pr
 
 // ---------- bulk ----------
 
-export async function getBulk(): Promise<QtyMap> {
+export async function getBulk(): Promise<BulkMap> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.from("bulk").select("card_id, qty");
+    const { data, error } = await supabase.from("bulk").select("card_id, normal_qty, foil_qty");
     if (error) throw new Error(error.message);
-    const map: QtyMap = {};
-    for (const row of data ?? []) map[row.card_id] = row.qty ?? 0;
+    const map: BulkMap = {};
+    for (const row of data ?? []) map[row.card_id] = { normal: row.normal_qty ?? 0, foil: row.foil_qty ?? 0 };
     return map;
   }
   const db = await readLocalDb();
-  const map: QtyMap = {};
-  for (const row of db.bulk) map[row.cardId] = row.qty;
+  const map: BulkMap = {};
+  for (const row of db.bulk) map[row.cardId] = { normal: row.normalQty, foil: row.foilQty };
   return map;
 }
 
-export async function setBulkQty(cardId: string, qty: number): Promise<void> {
+export async function setBulkQty(cardId: string, variant: BulkVariant, qty: number): Promise<void> {
   const now = new Date().toISOString();
+  const column = variant === "normal" ? "normal_qty" : "foil_qty";
+
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
+    // Omitting the other column from the upsert leaves it untouched on an
+    // existing row (Postgres ON CONFLICT DO UPDATE only sets what's listed).
     const { error } = await supabase
       .from("bulk")
-      .upsert({ card_id: cardId, qty, updated_at: now }, { onConflict: "card_id" });
+      .upsert({ card_id: cardId, [column]: qty, updated_at: now }, { onConflict: "card_id" });
     if (error) throw new Error(error.message);
     return;
   }
   await withLocalDb((db) => {
     const existing = db.bulk.find((r) => r.cardId === cardId);
     if (existing) {
-      existing.qty = qty;
+      if (variant === "normal") existing.normalQty = qty;
+      else existing.foilQty = qty;
       existing.updatedAt = now;
     } else {
-      db.bulk.push({ cardId, qty, updatedAt: now });
+      db.bulk.push({
+        cardId,
+        normalQty: variant === "normal" ? qty : 0,
+        foilQty: variant === "foil" ? qty : 0,
+        updatedAt: now,
+      });
     }
   });
 }

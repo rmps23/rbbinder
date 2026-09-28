@@ -9,6 +9,9 @@
 --
 -- If you already ran an earlier version of this file, drop the old tables
 -- first: `drop table if exists public.collection, public.binder_cards;`
+-- If you already ran the previous "bulk" table (single qty column), migrate
+-- it instead: `alter table public.bulk rename column qty to normal_qty;
+-- alter table public.bulk add column if not exists foil_qty integer not null default 0;`
 
 create table if not exists public.cards (
   id text primary key,
@@ -45,7 +48,8 @@ create table if not exists public.binder_cards (
 
 create table if not exists public.bulk (
   card_id text primary key references public.cards(id) on delete cascade,
-  qty integer not null default 0,
+  normal_qty integer not null default 0,
+  foil_qty integer not null default 0,
   updated_at timestamptz not null default now()
 );
 
