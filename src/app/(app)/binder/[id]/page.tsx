@@ -248,7 +248,7 @@ export default function BinderDetailPage() {
 
   async function deleteBinder() {
     if (!binder) return;
-    if (!confirm(`Apagar o binder "${binder.name}"? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Delete binder "${binder.name}"? This action cannot be undone.`)) return;
     await fetch(`/api/binders/${binderId}`, { method: "DELETE" });
     router.push("/");
   }
@@ -278,15 +278,15 @@ export default function BinderDetailPage() {
   }
 
   if (cardsLoading || binderLoading || slotsLoading) {
-    return <p className="py-10 text-center text-white/40">A carregar binder...</p>;
+    return <p className="py-10 text-center text-white/40">Loading binder...</p>;
   }
 
   if (notFound || !binder) {
     return (
       <div className="py-10 text-center">
-        <p className="mb-3 text-white/40">Binder não encontrado.</p>
+        <p className="mb-3 text-white/40">Binder not found.</p>
         <Link href="/" className="text-sm font-medium text-amber-400 hover:underline">
-          Voltar ao dashboard
+          Back to dashboard
         </Link>
       </div>
     );
@@ -313,7 +313,7 @@ export default function BinderDetailPage() {
         ) : (
           <h1
             onClick={() => setRenaming(true)}
-            title="Clica para renomear"
+            title="Click to rename"
             className="cursor-text text-2xl font-bold text-white hover:text-amber-300"
           >
             {binder.name}
@@ -325,32 +325,32 @@ export default function BinderDetailPage() {
             onClick={deleteBinder}
             className="rounded-md border border-red-400/30 bg-red-400/10 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-400/20"
           >
-            Apagar binder
+            Delete binder
           </button>
         </div>
       </div>
       <p className="mb-5 text-sm text-white/50">
-        {binderStats.uniqueCount} cartas únicas · {binderStats.totalQty} cópias neste binder. Arrasta uma carta para
-        cima de outra para trocarem, ou para a margem esquerda/direita dela (ou para o meio das páginas) para a
-        inserires ali e empurrar as restantes.
+        {binderStats.uniqueCount} unique cards · {binderStats.totalQty} copies in this binder. Drag a card onto
+        another to swap them, or onto its left/right edge (or into the middle of the pages) to insert it there and
+        push the rest along.
       </p>
 
       <div className="mb-3 flex items-center justify-between">
         <button
           onClick={goPrev}
           disabled={clampedSpread === 0 || flip !== null}
-          aria-label="Páginas anteriores"
+          aria-label="Previous pages"
           className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
         >
           ←
         </button>
         <span className="text-sm text-white/50">
-          Páginas {leftPageIndex + 1}–{rightPageIndex + 1} de {totalPages}
+          Pages {leftPageIndex + 1}–{rightPageIndex + 1} of {totalPages}
         </span>
         <button
           onClick={goNext}
           disabled={clampedSpread >= totalSpreads - 1 || flip !== null}
-          aria-label="Próximas páginas"
+          aria-label="Next pages"
           className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
         >
           →
@@ -390,7 +390,7 @@ export default function BinderDetailPage() {
               }}
               onDragLeave={() => setSpineDragOver(false)}
               onDrop={handleDropOnSpine}
-              title="Largar aqui para inserir e empurrar as cartas seguintes"
+              title="Drop here to insert and push the following cards along"
               className={`hidden shrink-0 items-center justify-center self-stretch rounded transition sm:flex ${
                 spineDragOver ? "w-8 bg-amber-400/20" : "w-6"
               }`}
@@ -422,8 +422,8 @@ export default function BinderDetailPage() {
         <div className="flex shrink-0 flex-col gap-2">
           <button
             onClick={addPage}
-            title="Adicionar página"
-            aria-label="Adicionar página"
+            title="Add page"
+            aria-label="Add page"
             className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-light text-white/70 hover:bg-white/10 hover:text-amber-300"
           >
             +
@@ -431,8 +431,8 @@ export default function BinderDetailPage() {
           <button
             onClick={removePage}
             disabled={!canRemovePage}
-            title="Remover a última página"
-            aria-label="Remover a última página"
+            title="Remove the last page"
+            aria-label="Remove the last page"
             className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-light text-white/70 hover:bg-white/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-20"
           >
             −

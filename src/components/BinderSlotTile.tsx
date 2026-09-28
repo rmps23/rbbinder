@@ -50,7 +50,7 @@ export function BinderSlotTile({
         }`}
       >
         <span className="text-3xl leading-none">+</span>
-        <span className="text-[10px] font-medium">Adicionar carta</span>
+        <span className="text-[10px] font-medium">Add card</span>
       </button>
     );
   }
@@ -128,8 +128,8 @@ export function BinderSlotTile({
           e.stopPropagation();
           onRemove();
         }}
-        title="Remover carta deste espaço"
-        aria-label="Remover carta deste espaço"
+        title="Remove card from this slot"
+        aria-label="Remove card from this slot"
         className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-red-500/90 text-white opacity-0 shadow transition hover:bg-red-500 group-hover:opacity-100"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">

@@ -49,17 +49,22 @@ export function CardTile({
           title={card.rarity?.label ?? ""}
         />
         {owned && (
-          <div className="absolute left-1.5 top-1.5 flex gap-1">
-            {normalQty > 0 && (
-              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-black/75 px-1.5 text-xs font-bold text-sky-300 ring-1 ring-white/10">
-                {normalQty}
-              </span>
-            )}
-            {foilQty > 0 && (
-              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-black/75 px-1.5 text-xs font-bold text-fuchsia-300 ring-1 ring-white/10">
-                ✦{foilQty}
-              </span>
-            )}
+          <div className="absolute inset-x-0 bottom-0 flex bg-black/70 backdrop-blur-[2px]">
+            <div
+              className={`flex w-1/2 items-center justify-center gap-1 py-1 text-sm font-bold ${
+                normalQty > 0 ? "text-sky-300" : "text-white/25"
+              }`}
+            >
+              {normalQty}
+            </div>
+            <div className="w-px shrink-0 bg-white/10" />
+            <div
+              className={`flex w-1/2 items-center justify-center gap-1 py-1 text-sm font-bold ${
+                foilQty > 0 ? "text-fuchsia-300" : "text-white/25"
+              }`}
+            >
+              ✦{foilQty}
+            </div>
           </div>
         )}
       </div>

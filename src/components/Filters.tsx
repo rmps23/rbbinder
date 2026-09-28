@@ -38,13 +38,13 @@ export function Filters({
       <div className="flex flex-wrap gap-2">
         <input
           type="text"
-          placeholder="Pesquisar carta..."
+          placeholder="Search card..."
           value={state.search}
           onChange={(e) => set("search", e.target.value)}
           className="min-w-[180px] flex-1 rounded-md border border-white/10 bg-[#0d0f14] px-3 py-1.5 text-sm text-white outline-none focus:border-amber-400"
         />
         <select className={selectClass} value={state.setId} onChange={(e) => set("setId", e.target.value)}>
-          <option value="">Todos os sets</option>
+          <option value="">All sets</option>
           {sets.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -52,7 +52,7 @@ export function Filters({
           ))}
         </select>
         <select className={selectClass} value={state.typeId} onChange={(e) => set("typeId", e.target.value)}>
-          <option value="">Todos os tipos</option>
+          <option value="">All types</option>
           {TYPE_OPTIONS.map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
@@ -60,7 +60,7 @@ export function Filters({
           ))}
         </select>
         <select className={selectClass} value={state.rarityId} onChange={(e) => set("rarityId", e.target.value)}>
-          <option value="">Todas as raridades</option>
+          <option value="">All rarities</option>
           {RARITY_OPTIONS.map((r) => (
             <option key={r.id} value={r.id}>
               {r.label}
@@ -68,7 +68,7 @@ export function Filters({
           ))}
         </select>
         <select className={selectClass} value={state.domainId} onChange={(e) => set("domainId", e.target.value)}>
-          <option value="">Todos os domínios</option>
+          <option value="">All domains</option>
           {DOMAIN_OPTIONS.map((d) => (
             <option key={d.id} value={d.id}>
               {d.label}
@@ -80,9 +80,9 @@ export function Filters({
           value={state.altArt}
           onChange={(e) => set("altArt", e.target.value as AltArtFilter)}
         >
-          <option value="all">Todas as versões</option>
-          <option value="hide">Esconder alternate arts</option>
-          <option value="only">Só alternate arts</option>
+          <option value="all">All versions</option>
+          <option value="hide">Hide alternate arts</option>
+          <option value="only">Alternate arts only</option>
         </select>
       </div>
       {onlyOwnedLabel && (

@@ -104,27 +104,27 @@ export function AddCardModal({
       >
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">Escolher cartas</h2>
+            <h2 className="text-lg font-bold text-white">Choose cards</h2>
             <button
               onClick={onClose}
               className="rounded-md px-2 py-1 text-white/50 hover:bg-white/10 hover:text-white sm:hidden"
-              aria-label="Fechar"
+              aria-label="Close"
             >
               ✕
             </button>
           </div>
           <p className="mb-3 text-sm text-white/40">
-            Clica em quantas cartas quiseres para as juntares à lista, ajusta-as e depois carrega em &quot;Adicionar&quot;.
+            Click as many cards as you want to add them to the list, adjust them, then press &quot;Add&quot;.
           </p>
 
           <Filters sets={sets} state={filters} onChange={onFiltersChange} />
 
           <p className="mb-3 text-sm text-white/40">
-            {filtered.length} carta{filtered.length === 1 ? "" : "s"}
+            {filtered.length} card{filtered.length === 1 ? "" : "s"}
           </p>
 
           {filtered.length === 0 ? (
-            <p className="py-10 text-center text-white/40">Nenhuma carta encontrada com estes filtros.</p>
+            <p className="py-10 text-center text-white/40">No cards found with these filters.</p>
           ) : (
             <>
               <div className="grid max-h-[55vh] grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
@@ -163,7 +163,7 @@ export function AddCardModal({
                     onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
                     className="rounded-md border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 hover:bg-white/10"
                   >
-                    Mostrar mais ({filtered.length - visibleCount} restantes)
+                    Show more ({filtered.length - visibleCount} left)
                   </button>
                 </div>
               )}
@@ -173,16 +173,16 @@ export function AddCardModal({
 
         <div className="mt-4 flex w-full flex-col border-t border-white/10 pt-4 sm:mt-0 sm:w-64 sm:shrink-0 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
           <div className="mb-2 hidden items-center justify-between sm:flex">
-            <h3 className="text-sm font-semibold text-white">A adicionar</h3>
-            <button onClick={onClose} className="rounded-md px-2 py-1 text-white/50 hover:bg-white/10 hover:text-white" aria-label="Fechar">
+            <h3 className="text-sm font-semibold text-white">Adding</h3>
+            <button onClick={onClose} className="rounded-md px-2 py-1 text-white/50 hover:bg-white/10 hover:text-white" aria-label="Close">
               ✕
             </button>
           </div>
-          <h3 className="mb-2 text-sm font-semibold text-white sm:hidden">A adicionar</h3>
+          <h3 className="mb-2 text-sm font-semibold text-white sm:hidden">Adding</h3>
 
           {queue.length === 0 ? (
             <p className="flex-1 py-6 text-center text-sm text-white/40">
-              Ainda não escolheste nenhuma carta. Clica numa à esquerda para a juntares aqui.
+              You haven&apos;t chosen any cards yet. Click one on the left to add it here.
             </p>
           ) : (
             <div className="flex-1 space-y-1.5 overflow-y-auto sm:max-h-[50vh]">
@@ -197,8 +197,8 @@ export function AddCardModal({
                     <button
                       onClick={() => moveInQueue(i, -1)}
                       disabled={i === 0}
-                      title="Mover para cima"
-                      aria-label="Mover para cima"
+                      title="Move up"
+                      aria-label="Move up"
                       className="flex h-6 w-6 items-center justify-center rounded text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-20"
                     >
                       ↑
@@ -206,16 +206,16 @@ export function AddCardModal({
                     <button
                       onClick={() => moveInQueue(i, 1)}
                       disabled={i === queue.length - 1}
-                      title="Mover para baixo"
-                      aria-label="Mover para baixo"
+                      title="Move down"
+                      aria-label="Move down"
                       className="flex h-6 w-6 items-center justify-center rounded text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-20"
                     >
                       ↓
                     </button>
                     <button
                       onClick={() => removeFromQueue(i)}
-                      title="Remover da lista"
-                      aria-label="Remover da lista"
+                      title="Remove from list"
+                      aria-label="Remove from list"
                       className="flex h-6 w-6 items-center justify-center rounded text-red-300/70 hover:bg-red-500/20 hover:text-red-300"
                     >
                       ✕
@@ -231,7 +231,7 @@ export function AddCardModal({
             disabled={queue.length === 0}
             className="mt-3 rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-30"
           >
-            Adicionar {queue.length > 0 ? `(${queue.length})` : ""} ao binder
+            Add {queue.length > 0 ? `(${queue.length})` : ""} to binder
           </button>
         </div>
       </div>

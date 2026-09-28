@@ -26,7 +26,7 @@ export async function POST() {
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Falha ao sincronizar cartas" },
+      { error: err instanceof Error ? err.message : "Failed to sync cards" },
       { status: 500 }
     );
   }

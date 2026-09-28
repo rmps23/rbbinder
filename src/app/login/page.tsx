@@ -22,7 +22,7 @@ function LoginForm() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setError(body.error ?? "Password errada");
+        setError(body.error ?? "Wrong password");
         setBusy(false);
         return;
       }
@@ -30,7 +30,7 @@ function LoginForm() {
       router.push(next);
       router.refresh();
     } catch {
-      setError("Falha de rede. Tenta outra vez.");
+      setError("Network error. Try again.");
       setBusy(false);
     }
   }
@@ -44,7 +44,7 @@ function LoginForm() {
         <h1 className="mb-1 text-xl font-bold text-white">
           RB<span className="text-amber-400">Binder</span>
         </h1>
-        <p className="mb-5 text-sm text-white/50">Coleção Riftbound TCG</p>
+        <p className="mb-5 text-sm text-white/50">Riftbound TCG collection</p>
         <input
           autoFocus
           type="password"
@@ -59,7 +59,7 @@ function LoginForm() {
           disabled={busy || !password}
           className="w-full rounded-md bg-amber-400 px-3 py-2 font-semibold text-black transition hover:bg-amber-300 disabled:opacity-50"
         >
-          {busy ? "A entrar..." : "Entrar"}
+          {busy ? "Signing in..." : "Sign in"}
         </button>
       </form>
     </div>

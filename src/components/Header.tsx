@@ -48,7 +48,7 @@ export function Header() {
           onClick={logout}
           className="rounded-md px-3 py-1.5 text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white"
         >
-          Sair
+          Sign out
         </button>
       </div>
     </header>

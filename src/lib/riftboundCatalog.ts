@@ -1,6 +1,6 @@
 // Fetches the official English Riftbound card gallery data straight from
 // playriftbound.com. Used by POST /api/cards/sync (triggered by the
-// "Sincronizar cartas" button on the dashboard) to refresh the cards/sets
+// "Sync cards" button on the dashboard) to refresh the cards/sets
 // tables in Supabase whenever Riot releases a new set.
 //
 // Card images are NOT downloaded/rehosted - we only store the official CDN

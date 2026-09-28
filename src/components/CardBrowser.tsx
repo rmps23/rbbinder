@@ -77,7 +77,7 @@ export function CardBrowser({
   }, [visible]);
 
   if (loading) {
-    return <p className="py-10 text-center text-white/40">A carregar cartas...</p>;
+    return <p className="py-10 text-center text-white/40">Loading cards...</p>;
   }
 
   return (
@@ -85,7 +85,7 @@ export function CardBrowser({
       <Filters sets={availableSets} state={filters} onChange={setFilters} onlyOwnedLabel={onlyOwnedLabel} />
 
       <p className="mb-3 text-sm text-white/40">
-        {filtered.length} carta{filtered.length === 1 ? "" : "s"}
+        {filtered.length} card{filtered.length === 1 ? "" : "s"}
       </p>
 
       {filtered.length === 0 ? (
@@ -119,7 +119,7 @@ export function CardBrowser({
                 onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
                 className="rounded-md border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 hover:bg-white/10"
               >
-                Mostrar mais ({filtered.length - visibleCount} restantes)
+                Show more ({filtered.length - visibleCount} left)
               </button>
             </div>
           )}
