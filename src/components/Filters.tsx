@@ -21,7 +21,7 @@ export function Filters({
   sets: SetInfo[];
   state: FilterState;
   onChange: (next: FilterState) => void;
-  onlyOwnedLabel: string;
+  onlyOwnedLabel?: string;
 }) {
   function set<K extends keyof FilterState>(key: K, value: FilterState[K]) {
     onChange({ ...state, [key]: value });
@@ -73,15 +73,17 @@ export function Filters({
           ))}
         </select>
       </div>
-      <label className="flex w-fit items-center gap-2 text-sm text-white/70">
-        <input
-          type="checkbox"
-          checked={state.onlyOwned}
-          onChange={(e) => set("onlyOwned", e.target.checked)}
-          className="h-4 w-4 rounded border-white/20 bg-[#0d0f14] accent-amber-400"
-        />
-        {onlyOwnedLabel}
-      </label>
+      {onlyOwnedLabel && (
+        <label className="flex w-fit items-center gap-2 text-sm text-white/70">
+          <input
+            type="checkbox"
+            checked={state.onlyOwned}
+            onChange={(e) => set("onlyOwned", e.target.checked)}
+            className="h-4 w-4 rounded border-white/20 bg-[#0d0f14] accent-amber-400"
+          />
+          {onlyOwnedLabel}
+        </label>
+      )}
     </div>
   );
 }

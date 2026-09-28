@@ -23,6 +23,12 @@ export type SetInfo = { id: string; name: string; cardCount: number };
 // card_id -> quantity owned
 export type QtyMap = Record<string, number>;
 
+// A binder page is a flat grid of slots/pockets. A slot either holds a
+// card (+ how many copies sit in that pocket) or is empty. Keyed by a flat
+// zero-based position (page = floor(position / perPage)).
+export type BinderSlot = { cardId: string; qty: number };
+export type BinderSlots = Record<number, BinderSlot>;
+
 export type BinderLayout = "2x2" | "3x3" | "3x4" | "4x4";
 
 export type Binder = {

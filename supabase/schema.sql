@@ -3,11 +3,12 @@
 --   - cards/sets: the card catalog, populated by the "Sincronizar cartas"
 --     button on the dashboard (POST /api/cards/sync) instead of a local file.
 --   - binders: user-named binders (e.g. "Coleção principal", "Trade binder").
---   - binder_cards: how many copies of each card live in each binder.
+--   - binder_cards: which card (if any) sits in each page slot/pocket of a
+--     binder, like a real album - identified by a flat slot position.
 --   - bulk: repeated cards available for trade, separate from any binder.
 --
--- If you already ran the previous version of this file, drop the old table
--- first: `drop table if exists public.collection;`
+-- If you already ran an earlier version of this file, drop the old tables
+-- first: `drop table if exists public.collection, public.binder_cards;`
 
 create table if not exists public.cards (
   id text primary key,
@@ -34,10 +35,11 @@ create table if not exists public.binders (
 
 create table if not exists public.binder_cards (
   binder_id uuid not null references public.binders(id) on delete cascade,
+  position integer not null,
   card_id text not null references public.cards(id) on delete cascade,
-  qty integer not null default 0,
+  qty integer not null default 1,
   updated_at timestamptz not null default now(),
-  primary key (binder_id, card_id)
+  primary key (binder_id, position)
 );
 
 create table if not exists public.bulk (

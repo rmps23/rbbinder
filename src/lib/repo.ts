@@ -8,7 +8,7 @@
 import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "./supabaseAdmin";
 import { readLocalDb, withLocalDb } from "./localDb";
-import type { Binder, BinderLayout, QtyMap, RiftCard, SetInfo } from "./types";
+import type { Binder, BinderLayout, BinderSlots, QtyMap, RiftCard, SetInfo } from "./types";
 
 const CHUNK_SIZE = 200;
 
@@ -20,6 +20,23 @@ function sortCardsAndSets(cards: RiftCard[], sets: SetInfo[]) {
   cards.sort((a, b) => (a.set.id !== b.set.id ? a.set.id.localeCompare(b.set.id) : (a.collectorNumber ?? 0) - (b.collectorNumber ?? 0)));
   sets.sort((a, b) => a.id.localeCompare(b.id));
   return { cards, sets };
+}
+
+function accumulateStats(
+  rows: { binderId: string; cardId: string; qty: number }[]
+): Map<string, { uniqueCount: number; totalQty: number }> {
+  const byBinder = new Map<string, { cardIds: Set<string>; totalQty: number }>();
+  for (const row of rows) {
+    const s = byBinder.get(row.binderId) ?? { cardIds: new Set<string>(), totalQty: 0 };
+    s.cardIds.add(row.cardId);
+    s.totalQty += row.qty;
+    byBinder.set(row.binderId, s);
+  }
+  const result = new Map<string, { uniqueCount: number; totalQty: number }>();
+  for (const [binderId, s] of byBinder) {
+    result.set(binderId, { uniqueCount: s.cardIds.size, totalQty: s.totalQty });
+  }
+  return result;
 }
 
 function toBinder(
@@ -150,18 +167,12 @@ export async function listBinders(): Promise<Binder[]> {
     const supabase = getSupabaseAdmin();
     const [{ data: binders, error: bindersError }, { data: qtyRows, error: qtyError }] = await Promise.all([
       supabase.from("binders").select("*").order("sort_order").order("created_at"),
-      supabase.from("binder_cards").select("binder_id, qty").gt("qty", 0),
+      supabase.from("binder_cards").select("binder_id, card_id, qty").gt("qty", 0),
     ]);
     if (bindersError) throw new Error(bindersError.message);
     if (qtyError) throw new Error(qtyError.message);
 
-    const stats = new Map<string, { uniqueCount: number; totalQty: number }>();
-    for (const row of qtyRows ?? []) {
-      const s = stats.get(row.binder_id) ?? { uniqueCount: 0, totalQty: 0 };
-      s.uniqueCount += 1;
-      s.totalQty += row.qty;
-      stats.set(row.binder_id, s);
-    }
+    const stats = accumulateStats((qtyRows ?? []).map((r) => ({ binderId: r.binder_id, cardId: r.card_id, qty: r.qty })));
     return (binders ?? []).map((b) =>
       toBinder(
         { id: b.id, name: b.name, layout: b.layout, sortOrder: b.sort_order, createdAt: b.created_at },
@@ -171,14 +182,7 @@ export async function listBinders(): Promise<Binder[]> {
   }
 
   const db = await readLocalDb();
-  const stats = new Map<string, { uniqueCount: number; totalQty: number }>();
-  for (const row of db.binderCards) {
-    if (row.qty <= 0) continue;
-    const s = stats.get(row.binderId) ?? { uniqueCount: 0, totalQty: 0 };
-    s.uniqueCount += 1;
-    s.totalQty += row.qty;
-    stats.set(row.binderId, s);
-  }
+  const stats = accumulateStats(db.binderCards.filter((r) => r.qty > 0));
   return [...db.binders]
     .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt))
     .map((b) => toBinder(b, stats.get(b.id) ?? { uniqueCount: 0, totalQty: 0 }));
@@ -208,22 +212,23 @@ export async function getBinder(id: string): Promise<Binder | null> {
     const supabase = getSupabaseAdmin();
     const [{ data: binder, error: binderError }, { data: qtyRows, error: qtyError }] = await Promise.all([
       supabase.from("binders").select("*").eq("id", id).maybeSingle(),
-      supabase.from("binder_cards").select("qty").eq("binder_id", id).gt("qty", 0),
+      supabase.from("binder_cards").select("card_id, qty").eq("binder_id", id).gt("qty", 0),
     ]);
     if (binderError) throw new Error(binderError.message);
     if (!binder) return null;
     if (qtyError) throw new Error(qtyError.message);
+    const stats = accumulateStats((qtyRows ?? []).map((r) => ({ binderId: id, cardId: r.card_id, qty: r.qty })));
     return toBinder(
       { id: binder.id, name: binder.name, layout: binder.layout, sortOrder: binder.sort_order, createdAt: binder.created_at },
-      { uniqueCount: qtyRows?.length ?? 0, totalQty: (qtyRows ?? []).reduce((sum, r) => sum + r.qty, 0) }
+      stats.get(id) ?? { uniqueCount: 0, totalQty: 0 }
     );
   }
 
   const db = await readLocalDb();
   const binder = db.binders.find((b) => b.id === id);
   if (!binder) return null;
-  const rows = db.binderCards.filter((r) => r.binderId === id && r.qty > 0);
-  return toBinder(binder, { uniqueCount: rows.length, totalQty: rows.reduce((sum, r) => sum + r.qty, 0) });
+  const stats = accumulateStats(db.binderCards.filter((r) => r.binderId === id && r.qty > 0));
+  return toBinder(binder, stats.get(id) ?? { uniqueCount: 0, totalQty: 0 });
 }
 
 export async function updateBinder(
@@ -254,8 +259,8 @@ export async function updateBinder(
     if (patch.layout !== undefined) binder.layout = patch.layout;
     if (patch.sortOrder !== undefined) binder.sortOrder = patch.sortOrder;
     binder.updatedAt = now;
-    const rows = db.binderCards.filter((r) => r.binderId === id && r.qty > 0);
-    return toBinder(binder, { uniqueCount: rows.length, totalQty: rows.reduce((sum, r) => sum + r.qty, 0) });
+    const stats = accumulateStats(db.binderCards.filter((r) => r.binderId === id && r.qty > 0));
+    return toBinder(binder, stats.get(id) ?? { uniqueCount: 0, totalQty: 0 });
   });
 }
 
@@ -272,40 +277,59 @@ export async function deleteBinder(id: string): Promise<void> {
   });
 }
 
-// ---------- binder cards ----------
+// ---------- binder slots ----------
 
-export async function getBinderCards(binderId: string): Promise<QtyMap> {
+export async function getBinderSlots(binderId: string): Promise<BinderSlots> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.from("binder_cards").select("card_id, qty").eq("binder_id", binderId);
+    const { data, error } = await supabase
+      .from("binder_cards")
+      .select("position, card_id, qty")
+      .eq("binder_id", binderId);
     if (error) throw new Error(error.message);
-    const map: QtyMap = {};
-    for (const row of data ?? []) map[row.card_id] = row.qty ?? 0;
-    return map;
+    const slots: BinderSlots = {};
+    for (const row of data ?? []) slots[row.position] = { cardId: row.card_id, qty: row.qty ?? 0 };
+    return slots;
   }
   const db = await readLocalDb();
-  const map: QtyMap = {};
-  for (const row of db.binderCards) if (row.binderId === binderId) map[row.cardId] = row.qty;
-  return map;
+  const slots: BinderSlots = {};
+  for (const row of db.binderCards) if (row.binderId === binderId) slots[row.position] = { cardId: row.cardId, qty: row.qty };
+  return slots;
 }
 
-export async function setBinderCardQty(binderId: string, cardId: string, qty: number): Promise<void> {
+// qty <= 0 clears the slot (cardId is then ignored).
+export async function setBinderSlot(binderId: string, position: number, cardId: string | null, qty: number): Promise<void> {
   const now = new Date().toISOString();
+
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
+    if (qty <= 0 || !cardId) {
+      const { error } = await supabase.from("binder_cards").delete().eq("binder_id", binderId).eq("position", position);
+      if (error) throw new Error(error.message);
+      return;
+    }
     const { error } = await supabase
       .from("binder_cards")
-      .upsert({ binder_id: binderId, card_id: cardId, qty, updated_at: now }, { onConflict: "binder_id,card_id" });
+      .upsert(
+        { binder_id: binderId, position, card_id: cardId, qty, updated_at: now },
+        { onConflict: "binder_id,position" }
+      );
     if (error) throw new Error(error.message);
     return;
   }
+
   await withLocalDb((db) => {
-    const existing = db.binderCards.find((r) => r.binderId === binderId && r.cardId === cardId);
+    if (qty <= 0 || !cardId) {
+      db.binderCards = db.binderCards.filter((r) => !(r.binderId === binderId && r.position === position));
+      return;
+    }
+    const existing = db.binderCards.find((r) => r.binderId === binderId && r.position === position);
     if (existing) {
+      existing.cardId = cardId;
       existing.qty = qty;
       existing.updatedAt = now;
     } else {
-      db.binderCards.push({ binderId, cardId, qty, updatedAt: now });
+      db.binderCards.push({ binderId, position, cardId, qty, updatedAt: now });
     }
   });
 }

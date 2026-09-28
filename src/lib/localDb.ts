@@ -20,7 +20,7 @@ export type LocalBinder = {
   createdAt: string;
   updatedAt: string;
 };
-export type LocalBinderCard = { binderId: string; cardId: string; qty: number; updatedAt: string };
+export type LocalBinderCard = { binderId: string; position: number; cardId: string; qty: number; updatedAt: string };
 export type LocalBulk = { cardId: string; qty: number; updatedAt: string };
 
 export type LocalDb = {
@@ -45,7 +45,11 @@ function serialized<T>(fn: () => Promise<T>): Promise<T> {
 async function readDb(): Promise<LocalDb> {
   try {
     const raw = await fs.readFile(DB_PATH, "utf-8");
-    return { ...EMPTY_DB, ...JSON.parse(raw) };
+    const db: LocalDb = { ...EMPTY_DB, ...JSON.parse(raw) };
+    // Drop binder_cards written by the old card_id-keyed format (pre slot
+    // positions) so stale local test data doesn't crash the new shape.
+    db.binderCards = db.binderCards.filter((r) => typeof r.position === "number");
+    return db;
   } catch {
     return structuredClone(EMPTY_DB);
   }
