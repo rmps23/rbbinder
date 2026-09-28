@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Filters, FilterState } from "./Filters";
 import { PAGE_SIZE } from "@/lib/constants";
+import { isAlternateArt } from "@/lib/cardUtils";
 import type { RiftCard, SetInfo } from "@/lib/types";
 
 export function AddCardModal({
@@ -50,6 +51,8 @@ export function AddCardModal({
       if (filters.typeId && !c.types.includes(filters.typeId)) return false;
       if (filters.rarityId && c.rarity?.id !== filters.rarityId) return false;
       if (filters.domainId && !c.domains.some((d) => d.id === filters.domainId)) return false;
+      if (filters.altArt === "hide" && isAlternateArt(c)) return false;
+      if (filters.altArt === "only" && !isAlternateArt(c)) return false;
       return true;
     });
   }, [cards, filters]);

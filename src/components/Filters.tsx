@@ -3,12 +3,15 @@
 import type { SetInfo } from "@/lib/types";
 import { DOMAIN_OPTIONS, RARITY_OPTIONS, TYPE_OPTIONS } from "@/lib/constants";
 
+export type AltArtFilter = "all" | "hide" | "only";
+
 export type FilterState = {
   search: string;
   setId: string;
   typeId: string;
   rarityId: string;
   domainId: string;
+  altArt: AltArtFilter;
   onlyOwned: boolean;
 };
 
@@ -71,6 +74,15 @@ export function Filters({
               {d.label}
             </option>
           ))}
+        </select>
+        <select
+          className={selectClass}
+          value={state.altArt}
+          onChange={(e) => set("altArt", e.target.value as AltArtFilter)}
+        >
+          <option value="all">Todas as versões</option>
+          <option value="hide">Esconder alternate arts</option>
+          <option value="only">Só alternate arts</option>
         </select>
       </div>
       {onlyOwnedLabel && (

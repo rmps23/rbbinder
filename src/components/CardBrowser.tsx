@@ -5,6 +5,7 @@ import { useAppData } from "./AppDataProvider";
 import { Filters, FilterState } from "./Filters";
 import { CardTile } from "./CardTile";
 import { PAGE_SIZE } from "@/lib/constants";
+import { isAlternateArt } from "@/lib/cardUtils";
 
 const DEFAULT_FILTERS: FilterState = {
   search: "",
@@ -12,6 +13,7 @@ const DEFAULT_FILTERS: FilterState = {
   typeId: "",
   rarityId: "",
   domainId: "",
+  altArt: "all",
   onlyOwned: false,
 };
 
@@ -45,6 +47,8 @@ export function CardBrowser({
       if (filters.typeId && !c.types.includes(filters.typeId)) return false;
       if (filters.rarityId && c.rarity?.id !== filters.rarityId) return false;
       if (filters.domainId && !c.domains.some((d) => d.id === filters.domainId)) return false;
+      if (filters.altArt === "hide" && isAlternateArt(c)) return false;
+      if (filters.altArt === "only" && !isAlternateArt(c)) return false;
       if (filters.onlyOwned && (bulk[c.id] ?? 0) <= 0) return false;
       return true;
     });

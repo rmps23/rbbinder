@@ -13,6 +13,9 @@ import { BINDER_LAYOUTS, GRID_COLS_CLASS } from "@/lib/constants";
 import type { Binder, BinderLayout, BinderSlots, RiftCard } from "@/lib/types";
 
 type SlotView = { position: number; card: RiftCard | null; qty: number };
+type FlipState = { side: "left" | "right"; phase: "closing" | "opening" } | null;
+
+const FLIP_MS = 220;
 
 const DEFAULT_FILTERS: FilterState = {
   search: "",
@@ -20,6 +23,7 @@ const DEFAULT_FILTERS: FilterState = {
   typeId: "",
   rarityId: "",
   domainId: "",
+  altArt: "all",
   onlyOwned: false,
 };
 
@@ -31,6 +35,7 @@ function BinderPage({
   onRemove,
   onDropCard,
   onInsertAt,
+  style,
 }: {
   slots: SlotView[];
   cols: number;
@@ -39,9 +44,10 @@ function BinderPage({
   onRemove: (position: number) => void;
   onDropCard: (from: number, to: number) => void;
   onInsertAt: (from: number, insertPosition: number) => void;
+  style?: React.CSSProperties;
 }) {
   return (
-    <div className="relative flex-1 rounded-lg bg-[#101319] p-3 shadow-inner">
+    <div className="relative flex-1 rounded-lg bg-[#101319] p-3 shadow-inner" style={style}>
       <div
         className={`pointer-events-none absolute top-1/2 flex -translate-y-1/2 flex-col gap-3 ${
           holes === "left" ? "right-1" : "left-1"
@@ -80,6 +86,7 @@ export default function BinderDetailPage() {
   const [binderLoading, setBinderLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [spread, setSpread] = useState(0);
+  const [flip, setFlip] = useState<FlipState>(null);
   const [pickerPosition, setPickerPosition] = useState<number | null>(null);
   const [spineDragOver, setSpineDragOver] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -149,7 +156,9 @@ export default function BinderDetailPage() {
 
   // At least binder.pageCount pages, but always one blank page past the
   // last filled one too, like turning to the next empty page of an album.
-  const totalPages = Math.max(binder?.pageCount ?? 2, Math.floor(highestPosition / perPage) + 2);
+  const minPagesAllowed = Math.floor(highestPosition / perPage) + 2;
+  const totalPages = Math.max(binder?.pageCount ?? 2, minPagesAllowed);
+  const canRemovePage = totalPages > minPagesAllowed;
   const totalSpreads = Math.ceil(totalPages / 2);
   const clampedSpread = Math.min(spread, totalSpreads - 1);
   const leftPageIndex = clampedSpread * 2;
@@ -187,6 +196,39 @@ export default function BinderDetailPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ pageCount: newPageCount }),
     });
+  }
+
+  async function removePage() {
+    if (!canRemovePage) return;
+    const newPageCount = totalPages - 1;
+    setBinder((b) => (b ? { ...b, pageCount: newPageCount } : b));
+    await fetch(`/api/binders/${binderId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pageCount: newPageCount }),
+    });
+  }
+
+  // Flips the visible spread like a real page turn: the outgoing page
+  // rotates edge-on (hiding its content via backface-visibility), the
+  // spread swaps underneath while it's invisible, then it rotates back
+  // open showing the new pages.
+  function turnTo(target: number, side: "left" | "right") {
+    if (flip || target === clampedSpread || target < 0 || target > totalSpreads - 1) return;
+    setFlip({ side, phase: "closing" });
+    window.setTimeout(() => {
+      setSpread(target);
+      setFlip({ side, phase: "opening" });
+      window.setTimeout(() => setFlip(null), FLIP_MS);
+    }, FLIP_MS);
+  }
+
+  function goPrev() {
+    turnTo(clampedSpread - 1, "left");
+  }
+
+  function goNext() {
+    turnTo(clampedSpread + 1, "right");
   }
 
   async function saveName() {
@@ -295,8 +337,8 @@ export default function BinderDetailPage() {
 
       <div className="mb-3 flex items-center justify-between">
         <button
-          onClick={() => setSpread((s) => Math.max(0, s - 1))}
-          disabled={clampedSpread === 0}
+          onClick={goPrev}
+          disabled={clampedSpread === 0 || flip !== null}
           aria-label="Páginas anteriores"
           className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
         >
@@ -306,8 +348,8 @@ export default function BinderDetailPage() {
           Páginas {leftPageIndex + 1}–{rightPageIndex + 1} de {totalPages}
         </span>
         <button
-          onClick={() => setSpread((s) => Math.min(totalSpreads - 1, s + 1))}
-          disabled={clampedSpread >= totalSpreads - 1}
+          onClick={goNext}
+          disabled={clampedSpread >= totalSpreads - 1 || flip !== null}
           aria-label="Próximas páginas"
           className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
         >
@@ -316,7 +358,10 @@ export default function BinderDetailPage() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="flex-1 rounded-xl border border-white/10 bg-[#07080b] p-2 shadow-2xl sm:p-4">
+        <div
+          className="flex-1 rounded-xl border border-white/10 bg-[#07080b] p-2 shadow-2xl sm:p-4"
+          style={{ perspective: "2000px" }}
+        >
           <div className="flex flex-col gap-3 sm:flex-row">
             <BinderPage
               slots={leftSlots}
@@ -326,6 +371,17 @@ export default function BinderDetailPage() {
               onRemove={clearSlot}
               onDropCard={swapSlots}
               onInsertAt={insertAtBoundary}
+              style={
+                flip?.side === "left"
+                  ? {
+                      transform: `rotateY(${flip.phase === "closing" ? "-130deg" : "0deg"})`,
+                      transition: `transform ${FLIP_MS}ms ease-in`,
+                      transformOrigin: "right center",
+                      transformStyle: "preserve-3d",
+                      backfaceVisibility: "hidden",
+                    }
+                  : undefined
+              }
             />
             <div
               onDragOver={(e) => {
@@ -349,17 +405,39 @@ export default function BinderDetailPage() {
               onRemove={clearSlot}
               onDropCard={swapSlots}
               onInsertAt={insertAtBoundary}
+              style={
+                flip?.side === "right"
+                  ? {
+                      transform: `rotateY(${flip.phase === "closing" ? "130deg" : "0deg"})`,
+                      transition: `transform ${FLIP_MS}ms ease-in`,
+                      transformOrigin: "left center",
+                      transformStyle: "preserve-3d",
+                      backfaceVisibility: "hidden",
+                    }
+                  : undefined
+              }
             />
           </div>
         </div>
-        <button
-          onClick={addPage}
-          title="Adicionar página"
-          aria-label="Adicionar página"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-light text-white/70 hover:bg-white/10 hover:text-amber-300"
-        >
-          +
-        </button>
+        <div className="flex shrink-0 flex-col gap-2">
+          <button
+            onClick={addPage}
+            title="Adicionar página"
+            aria-label="Adicionar página"
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-light text-white/70 hover:bg-white/10 hover:text-amber-300"
+          >
+            +
+          </button>
+          <button
+            onClick={removePage}
+            disabled={!canRemovePage}
+            title="Remover a última página"
+            aria-label="Remover a última página"
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-light text-white/70 hover:bg-white/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-20"
+          >
+            −
+          </button>
+        </div>
       </div>
 
       {pickerPosition !== null && (
