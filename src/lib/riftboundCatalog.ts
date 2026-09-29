@@ -89,7 +89,15 @@ export async function fetchRiftboundCatalog(): Promise<{ cards: RiftCard[]; sets
   const rawSets = gallery.sets?.items ?? [];
   if (rawCards.length === 0) throw new Error("No cards found - page structure may have changed");
 
-  const cards = rawCards.map(flattenCard).sort((a: RiftCard, b: RiftCard) => {
+  // The source data occasionally repeats the same card id twice (seen with
+  // at least one card so far). Deduping here - not just relying on upsert -
+  // matters because Supabase's upsert errors ("ON CONFLICT DO UPDATE command
+  // cannot affect row a second time") if one batch contains the same id
+  // more than once.
+  const byId = new Map<string, RiftCard>();
+  for (const card of rawCards.map(flattenCard)) byId.set(card.id, card);
+
+  const cards = [...byId.values()].sort((a: RiftCard, b: RiftCard) => {
     if (a.set.id !== b.set.id) return a.set.id.localeCompare(b.set.id);
     return (a.collectorNumber ?? 0) - (b.collectorNumber ?? 0);
   });
