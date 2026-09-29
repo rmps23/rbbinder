@@ -6,6 +6,7 @@ out
 .vercel
 *.log
 tsconfig.tsbuildinfo
+.DS_Store
 
 # Local file-backed database used only when Supabase isn't configured
 # (see src/lib/localDb.ts) - your local test data, never committed.

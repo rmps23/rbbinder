@@ -1,9 +1,9 @@
 export const RARITY_COLORS: Record<string, string> = {
-  common: "#8A8F98",
-  uncommon: "#41B4B8",
-  rare: "#3D7FE0",
-  epic: "#A35DE0",
-  showcase: "#D9A441",
+  common: "#8b93a3",
+  uncommon: "#0ac8b9",
+  rare: "#3d7fe0",
+  epic: "#a35de0",
+  showcase: "#d8ab52",
 };
 
 export const DOMAIN_COLORS: Record<string, string> = {

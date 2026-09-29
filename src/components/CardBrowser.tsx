@@ -95,9 +95,12 @@ export function CardBrowser({
           <div className="space-y-6">
             {groups.map((group) => (
               <div key={group.setId}>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
-                  {group.setName}
-                </h3>
+                <div className="mb-2 flex items-center gap-2.5">
+                  <span className="inline-block h-4 w-1 rounded-sm bg-brand-gold" />
+                  <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-white">
+                    {group.setName}
+                  </h3>
+                </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                   {group.cards.map((card) => (
                     <CardTile
@@ -117,7 +120,7 @@ export function CardBrowser({
             <div className="mt-6 flex justify-center">
               <button
                 onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
-                className="rounded-md border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 hover:bg-white/10"
+                className="rounded-full border border-white/15 bg-white/5 px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-white/80 hover:bg-white/10"
               >
                 Show more ({filtered.length - visibleCount} left)
               </button>

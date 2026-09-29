@@ -21,12 +21,12 @@ export function CardTile({
 }) {
   const [imgError, setImgError] = useState(false);
   const owned = normalQty > 0 || foilQty > 0;
+  const ring = rarityColor(card.rarity?.id);
 
   return (
     <div
-      className={`group flex flex-col overflow-hidden rounded-lg border bg-[#14171f] transition ${
-        owned ? "border-sky-400/40" : "border-white/10"
-      }`}
+      className="group flex flex-col overflow-hidden rounded-xl border-2 bg-panel transition"
+      style={{ borderColor: owned ? ring : "rgba(255,255,255,0.08)" }}
     >
       <div className="relative aspect-[744/1039] w-full bg-[#0a0c10]">
         {card.image.url && !imgError ? (
@@ -43,24 +43,19 @@ export function CardTile({
             {card.name}
           </div>
         )}
-        <span
-          className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full ring-1 ring-black/40"
-          style={{ backgroundColor: rarityColor(card.rarity?.id) }}
-          title={card.rarity?.label ?? ""}
-        />
         {owned && (
-          <div className="absolute inset-x-0 bottom-0 flex bg-black/70 backdrop-blur-[2px]">
+          <div className="absolute inset-x-0 bottom-0 flex bg-ink/85 backdrop-blur-[2px]">
             <div
-              className={`flex w-1/2 items-center justify-center gap-1 py-1 text-sm font-bold ${
-                normalQty > 0 ? "text-sky-300" : "text-white/25"
+              className={`flex w-1/2 items-center justify-center gap-1 py-1 font-display text-sm font-bold ${
+                normalQty > 0 ? "text-brand-cyan" : "text-white/25"
               }`}
             >
               {normalQty}
             </div>
             <div className="w-px shrink-0 bg-white/10" />
             <div
-              className={`flex w-1/2 items-center justify-center gap-1 py-1 text-sm font-bold ${
-                foilQty > 0 ? "text-fuchsia-300" : "text-white/25"
+              className={`flex w-1/2 items-center justify-center gap-1 py-1 font-display text-sm font-bold ${
+                foilQty > 0 ? "text-brand-gold" : "text-white/25"
               }`}
             >
               ✦{foilQty}
@@ -74,11 +69,11 @@ export function CardTile({
         <div className="mt-auto flex flex-col gap-1 pt-1">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-medium text-white/40">Normal</span>
-            <QuantityStepper value={normalQty} onChange={onChangeNormal} accent="sky" />
+            <QuantityStepper value={normalQty} onChange={onChangeNormal} accent="cyan" />
           </div>
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-medium text-white/40">Foil</span>
-            <QuantityStepper value={foilQty} onChange={onChangeFoil} accent="fuchsia" />
+            <QuantityStepper value={foilQty} onChange={onChangeFoil} accent="gold" />
           </div>
         </div>
       </div>

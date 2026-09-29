@@ -9,9 +9,11 @@ import type { Binder, BinderLayout, CardsSyncResult } from "@/lib/types";
 
 function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-[#14171f] p-4">
-      <p className="text-xs uppercase tracking-wide text-white/40">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${accent ?? "text-white"}`}>{value}</p>
+    <div className="rounded-xl border border-white/[0.06] bg-panel p-5">
+      <p className="font-display text-3xl font-bold text-white">
+        <span className={accent}>{value}</span>
+      </p>
+      <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-white/40">{label}</p>
     </div>
   );
 }
@@ -101,36 +103,36 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold text-white">Dashboard</h1>
+      <h1 className="mb-1 font-display text-2xl font-semibold uppercase tracking-wide text-white">Dashboard</h1>
       <p className="mb-5 text-sm text-white/50">Your Riftbound TCG collection binders.</p>
 
       {cards.length === 0 && (
-        <div className="mb-5 rounded-lg border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">
+        <div className="mb-5 rounded-lg border border-brand-gold/30 bg-brand-gold/10 p-4 text-sm text-brand-goldSoft">
           There are no cards in the database yet. Click &quot;Sync cards&quot; to fetch the official catalog before
           creating binders.
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Cards in catalog" value={cards.length} />
-        <StatCard label="Binders created" value={binders.length} accent="text-amber-400" />
-        <StatCard label="Cards in bulk" value={bulkTotal} accent="text-sky-400" />
+        <StatCard label="Cards in catalog" value={cards.length} accent="text-white" />
+        <StatCard label="Binders created" value={binders.length} accent="text-brand-gold" />
+        <StatCard label="Cards in bulk" value={bulkTotal} accent="text-brand-cyan" />
         <Link href="/bulk" className="block">
-          <StatCard label="Bulk · unique cards" value={bulkUnique} />
+          <StatCard label="Bulk · unique cards" value={bulkUnique} accent="text-brand-gold" />
         </Link>
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           onClick={() => setCreating((v) => !v)}
-          className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300"
+          className="rounded-full border-[1.5px] border-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold hover:bg-brand-gold/10"
         >
           + New binder
         </button>
         <button
           onClick={syncCards}
           disabled={syncing}
-          className="rounded-md border border-sky-400/40 bg-sky-400/10 px-4 py-2 text-sm font-semibold text-sky-300 hover:bg-sky-400/20 disabled:cursor-wait disabled:opacity-60"
+          className="rounded-full bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft disabled:cursor-wait disabled:opacity-60"
         >
           {syncing ? "Syncing..." : "Sync cards"}
         </button>
@@ -141,7 +143,7 @@ export default function DashboardPage() {
       {creating && (
         <form
           onSubmit={createBinder}
-          className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-white/10 bg-[#14171f]/60 p-4"
+          className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.06] bg-panel/60 p-4"
         >
           <div className="flex flex-col gap-1">
             <label className="text-xs text-white/50">Binder name</label>
@@ -150,7 +152,7 @@ export default function DashboardPage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="e.g. Main collection"
-              className="min-w-[220px] rounded-md border border-white/10 bg-[#0d0f14] px-3 py-1.5 text-sm text-white outline-none focus:border-amber-400"
+              className="min-w-[220px] rounded-md border border-white/10 bg-ink px-3 py-1.5 text-sm text-white outline-none focus:border-brand-gold"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -158,7 +160,7 @@ export default function DashboardPage() {
             <select
               value={newLayout}
               onChange={(e) => setNewLayout(e.target.value as BinderLayout)}
-              className="rounded-md border border-white/10 bg-[#14171f] px-2.5 py-1.5 text-sm text-white/80 outline-none focus:border-amber-400"
+              className="rounded-md border border-white/10 bg-panel px-2.5 py-1.5 text-sm text-white/80 outline-none focus:border-brand-gold"
             >
               {BINDER_LAYOUTS.map((l) => (
                 <option key={l.id} value={l.id}>
@@ -169,7 +171,7 @@ export default function DashboardPage() {
           </div>
           <button
             type="submit"
-            className="rounded-md bg-amber-400 px-4 py-1.5 text-sm font-semibold text-black hover:bg-amber-300"
+            className="rounded-full bg-brand-gold px-5 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft"
           >
             Create
           </button>
@@ -177,21 +179,31 @@ export default function DashboardPage() {
         </form>
       )}
 
-      <h2 className="mb-3 mt-8 text-sm font-semibold uppercase tracking-wide text-white/50">Your binders</h2>
+      <div className="mb-3 mt-8 flex items-center gap-3">
+        <span className="inline-block h-5 w-1 rounded-sm bg-brand-gold" />
+        <h2 className="font-display text-lg font-semibold uppercase tracking-wide text-white">Your binders</h2>
+      </div>
       {binders.length === 0 ? (
         <p className="py-10 text-center text-white/40">
           You haven&apos;t created any binders yet. Use the &quot;+ New binder&quot; button above.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {binders.map((b) => {
             const pct = cards.length ? Math.round((b.uniqueCount / cards.length) * 100) : 0;
             return (
-              <div key={b.id} className="group relative rounded-lg border border-white/10 bg-[#14171f] p-4">
-                <Link href={`/binder/${b.id}`} className="block">
-                  <div className="mb-2 flex items-center justify-between pr-6">
-                    <p className="font-semibold text-white">{b.name}</p>
-                    <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/60">
+              <div
+                key={b.id}
+                className="group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-panel p-5"
+              >
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-70"
+                  style={{ background: "linear-gradient(180deg, rgba(216,171,82,0.14), transparent 70%)" }}
+                />
+                <Link href={`/binder/${b.id}`} className="relative block">
+                  <div className="mb-3 flex items-start justify-between pr-6">
+                    <p className="font-display text-lg font-semibold text-white">{b.name}</p>
+                    <span className="rounded-md bg-brand-gold px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-ink">
                       {b.layout}
                     </span>
                   </div>
@@ -199,13 +211,13 @@ export default function DashboardPage() {
                     {b.uniqueCount} unique · {b.totalQty} copies
                   </p>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-amber-400" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full bg-brand-gold" style={{ width: `${pct}%` }} />
                   </div>
                 </Link>
                 <button
                   onClick={() => deleteBinder(b)}
                   title="Delete binder"
-                  className="absolute right-3 top-3 text-white/30 opacity-0 transition hover:text-red-300 group-hover:opacity-100"
+                  className="absolute right-4 top-4 text-white/30 opacity-0 transition hover:text-brand-red group-hover:opacity-100"
                 >
                   ✕
                 </button>

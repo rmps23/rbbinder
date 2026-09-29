@@ -11,14 +11,14 @@ export function LayoutSwitcher({
   onChange: (layout: BinderLayout) => void;
 }) {
   return (
-    <div className="flex gap-1 rounded-md border border-white/10 bg-[#14171f] p-1">
+    <div className="flex gap-1 rounded-md border border-white/10 bg-panel p-1">
       {BINDER_LAYOUTS.map((l) => (
         <button
           key={l.id}
           type="button"
           onClick={() => onChange(l.id)}
-          className={`rounded px-2.5 py-1 text-xs font-medium transition ${
-            value === l.id ? "bg-amber-400 text-black" : "text-white/60 hover:bg-white/10 hover:text-white"
+          className={`rounded px-2.5 py-1 font-display text-xs font-semibold uppercase tracking-wide transition ${
+            value === l.id ? "bg-brand-gold text-ink" : "text-white/60 hover:bg-white/10 hover:text-white"
           }`}
         >
           {l.label}

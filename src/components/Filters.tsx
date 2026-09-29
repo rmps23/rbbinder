@@ -31,17 +31,17 @@ export function Filters({
   }
 
   const selectClass =
-    "rounded-md border border-white/10 bg-[#14171f] px-2.5 py-1.5 text-sm text-white/80 outline-none focus:border-amber-400";
+    "rounded-md border border-white/10 bg-panel px-2.5 py-1.5 text-sm text-white/80 outline-none focus:border-brand-gold";
 
   return (
-    <div className="mb-4 flex flex-col gap-2.5 rounded-lg border border-white/10 bg-[#14171f]/60 p-3">
+    <div className="mb-4 flex flex-col gap-2.5 rounded-xl border border-white/[0.06] bg-panel/60 p-3">
       <div className="flex flex-wrap gap-2">
         <input
           type="text"
           placeholder="Search card..."
           value={state.search}
           onChange={(e) => set("search", e.target.value)}
-          className="min-w-[180px] flex-1 rounded-md border border-white/10 bg-[#0d0f14] px-3 py-1.5 text-sm text-white outline-none focus:border-amber-400"
+          className="min-w-[180px] flex-1 rounded-md border border-white/10 bg-ink px-3 py-1.5 text-sm text-white outline-none focus:border-brand-gold"
         />
         <select className={selectClass} value={state.setId} onChange={(e) => set("setId", e.target.value)}>
           <option value="">All sets</option>
@@ -91,7 +91,7 @@ export function Filters({
             type="checkbox"
             checked={state.onlyOwned}
             onChange={(e) => set("onlyOwned", e.target.checked)}
-            className="h-4 w-4 rounded border-white/20 bg-[#0d0f14] accent-amber-400"
+            className="h-4 w-4 rounded border-white/20 bg-ink accent-brand-gold"
           />
           {onlyOwnedLabel}
         </label>

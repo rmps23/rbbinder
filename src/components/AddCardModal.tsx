@@ -99,12 +99,12 @@ export function AddCardModal({
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-5xl flex-col rounded-lg border border-white/10 bg-[#0d0f14] p-4 shadow-xl sm:flex-row sm:gap-4"
+        className="flex w-full max-w-5xl flex-col rounded-xl border border-white/10 bg-ink p-4 shadow-xl sm:flex-row sm:gap-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">Choose cards</h2>
+            <h2 className="font-display text-lg font-semibold uppercase tracking-wide text-white">Choose cards</h2>
             <button
               onClick={onClose}
               className="rounded-md px-2 py-1 text-white/50 hover:bg-white/10 hover:text-white sm:hidden"
@@ -133,7 +133,7 @@ export function AddCardModal({
                     key={card.id}
                     ref={i === targetIndex ? targetRef : undefined}
                     onClick={() => addToQueue(card)}
-                    className="group flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[#14171f] text-left transition hover:border-amber-400/60"
+                    className="group flex flex-col overflow-hidden rounded-lg border border-white/10 bg-panel text-left transition hover:border-brand-gold/60"
                   >
                     <div className="relative aspect-[744/1039] w-full bg-[#0a0c10]">
                       {card.image.url ? (
@@ -161,7 +161,7 @@ export function AddCardModal({
                 <div className="mt-4 flex justify-center">
                   <button
                     onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
-                    className="rounded-md border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 hover:bg-white/10"
+                    className="rounded-full border border-white/15 bg-white/5 px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-white/80 hover:bg-white/10"
                   >
                     Show more ({filtered.length - visibleCount} left)
                   </button>
@@ -173,12 +173,12 @@ export function AddCardModal({
 
         <div className="mt-4 flex w-full flex-col border-t border-white/10 pt-4 sm:mt-0 sm:w-64 sm:shrink-0 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
           <div className="mb-2 hidden items-center justify-between sm:flex">
-            <h3 className="text-sm font-semibold text-white">Adding</h3>
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-white">Adding</h3>
             <button onClick={onClose} className="rounded-md px-2 py-1 text-white/50 hover:bg-white/10 hover:text-white" aria-label="Close">
               ✕
             </button>
           </div>
-          <h3 className="mb-2 text-sm font-semibold text-white sm:hidden">Adding</h3>
+          <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-wide text-white sm:hidden">Adding</h3>
 
           {queue.length === 0 ? (
             <p className="flex-1 py-6 text-center text-sm text-white/40">
@@ -187,7 +187,7 @@ export function AddCardModal({
           ) : (
             <div className="flex-1 space-y-1.5 overflow-y-auto sm:max-h-[50vh]">
               {queue.map((card, i) => (
-                <div key={`${card.id}-${i}`} className="flex items-center gap-2 rounded-md border border-white/10 bg-[#14171f] p-1.5">
+                <div key={`${card.id}-${i}`} className="flex items-center gap-2 rounded-md border border-white/10 bg-panel p-1.5">
                   <span className="w-5 shrink-0 text-center text-xs text-white/30">{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium text-white/90">{card.name}</p>
@@ -229,7 +229,7 @@ export function AddCardModal({
           <button
             onClick={() => onCommit(queue)}
             disabled={queue.length === 0}
-            className="mt-3 rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-30"
+            className="mt-3 rounded-full bg-brand-gold px-4 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft disabled:cursor-not-allowed disabled:opacity-30"
           >
             Add {queue.length > 0 ? `(${queue.length})` : ""} to binder
           </button>

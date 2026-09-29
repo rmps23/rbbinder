@@ -1,25 +1,23 @@
 "use client";
 
 const ACCENT_TEXT: Record<string, string> = {
-  amber: "text-amber-300",
-  sky: "text-sky-300",
-  fuchsia: "text-fuchsia-300",
+  gold: "text-brand-gold",
+  cyan: "text-brand-cyan",
 };
 
 const ACCENT_RING: Record<string, string> = {
-  amber: "focus-within:ring-amber-400/50",
-  sky: "focus-within:ring-sky-400/50",
-  fuchsia: "focus-within:ring-fuchsia-400/50",
+  gold: "focus-within:ring-brand-gold/50",
+  cyan: "focus-within:ring-brand-cyan/50",
 };
 
 export function QuantityStepper({
   value,
   onChange,
-  accent = "amber",
+  accent = "gold",
 }: {
   value: number;
   onChange: (qty: number) => void;
-  accent?: "amber" | "sky" | "fuchsia";
+  accent?: "gold" | "cyan";
 }) {
   return (
     <div
@@ -30,7 +28,7 @@ export function QuantityStepper({
         type="button"
         onClick={() => onChange(Math.max(0, value - 1))}
         className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90"
-        aria-label="Diminuir"
+        aria-label="Decrease"
       >
         <span className="text-sm leading-none">−</span>
       </button>
@@ -45,7 +43,7 @@ export function QuantityStepper({
         type="button"
         onClick={() => onChange(value + 1)}
         className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90"
-        aria-label="Aumentar"
+        aria-label="Increase"
       >
         <span className="text-sm leading-none">+</span>
       </button>

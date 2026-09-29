@@ -1,21 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppData } from "@/components/AppDataProvider";
+import { useHeaderToolbar } from "@/components/HeaderToolbarContext";
 import { useBinderCards } from "@/lib/useBinderCards";
 import { BinderSlotTile } from "@/components/BinderSlotTile";
 import { AddCardModal } from "@/components/AddCardModal";
 import { LayoutSwitcher } from "@/components/LayoutSwitcher";
 import { FilterState } from "@/components/Filters";
 import { BINDER_LAYOUTS, GRID_COLS_CLASS } from "@/lib/constants";
-import type { Binder, BinderLayout, BinderSlots, RiftCard } from "@/lib/types";
+import type { Binder, BinderLayout, RiftCard } from "@/lib/types";
 
 type SlotView = { position: number; card: RiftCard | null; qty: number };
-type FlipState = { side: "left" | "right"; phase: "closing" | "opening" } | null;
 
-const FLIP_MS = 220;
+// The book's imperative API (react-pageflip's TS defs type this as `any`).
+type PageFlipHandle = {
+  flipNext: (corner?: "top" | "bottom") => void;
+  flipPrev: (corner?: "top" | "bottom") => void;
+  turnToPage: (page: number) => void;
+};
+type FlipBookHandle = { pageFlip: () => PageFlipHandle };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FlipBookComponent = React.ComponentType<any>;
+
+const REF_WIDTH = 420;
+const MIN_WIDTH = 240;
+const MAX_WIDTH = 560;
 
 const DEFAULT_FILTERS: FilterState = {
   search: "",
@@ -27,51 +39,68 @@ const DEFAULT_FILTERS: FilterState = {
   onlyOwned: false,
 };
 
-function BinderPage({
-  slots,
-  cols,
-  holes,
-  onPick,
-  onRemove,
-  onDropCard,
-  onInsertAt,
-  style,
-}: {
+type PageGridProps = {
   slots: SlotView[];
   cols: number;
-  holes: "left" | "right";
   onPick: (position: number) => void;
   onRemove: (position: number) => void;
   onDropCard: (from: number, to: number) => void;
   onInsertAt: (from: number, insertPosition: number) => void;
-  style?: React.CSSProperties;
-}) {
+};
+
+function PageGrid({ slots, cols, onPick, onRemove, onDropCard, onInsertAt }: PageGridProps) {
   return (
-    <div className="relative flex-1 rounded-lg bg-[#101319] p-3 shadow-inner" style={style}>
-      <div
-        className={`pointer-events-none absolute top-1/2 flex -translate-y-1/2 flex-col gap-3 ${
-          holes === "left" ? "right-1" : "left-1"
-        }`}
-      >
-        {[0, 1, 2].map((i) => (
-          <span key={i} className="h-2 w-2 rounded-full bg-black/50 ring-1 ring-white/5" />
-        ))}
-      </div>
-      <div className={`grid ${GRID_COLS_CLASS[cols]} gap-3`}>
-        {slots.map(({ position, card, qty }) => (
-          <BinderSlotTile
-            key={position}
-            position={position}
-            card={card}
-            qty={qty}
-            onPick={() => onPick(position)}
-            onRemove={() => onRemove(position)}
-            onDropCard={onDropCard}
-            onInsertAt={onInsertAt}
-          />
-        ))}
-      </div>
+    <div className={`grid ${GRID_COLS_CLASS[cols]} h-full gap-3 p-3`}>
+      {slots.map(({ position, card, qty }) => (
+        <BinderSlotTile
+          key={position}
+          position={position}
+          card={card}
+          qty={qty}
+          onPick={() => onPick(position)}
+          onRemove={() => onRemove(position)}
+          onDropCard={onDropCard}
+          onInsertAt={onInsertAt}
+        />
+      ))}
     </div>
+  );
+}
+
+// react-pageflip clones each page child to attach its own ref, so a page
+// built from a component (rather than a plain <div>) has to forward it.
+const FlipPage = forwardRef<HTMLDivElement, PageGridProps>((props, ref) => (
+  <div
+    ref={ref}
+    className="h-full w-full rounded-xl"
+    style={{
+      background:
+        "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.05), transparent 60%), " +
+        "linear-gradient(180deg, rgba(255,255,255,0.035) 0%, transparent 30%, rgba(0,0,0,0.16) 100%), " +
+        "#1a212c",
+    }}
+  >
+    <PageGrid {...props} />
+  </div>
+));
+FlipPage.displayName = "FlipPage";
+
+// A metal ring, like a real ring-binder mechanism straddling the gutter
+// between two pages - an open oval rather than a flat dot, with a
+// light-to-dark gradient stroke to read as cylindrical metal.
+function BinderRing({ id }: { id: string }) {
+  const gradientId = `ring-metal-${id}`;
+  return (
+    <svg width="44" height="26" viewBox="0 0 44 26" className="shrink-0" style={{ filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.6))" }}>
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f3dfa8" />
+          <stop offset="45%" stopColor="#c9a24a" />
+          <stop offset="100%" stopColor="#7a5c22" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="22" cy="13" rx="18" ry="10" fill="none" stroke={`url(#${gradientId})`} strokeWidth={5} />
+    </svg>
   );
 }
 
@@ -81,16 +110,34 @@ export default function BinderDetailPage() {
   const router = useRouter();
   const { cards, sets, loading: cardsLoading } = useAppData();
   const { slots, loading: slotsLoading, placeCard, clearSlot, swapSlots, insertAtBoundary } = useBinderCards(binderId);
+  const { setToolbar } = useHeaderToolbar();
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const [compactNavVisible, setCompactNavVisible] = useState(false);
 
   const [binder, setBinder] = useState<Binder | null>(null);
   const [binderLoading, setBinderLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [spread, setSpread] = useState(0);
-  const [flip, setFlip] = useState<FlipState>(null);
   const [pickerPosition, setPickerPosition] = useState<number | null>(null);
-  const [spineDragOver, setSpineDragOver] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+
+  // react-pageflip manipulates the DOM directly and isn't SSR-safe, so it's
+  // imported client-side only, after mount (next/dynamic's own ssr:false
+  // wrapper doesn't forward refs, which we need for the nav buttons).
+  const [FlipBook, setFlipBook] = useState<FlipBookComponent | null>(null);
+  useEffect(() => {
+    let active = true;
+    import("react-pageflip").then((mod) => {
+      if (active) setFlipBook(() => mod.default);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const bookRef = useRef<FlipBookHandle | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const jumpToEndRef = useRef(false);
 
   // Remembers the last filters used in the "add card" popup for this
   // specific binder, so re-opening it doesn't lose your search/set/type.
@@ -148,6 +195,10 @@ export default function BinderDetailPage() {
 
   const layout = BINDER_LAYOUTS.find((l) => l.id === binder?.layout) ?? BINDER_LAYOUTS[1];
   const perPage = layout.cols * layout.rows;
+  // Approximate width/height ratio for a page of this layout (card art is
+  // 744x1039, gaps/padding ignored) - used to size the flip book so pages
+  // don't come out stretched or squashed.
+  const pageAspect = (layout.cols * 744) / (layout.rows * 1039);
 
   const highestPosition = useMemo(() => {
     const positions = Object.keys(slots).map(Number);
@@ -155,15 +206,14 @@ export default function BinderDetailPage() {
   }, [slots]);
 
   // At least binder.pageCount pages, but always one blank page past the
-  // last filled one too, like turning to the next empty page of an album.
+  // last filled one too, like turning to the next empty page of an album -
+  // and always an even count, since the book always shows two at a time.
   const minPagesAllowed = Math.floor(highestPosition / perPage) + 2;
   const totalPages = Math.max(binder?.pageCount ?? 2, minPagesAllowed);
   const canRemovePage = totalPages > minPagesAllowed;
-  const totalSpreads = Math.ceil(totalPages / 2);
-  const clampedSpread = Math.min(spread, totalSpreads - 1);
-  const leftPageIndex = clampedSpread * 2;
+  const bookPageCount = Math.ceil(totalPages / 2) * 2;
+  const leftPageIndex = Math.min(currentPage, bookPageCount - 2);
   const rightPageIndex = leftPageIndex + 1;
-  const insertPosition = rightPageIndex * perPage;
 
   function buildPageSlots(pageIndex: number): SlotView[] {
     return Array.from({ length: perPage }, (_, i) => {
@@ -174,12 +224,24 @@ export default function BinderDetailPage() {
     });
   }
 
-  const leftSlots = useMemo(() => buildPageSlots(leftPageIndex), [leftPageIndex, perPage, slots, cardById]);
-  const rightSlots = useMemo(() => buildPageSlots(rightPageIndex), [rightPageIndex, perPage, slots, cardById]);
+  const pages = useMemo(
+    () => Array.from({ length: bookPageCount }, (_, i) => buildPageSlots(i)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bookPageCount, perPage, slots, cardById]
+  );
+
+  // If pages are removed out from under the page you're looking at, snap
+  // back into range instead of leaving the book on a page that no longer
+  // exists.
+  useEffect(() => {
+    if (currentPage > bookPageCount - 2) {
+      const target = Math.max(0, bookPageCount - 2);
+      requestAnimationFrame(() => bookRef.current?.pageFlip()?.turnToPage(target));
+    }
+  }, [bookPageCount, currentPage]);
 
   async function changeLayout(newLayout: BinderLayout) {
     setBinder((b) => (b ? { ...b, layout: newLayout } : b));
-    setSpread(0);
     await fetch(`/api/binders/${binderId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -190,13 +252,22 @@ export default function BinderDetailPage() {
   async function addPage() {
     const newPageCount = totalPages + 1;
     setBinder((b) => (b ? { ...b, pageCount: newPageCount } : b));
-    setSpread(Math.ceil(newPageCount / 2) - 1);
+    jumpToEndRef.current = true;
     await fetch(`/api/binders/${binderId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ pageCount: newPageCount }),
     });
   }
+
+  // After the new page lands and the book's own page collection has had a
+  // moment to rebuild, jump to the new last spread.
+  useEffect(() => {
+    if (jumpToEndRef.current) {
+      jumpToEndRef.current = false;
+      requestAnimationFrame(() => bookRef.current?.pageFlip()?.turnToPage(bookPageCount - 2));
+    }
+  }, [bookPageCount]);
 
   async function removePage() {
     if (!canRemovePage) return;
@@ -209,27 +280,77 @@ export default function BinderDetailPage() {
     });
   }
 
-  // Flips the visible spread like a real page turn: the outgoing page
-  // rotates edge-on (hiding its content via backface-visibility), the
-  // spread swaps underneath while it's invisible, then it rotates back
-  // open showing the new pages.
-  function turnTo(target: number, side: "left" | "right") {
-    if (flip || target === clampedSpread || target < 0 || target > totalSpreads - 1) return;
-    setFlip({ side, phase: "closing" });
-    window.setTimeout(() => {
-      setSpread(target);
-      setFlip({ side, phase: "opening" });
-      window.setTimeout(() => setFlip(null), FLIP_MS);
-    }, FLIP_MS);
-  }
-
   function goPrev() {
-    turnTo(clampedSpread - 1, "left");
+    bookRef.current?.pageFlip()?.flipPrev();
   }
 
   function goNext() {
-    turnTo(clampedSpread + 1, "right");
+    bookRef.current?.pageFlip()?.flipNext();
   }
+
+  // Once the toolbar (with the page arrows) scrolls out from under the
+  // sticky header, fade in a compact prev/next control in the header itself
+  // instead, so paging through the binder never needs a scroll back up.
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setCompactNavVisible(!entry.isIntersecting),
+      { rootMargin: "-57px 0px 0px 0px", threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+    // Only needs to (re)attach once the toolbar element actually exists.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!binder]);
+
+  const compactNav = (
+    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pl-2 pr-1.5 shadow-inner">
+      <button
+        onClick={goPrev}
+        disabled={leftPageIndex === 0}
+        aria-label="Previous pages"
+        className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+      >
+        ←
+      </button>
+      <span className="min-w-[52px] text-center font-display text-[11px] font-semibold uppercase tracking-wide tabular-nums text-white/60">
+        {leftPageIndex + 1}–{rightPageIndex + 1}/{totalPages}
+      </span>
+      <button
+        onClick={goNext}
+        disabled={rightPageIndex >= bookPageCount - 1}
+        aria-label="Next pages"
+        className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+      >
+        →
+      </button>
+      <span className="mx-0.5 h-4 w-px bg-white/10" />
+      <button
+        onClick={addPage}
+        title="Add page"
+        aria-label="Add page"
+        className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-gold font-display text-sm font-semibold text-ink hover:bg-brand-goldSoft"
+      >
+        +
+      </button>
+      <button
+        onClick={removePage}
+        disabled={!canRemovePage}
+        title="Remove the last page"
+        aria-label="Remove the last page"
+        className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 font-display text-sm font-semibold text-white/60 hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-20"
+      >
+        −
+      </button>
+    </div>
+  );
+
+  useEffect(() => {
+    setToolbar({ node: compactNav, visible: compactNavVisible });
+    return () => setToolbar(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leftPageIndex, rightPageIndex, totalPages, bookPageCount, compactNavVisible]);
 
   async function saveName() {
     const name = nameDraft.trim();
@@ -251,13 +372,6 @@ export default function BinderDetailPage() {
     if (!confirm(`Delete binder "${binder.name}"? This action cannot be undone.`)) return;
     await fetch(`/api/binders/${binderId}`, { method: "DELETE" });
     router.push("/");
-  }
-
-  function handleDropOnSpine(e: React.DragEvent) {
-    e.preventDefault();
-    setSpineDragOver(false);
-    const from = Number(e.dataTransfer.getData("text/plain"));
-    if (!Number.isNaN(from)) insertAtBoundary(from, insertPosition);
   }
 
   // Places the queued cards (built up in the popup) one after another,
@@ -285,7 +399,7 @@ export default function BinderDetailPage() {
     return (
       <div className="py-10 text-center">
         <p className="mb-3 text-white/40">Binder not found.</p>
-        <Link href="/" className="text-sm font-medium text-amber-400 hover:underline">
+        <Link href="/" className="text-sm font-medium text-brand-gold hover:underline">
           Back to dashboard
         </Link>
       </div>
@@ -294,137 +408,84 @@ export default function BinderDetailPage() {
 
   return (
     <div>
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        {renaming ? (
-          <input
-            autoFocus
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            onBlur={saveName}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveName();
-              if (e.key === "Escape") {
-                setNameDraft(binder.name);
-                setRenaming(false);
-              }
-            }}
-            className="rounded-md border border-amber-400/50 bg-[#14171f] px-2 py-1 text-2xl font-bold text-white outline-none"
-          />
-        ) : (
-          <h1
-            onClick={() => setRenaming(true)}
-            title="Click to rename"
-            className="cursor-text text-2xl font-bold text-white hover:text-amber-300"
-          >
-            {binder.name}
-          </h1>
-        )}
-        <div className="flex items-center gap-2">
-          <LayoutSwitcher value={binder.layout} onChange={changeLayout} />
-          <button
-            onClick={deleteBinder}
-            className="rounded-md border border-red-400/30 bg-red-400/10 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-400/20"
-          >
-            Delete binder
-          </button>
-        </div>
-      </div>
-      <p className="mb-5 text-sm text-white/50">
-        {binderStats.uniqueCount} unique cards · {binderStats.totalQty} copies in this binder. Drag a card onto
-        another to swap them, or onto its left/right edge (or into the middle of the pages) to insert it there and
-        push the rest along.
-      </p>
-
-      <div className="mb-3 flex items-center justify-between">
-        <button
-          onClick={goPrev}
-          disabled={clampedSpread === 0 || flip !== null}
-          aria-label="Previous pages"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          ←
-        </button>
-        <span className="text-sm text-white/50">
-          Pages {leftPageIndex + 1}–{rightPageIndex + 1} of {totalPages}
-        </span>
-        <button
-          onClick={goNext}
-          disabled={clampedSpread >= totalSpreads - 1 || flip !== null}
-          aria-label="Next pages"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          →
-        </button>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div
-          className="flex-1 rounded-xl border border-white/10 bg-[#07080b] p-2 shadow-2xl sm:p-4"
-          style={{ perspective: "2000px" }}
-        >
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <BinderPage
-              slots={leftSlots}
-              cols={layout.cols}
-              holes="left"
-              onPick={setPickerPosition}
-              onRemove={clearSlot}
-              onDropCard={swapSlots}
-              onInsertAt={insertAtBoundary}
-              style={
-                flip?.side === "left"
-                  ? {
-                      transform: `rotateY(${flip.phase === "closing" ? "-130deg" : "0deg"})`,
-                      transition: `transform ${FLIP_MS}ms ease-in`,
-                      transformOrigin: "right center",
-                      transformStyle: "preserve-3d",
-                      backfaceVisibility: "hidden",
-                    }
-                  : undefined
-              }
-            />
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setSpineDragOver(true);
+      <div ref={toolbarRef} className="mb-4 overflow-hidden rounded-xl border border-white/[0.06] bg-panel">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
+          {renaming ? (
+            <input
+              autoFocus
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveName();
+                if (e.key === "Escape") {
+                  setNameDraft(binder.name);
+                  setRenaming(false);
+                }
               }}
-              onDragLeave={() => setSpineDragOver(false)}
-              onDrop={handleDropOnSpine}
-              title="Drop here to insert and push the following cards along"
-              className={`hidden shrink-0 items-center justify-center self-stretch rounded transition sm:flex ${
-                spineDragOver ? "w-8 bg-amber-400/20" : "w-6"
-              }`}
-            >
-              <div className="h-full w-px bg-gradient-to-b from-transparent via-black/60 to-transparent" />
-            </div>
-            <BinderPage
-              slots={rightSlots}
-              cols={layout.cols}
-              holes="right"
-              onPick={setPickerPosition}
-              onRemove={clearSlot}
-              onDropCard={swapSlots}
-              onInsertAt={insertAtBoundary}
-              style={
-                flip?.side === "right"
-                  ? {
-                      transform: `rotateY(${flip.phase === "closing" ? "130deg" : "0deg"})`,
-                      transition: `transform ${FLIP_MS}ms ease-in`,
-                      transformOrigin: "left center",
-                      transformStyle: "preserve-3d",
-                      backfaceVisibility: "hidden",
-                    }
-                  : undefined
-              }
+              className="rounded-md border border-brand-gold/50 bg-ink px-2 py-1 font-display text-xl font-semibold uppercase tracking-wide text-white outline-none"
             />
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <h1
+                onClick={() => setRenaming(true)}
+                title="Click to rename"
+                className="cursor-text font-display text-xl font-semibold uppercase tracking-wide text-white hover:text-brand-gold"
+              >
+                {binder.name}
+              </h1>
+              <button
+                onClick={() => setRenaming(true)}
+                title="Rename binder"
+                aria-label="Rename binder"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-white/35 hover:bg-white/10 hover:text-brand-gold"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <LayoutSwitcher value={binder.layout} onChange={changeLayout} />
+            <button
+              onClick={deleteBinder}
+              className="rounded-md border border-brand-red/30 bg-brand-red/10 px-3 py-1.5 text-xs font-medium text-brand-red hover:bg-brand-red/20"
+            >
+              Delete binder
+            </button>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-3 px-4 py-2.5">
+          <button
+            onClick={goPrev}
+            disabled={leftPageIndex === 0}
+            aria-label="Previous pages"
+            className="flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] border-brand-gold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+          >
+            ←
+          </button>
+          <span className="min-w-[130px] text-center font-display text-xs font-semibold uppercase tracking-wide text-white/50">
+            Pages {leftPageIndex + 1}–{rightPageIndex + 1} of {totalPages}
+          </span>
+          <button
+            onClick={goNext}
+            disabled={rightPageIndex >= bookPageCount - 1}
+            aria-label="Next pages"
+            className="flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] border-brand-gold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+          >
+            →
+          </button>
+          <span className="mx-1 h-6 w-px bg-white/10" />
           <button
             onClick={addPage}
             title="Add page"
             aria-label="Add page"
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-light text-white/70 hover:bg-white/10 hover:text-amber-300"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-gold font-display text-base font-semibold text-ink hover:bg-brand-goldSoft"
           >
             +
           </button>
@@ -433,11 +494,70 @@ export default function BinderDetailPage() {
             disabled={!canRemovePage}
             title="Remove the last page"
             aria-label="Remove the last page"
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-light text-white/70 hover:bg-white/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-20"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-ink font-display text-base font-semibold text-white/60 hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-20"
           >
             −
           </button>
         </div>
+      </div>
+
+      <p className="mb-4 text-center text-sm text-white/40">{binderStats.totalQty} cards placed</p>
+
+      <div className="relative flex items-center justify-center rounded-2xl border border-white/[0.07] bg-[#101520] p-2 shadow-2xl sm:p-4">
+        <div
+          className="pointer-events-none absolute inset-y-6 left-1/2 z-10 w-3 -translate-x-1/2 sm:inset-y-10"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(0,0,0,0.7) 35%, rgba(0,0,0,0.7) 65%, transparent)" }}
+        />
+        <div className="pointer-events-none absolute inset-y-10 left-1/2 -z-10 flex w-0 -translate-x-1/2 flex-col items-center justify-between sm:inset-y-14">
+          {[0, 1, 2, 3].map((i) => (
+            <BinderRing key={i} id={String(i)} />
+          ))}
+        </div>
+        {FlipBook ? (
+          <FlipBook
+            key={layout.id}
+            ref={bookRef}
+            width={REF_WIDTH}
+            height={Math.round(REF_WIDTH / pageAspect)}
+            size="stretch"
+            minWidth={MIN_WIDTH}
+            maxWidth={MAX_WIDTH}
+            minHeight={Math.round(MIN_WIDTH / pageAspect)}
+            maxHeight={Math.round(MAX_WIDTH / pageAspect)}
+            startPage={0}
+            drawShadow
+            flippingTime={600}
+            usePortrait
+            startZIndex={0}
+            autoSize
+            maxShadowOpacity={0.5}
+            showCover={false}
+            mobileScrollSupport
+            swipeDistance={30}
+            clickEventForward
+            useMouseEvents={false}
+            showPageCorners={false}
+            disableFlipByClick
+            className=""
+            style={{}}
+            onFlip={(e: { data: number }) => setCurrentPage(e.data)}
+            onInit={(e: { data: { page: number } }) => setCurrentPage(e.data.page)}
+          >
+            {pages.map((pageSlots, i) => (
+              <FlipPage
+                key={i}
+                slots={pageSlots}
+                cols={layout.cols}
+                onPick={setPickerPosition}
+                onRemove={clearSlot}
+                onDropCard={swapSlots}
+                onInsertAt={insertAtBoundary}
+              />
+            ))}
+          </FlipBook>
+        ) : (
+          <p className="py-10 text-center text-white/40">Loading binder...</p>
+        )}
       </div>
 
       {pickerPosition !== null && (
