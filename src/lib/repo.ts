@@ -55,18 +55,33 @@ function toBinder(
   };
 }
 
+// Supabase/PostgREST silently caps a single select at 1000 rows, so anything
+// that can grow past that has to be read in pages.
+async function selectAll<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const PAGE = 1000;
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await fetchPage(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+  return rows;
+}
+
 // ---------- cards / sets ----------
 
 export async function getCardsAndSets(): Promise<{ cards: RiftCard[]; sets: SetInfo[] }> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
-    const [{ data: cardRows, error: cardsError }, { data: setRows, error: setsError }] = await Promise.all([
-      supabase.from("cards").select("payload"),
+    const [cardRows, { data: setRows, error: setsError }] = await Promise.all([
+      selectAll((from, to) => supabase.from("cards").select("payload").order("id").range(from, to)),
       supabase.from("sets").select("id, name, card_count"),
     ]);
-    if (cardsError) throw new Error(cardsError.message);
     if (setsError) throw new Error(setsError.message);
-    const cards = (cardRows ?? []).map((r) => r.payload as RiftCard);
+    const cards = cardRows.map((r) => r.payload as RiftCard);
     const sets = (setRows ?? []).map((r) => ({ id: r.id, name: r.name, cardCount: r.card_count }));
     return sortCardsAndSets(cards, sets);
   }
@@ -80,9 +95,8 @@ export async function getCardsAndSets(): Promise<{ cards: RiftCard[]; sets: SetI
 export async function getExistingCardIds(): Promise<Set<string>> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.from("cards").select("id");
-    if (error) throw new Error(error.message);
-    return new Set((data ?? []).map((r) => r.id));
+    const rows = await selectAll((from, to) => supabase.from("cards").select("id").order("id").range(from, to));
+    return new Set(rows.map((r) => r.id));
   }
   const db = await readLocalDb();
   return new Set(db.cards.map((c) => c.id));
@@ -176,14 +190,21 @@ export async function setBulkQty(cardId: string, variant: BulkVariant, qty: numb
 export async function listBinders(): Promise<Binder[]> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
-    const [{ data: binders, error: bindersError }, { data: qtyRows, error: qtyError }] = await Promise.all([
+    const [{ data: binders, error: bindersError }, qtyRows] = await Promise.all([
       supabase.from("binders").select("*").order("sort_order").order("created_at"),
-      supabase.from("binder_cards").select("binder_id, card_id, qty").gt("qty", 0),
+      selectAll((from, to) =>
+        supabase
+          .from("binder_cards")
+          .select("binder_id, card_id, qty")
+          .gt("qty", 0)
+          .order("binder_id")
+          .order("position")
+          .range(from, to)
+      ),
     ]);
     if (bindersError) throw new Error(bindersError.message);
-    if (qtyError) throw new Error(qtyError.message);
 
-    const stats = accumulateStats((qtyRows ?? []).map((r) => ({ binderId: r.binder_id, cardId: r.card_id, qty: r.qty })));
+    const stats = accumulateStats(qtyRows.map((r) => ({ binderId: r.binder_id, cardId: r.card_id, qty: r.qty })));
     return (binders ?? []).map((b) =>
       toBinder(
         { id: b.id, name: b.name, layout: b.layout, pageCount: b.page_count, sortOrder: b.sort_order, createdAt: b.created_at },
