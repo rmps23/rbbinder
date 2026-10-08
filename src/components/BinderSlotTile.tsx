@@ -24,6 +24,7 @@ export function BinderSlotTile({
   onInsertAt: (fromPosition: number, insertPosition: number) => void;
 }) {
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const [dropZone, setDropZone] = useState<DropZone | null>(null);
 
   if (!card) {
@@ -113,7 +114,9 @@ export function BinderSlotTile({
           alt={card.image.alt}
           fill
           sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 16vw"
-          className="pointer-events-none object-cover"
+          loading="eager"
+          className={`pointer-events-none object-cover transition-opacity duration-500 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+          onLoad={() => setImgLoaded(true)}
           onError={() => setImgError(true)}
           draggable={false}
         />

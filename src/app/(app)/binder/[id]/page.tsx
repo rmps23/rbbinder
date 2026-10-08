@@ -69,18 +69,25 @@ function PageGrid({ slots, cols, onPick, onRemove, onDropCard, onInsertAt }: Pag
 
 // react-pageflip clones each page child to attach its own ref, so a page
 // built from a component (rather than a plain <div>) has to forward it.
-const FlipPage = forwardRef<HTMLDivElement, PageGridProps>((props, ref) => (
-  <div
-    ref={ref}
-    className="h-full w-full rounded-xl"
-    style={{
-      background:
-        "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.05), transparent 60%), " +
-        "linear-gradient(180deg, rgba(255,255,255,0.035) 0%, transparent 30%, rgba(0,0,0,0.16) 100%), " +
-        "#1a212c",
-    }}
-  >
-    <PageGrid {...props} />
+// The library rewrites the root element's inline style on every frame
+// (cssText), so anything painted via style= on the root - like the page's
+// background - gets wiped mid-flip and the page turns see-through. All the
+// visuals therefore live on an inner div.
+const FlipPage = forwardRef<HTMLDivElement, PageGridProps & { side: "left" | "right" }>(({ side, ...props }, ref) => (
+  <div ref={ref} className="h-full w-full">
+    <div
+      className="h-full w-full overflow-hidden rounded-xl"
+      style={{
+        background:
+          // Darkens toward the gutter, like paper curving down into the spine.
+          `linear-gradient(${side === "left" ? 270 : 90}deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 9%, transparent 24%), ` +
+          "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.05), transparent 60%), " +
+          "linear-gradient(180deg, rgba(255,255,255,0.035) 0%, transparent 30%, rgba(0,0,0,0.16) 100%), " +
+          "#1a212c",
+      }}
+    >
+      <PageGrid {...props} />
+    </div>
   </div>
 ));
 FlipPage.displayName = "FlipPage";
@@ -228,6 +235,29 @@ export default function BinderDetailPage() {
     () => Array.from({ length: bookPageCount }, (_, i) => buildPageSlots(i)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bookPageCount, perPage, slots, cardById]
+  );
+
+  // The book rebuilds its whole page collection whenever its children change
+  // identity, which looked like a hard flicker after every page turn (the
+  // flip updates currentPage, which re-rendered fresh <FlipPage> elements).
+  // Keeping the elements memoized - with handlers read through a ref so they
+  // stay stable - means a flip no longer triggers a rebuild.
+  const handlersRef = useRef({ clearSlot, swapSlots, insertAtBoundary });
+  handlersRef.current = { clearSlot, swapSlots, insertAtBoundary };
+  const stableHandlers = useMemo(
+    () => ({
+      onRemove: (position: number) => handlersRef.current.clearSlot(position),
+      onDropCard: (from: number, to: number) => handlersRef.current.swapSlots(from, to),
+      onInsertAt: (from: number, insertPosition: number) => handlersRef.current.insertAtBoundary(from, insertPosition),
+    }),
+    []
+  );
+  const pageElements = useMemo(
+    () =>
+      pages.map((pageSlots, i) => (
+        <FlipPage key={i} side={i % 2 === 0 ? "left" : "right"} slots={pageSlots} cols={layout.cols} onPick={setPickerPosition} {...stableHandlers} />
+      )),
+    [pages, layout.cols, stableHandlers]
   );
 
   // If pages are removed out from under the page you're looking at, snap
@@ -504,10 +534,6 @@ export default function BinderDetailPage() {
       <p className="mb-4 text-center text-sm text-white/40">{binderStats.totalQty} cards placed</p>
 
       <div className="relative flex items-center justify-center rounded-2xl border border-white/[0.07] bg-[#101520] p-2 shadow-2xl sm:p-4">
-        <div
-          className="pointer-events-none absolute inset-y-6 left-1/2 z-10 w-3 -translate-x-1/2 sm:inset-y-10"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(0,0,0,0.7) 35%, rgba(0,0,0,0.7) 65%, transparent)" }}
-        />
         <div className="pointer-events-none absolute inset-y-10 left-1/2 -z-10 flex w-0 -translate-x-1/2 flex-col items-center justify-between sm:inset-y-14">
           {[0, 1, 2, 3].map((i) => (
             <BinderRing key={i} id={String(i)} />
@@ -526,7 +552,7 @@ export default function BinderDetailPage() {
             maxHeight={Math.round(MAX_WIDTH / pageAspect)}
             startPage={0}
             drawShadow
-            flippingTime={600}
+            flippingTime={800}
             usePortrait
             startZIndex={0}
             autoSize
@@ -543,17 +569,7 @@ export default function BinderDetailPage() {
             onFlip={(e: { data: number }) => setCurrentPage(e.data)}
             onInit={(e: { data: { page: number } }) => setCurrentPage(e.data.page)}
           >
-            {pages.map((pageSlots, i) => (
-              <FlipPage
-                key={i}
-                slots={pageSlots}
-                cols={layout.cols}
-                onPick={setPickerPosition}
-                onRemove={clearSlot}
-                onDropCard={swapSlots}
-                onInsertAt={insertAtBoundary}
-              />
-            ))}
+            {pageElements}
           </FlipBook>
         ) : (
           <p className="py-10 text-center text-white/40">Loading binder...</p>
