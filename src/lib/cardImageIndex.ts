@@ -16,7 +16,8 @@ export type ThumbIndex = {
   size: number;
   // `groupOf` maps a card id to its name, so other prints of the same card
   // (near-identical art) don't count as the runner-up.
-  match: (rgba: Uint8ClampedArray, groupOf: (id: string) => string) => ImageMatch | null;
+  match: (rgba: Uint8ClampedArray) => ImageMatch | null;
+  setGroups: (groupOf: (id: string) => string) => void;
 };
 
 // Per-channel zero-mean / unit-variance, so brightness, contrast and white
@@ -57,20 +58,30 @@ export function loadThumbIndex(): Promise<ThumbIndex> {
 
       const q = new Float32Array(size);
       const rgb = new Float32Array(size);
+      const dotsBuf = new Float32Array(json.ids.length);
+      let groups = new Int32Array(json.ids.length);
       const index: ThumbIndex = {
+        setGroups(groupOf) {
+          const seen = new Map<string, number>();
+          groups = Int32Array.from(json.ids, (id) => {
+            const g = groupOf(id);
+            if (!seen.has(g)) seen.set(g, seen.size);
+            return seen.get(g)!;
+          });
+        },
         w: json.w,
         h: json.h,
         ids: json.ids,
         vecs,
         size,
-        match(rgba, groupOf) {
+        match(rgba) {
           for (let i = 0, j = 0; i < rgba.length; i += 4, j += 3) {
             rgb[j] = rgba[i];
             rgb[j + 1] = rgba[i + 1];
             rgb[j + 2] = rgba[i + 2];
           }
           normalize(rgb, size, q, 0);
-          const dots = new Float32Array(json.ids.length);
+          const dots = dotsBuf;
           let bi = 0;
           for (let e = 0; e < json.ids.length; e++) {
             let dot = 0;
@@ -79,10 +90,10 @@ export function loadThumbIndex(): Promise<ThumbIndex> {
             dots[e] = dot;
             if (dot > dots[bi]) bi = e;
           }
-          const group = groupOf(json.ids[bi]);
+          const group = groups[bi];
           let second = -2;
           for (let e = 0; e < json.ids.length; e++) {
-            if (dots[e] > second && groupOf(json.ids[e]) !== group) second = dots[e];
+            if (dots[e] > second && groups[e] !== group) second = dots[e];
           }
           return { id: json.ids[bi], score: dots[bi], second };
         },

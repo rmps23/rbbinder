@@ -14,9 +14,10 @@ type Worker = {
 
 const SAME_CARD_COOLDOWN_MS = 4000;
 const CARD_RATIO = 744 / 1039;
-const IMAGE_MIN_SCORE = 0.8;
-const IMAGE_MIN_MARGIN = 0.03;
-const IMAGE_STREAK = 3;
+const IMAGE_MIN_SCORE = 0.55;
+const OCR_DELAY_MS = 4000;
+const VOTE_WINDOW = 5;
+const VOTE_NEEDED = 4;
 
 export function ScanCardModal({
   cards,
@@ -193,7 +194,11 @@ export function ScanCardModal({
       }
     }
 
-    // Fast path: compare the card art to the catalog thumbnails ~8x a second.
+    // Fast path: compare the card art to the catalog thumbnails as fast as
+    // the phone can. Each frame is sampled at a few small shifts (the card
+    // never sits exactly in the frame) and the best-scoring one wins; then a
+    // short vote over the last frames decides, so one blurry frame can't
+    // trigger or block a detection.
     async function imageLoop() {
       let index;
       try {
@@ -201,9 +206,15 @@ export function ScanCardModal({
       } catch {
         return;
       }
+      const byId = new Map(cards.map((c) => [c.id, c]));
+      index.setGroups((id) => {
+        const c = byId.get(id);
+        return c ? `${c.name}|${c.subtitle ?? ""}` : id;
+      });
+
       const small = document.createElement("canvas");
-      small.width = index.w * 4;
-      small.height = index.h * 4;
+      small.width = index.w * 3;
+      small.height = index.h * 3;
       const tiny = document.createElement("canvas");
       tiny.width = index.w;
       tiny.height = index.h;
@@ -213,51 +224,56 @@ export function ScanCardModal({
       sctx.imageSmoothingQuality = "high";
       tctx.imageSmoothingQuality = "high";
 
-      const byId = new Map(cards.map((c) => [c.id, c]));
-      const groupOf = (id: string) => {
-        const c = byId.get(id);
-        return c ? `${c.name}|${c.subtitle ?? ""}` : id;
-      };
-      let streakId: string | null = null;
-      let streak = 0;
+      const SHIFTS: [number, number][] = [
+        [0, 0],
+        [-0.03, 0],
+        [0.03, 0],
+        [0, -0.03],
+        [0, 0.03],
+      ];
+      const votes: { id: string; score: number }[] = [];
 
       while (!cancelled) {
-        await new Promise((r) => setTimeout(r, 110));
+        await new Promise((r) => setTimeout(r, 0));
         const video = videoRef.current;
         const container = containerRef.current;
-        if (!video || !container || !video.videoWidth || pendingRef.current) continue;
-
-        const g = guideRect(video, container);
-        const r = {
-          x: g.x + g.w * THUMB_MARGIN_X,
-          y: g.y + g.h * THUMB_MARGIN_Y,
-          w: g.w * (1 - 2 * THUMB_MARGIN_X),
-          h: g.h * (1 - 2 * THUMB_MARGIN_Y),
-        };
-        sctx.drawImage(video, r.x, r.y, r.w, r.h, 0, 0, small.width, small.height);
-        tctx.drawImage(small, 0, 0, tiny.width, tiny.height);
-        const m = index.match(tctx.getImageData(0, 0, index.w, index.h).data, groupOf);
-        if (!m) continue;
-        setImgDebug(`art ${m.score.toFixed(2)} (next ${m.second.toFixed(2)}) ${byId.get(m.id)?.name ?? ""}`);
-
-        const confident = m.score >= IMAGE_MIN_SCORE && m.score - m.second >= IMAGE_MIN_MARGIN;
-        if (!confident) {
-          streakId = null;
-          streak = 0;
+        if (!video || !container || !video.videoWidth || pendingRef.current) {
+          votes.length = 0;
+          await new Promise((r) => setTimeout(r, 80));
           continue;
         }
-        streak = m.id === streakId ? streak + 1 : 1;
-        streakId = m.id;
-        if (streak < IMAGE_STREAK) continue;
 
-        const card = byId.get(m.id);
+        const g = guideRect(video, container);
+        const rw = g.w * (1 - 2 * THUMB_MARGIN_X);
+        const rh = g.h * (1 - 2 * THUMB_MARGIN_Y);
+        const t0 = performance.now();
+        let best: { id: string; score: number; second: number } | null = null;
+        for (const [sx, sy] of SHIFTS) {
+          sctx.drawImage(video, g.x + g.w * (THUMB_MARGIN_X + sx), g.y + g.h * (THUMB_MARGIN_Y + sy), rw, rh, 0, 0, small.width, small.height);
+          tctx.drawImage(small, 0, 0, tiny.width, tiny.height);
+          const m = index.match(tctx.getImageData(0, 0, index.w, index.h).data);
+          if (m && (!best || m.score > best.score)) best = m;
+        }
+        if (!best) continue;
+        setImgDebug(`art ${Math.round(performance.now() - t0)}ms ${best.score.toFixed(2)} (next ${best.second.toFixed(2)}) ${byId.get(best.id)?.name ?? ""}`);
+
+        votes.push({ id: best.id, score: best.score });
+        if (votes.length > VOTE_WINDOW) votes.shift();
+
+        // A very clear single frame goes straight through; otherwise the same
+        // card has to win most of the recent frames.
+        const clear = best.score >= 0.93 && best.score - best.second >= 0.06;
+        const tally = votes.filter((v) => v.id === best!.id);
+        const voted = votes.length >= VOTE_WINDOW && tally.length >= VOTE_NEEDED && best.score >= IMAGE_MIN_SCORE;
+        if (!clear && !voted) continue;
+
+        const card = byId.get(best.id);
         if (!card) continue;
         const last = lastAddedRef.current;
         if (last && last.id === card.id && Date.now() - last.at < SAME_CARD_COOLDOWN_MS) continue;
 
         const sameName = cards.filter((c) => c.name === card.name && c.subtitle === card.subtitle && c.id !== card.id);
-        streakId = null;
-        streak = 0;
+        votes.length = 0;
         propose({ via: "image", strong: true, candidates: [card, ...sameName] });
       }
     }
@@ -294,9 +310,12 @@ export function ScanCardModal({
         void imageLoop();
 
         // Back-to-back scanning: start the next read as soon as the last one ends.
+        // OCR is only a fallback, so it waits a few seconds to leave the CPU to
+        // the (much faster) artwork matcher first.
         let attempt = 0;
+        const ocrAfter = Date.now() + OCR_DELAY_MS;
         while (!cancelled) {
-          if (!pendingRef.current) {
+          if (!pendingRef.current && Date.now() >= ocrAfter) {
             try {
               await scanOnce(attempt++);
             } catch {
