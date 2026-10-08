@@ -92,6 +92,22 @@ const FlipPage = forwardRef<HTMLDivElement, PageGridProps & { side: "left" | "ri
 ));
 FlipPage.displayName = "FlipPage";
 
+// The inside of the front cover: like a real binder, the first spread shows
+// only a right-hand page, so book page 0 is a blank, never-used left side.
+const CoverPage = forwardRef<HTMLDivElement>((_, ref) => (
+  <div ref={ref} className="h-full w-full">
+    <div
+      className="h-full w-full rounded-xl"
+      style={{
+        background:
+          "linear-gradient(270deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 9%, transparent 24%), " +
+          "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%), #141a24",
+      }}
+    />
+  </div>
+));
+CoverPage.displayName = "CoverPage";
+
 // A metal ring, like a real ring-binder mechanism straddling the gutter
 // between two pages - an open oval rather than a flat dot, with a
 // light-to-dark gradient stroke to read as cylindrical metal.
@@ -218,9 +234,12 @@ export default function BinderDetailPage() {
   const minPagesAllowed = Math.floor(highestPosition / perPage) + 2;
   const totalPages = Math.max(binder?.pageCount ?? 2, minPagesAllowed);
   const canRemovePage = totalPages > minPagesAllowed;
-  const bookPageCount = Math.ceil(totalPages / 2) * 2;
+  // Book page 0 is the (unused) inside cover; data page N sits at book page N.
+  const bookPageCount = Math.ceil((totalPages + 1) / 2) * 2;
   const leftPageIndex = Math.min(currentPage, bookPageCount - 2);
   const rightPageIndex = leftPageIndex + 1;
+  const pageLabel =
+    leftPageIndex === 0 ? "1" : rightPageIndex > totalPages ? `${leftPageIndex}` : `${leftPageIndex}–${rightPageIndex}`;
 
   function buildPageSlots(pageIndex: number): SlotView[] {
     return Array.from({ length: perPage }, (_, i) => {
@@ -232,7 +251,7 @@ export default function BinderDetailPage() {
   }
 
   const pages = useMemo(
-    () => Array.from({ length: bookPageCount }, (_, i) => buildPageSlots(i)),
+    () => Array.from({ length: bookPageCount }, (_, i) => (i === 0 ? null : buildPageSlots(i - 1))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bookPageCount, perPage, slots, cardById]
   );
@@ -254,9 +273,13 @@ export default function BinderDetailPage() {
   );
   const pageElements = useMemo(
     () =>
-      pages.map((pageSlots, i) => (
+      pages.map((pageSlots, i) =>
+        pageSlots === null ? (
+          <CoverPage key={i} />
+        ) : (
         <FlipPage key={i} side={i % 2 === 0 ? "left" : "right"} slots={pageSlots} cols={layout.cols} onPick={setPickerPosition} {...stableHandlers} />
-      )),
+        )
+      ),
     [pages, layout.cols, stableHandlers]
   );
 
@@ -345,7 +368,7 @@ export default function BinderDetailPage() {
         ←
       </button>
       <span className="min-w-[52px] text-center font-display text-[11px] font-semibold uppercase tracking-wide tabular-nums text-white/60">
-        {leftPageIndex + 1}–{rightPageIndex + 1}/{totalPages}
+        {pageLabel}/{totalPages}
       </span>
       <button
         onClick={goNext}
@@ -500,7 +523,7 @@ export default function BinderDetailPage() {
             ←
           </button>
           <span className="min-w-[130px] text-center font-display text-xs font-semibold uppercase tracking-wide text-white/50">
-            Pages {leftPageIndex + 1}–{rightPageIndex + 1} of {totalPages}
+            {pageLabel.includes("–") ? "Pages" : "Page"} {pageLabel} of {totalPages}
           </span>
           <button
             onClick={goNext}
