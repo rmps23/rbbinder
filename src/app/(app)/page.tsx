@@ -217,7 +217,7 @@ export default function DashboardPage() {
                 <button
                   onClick={() => deleteBinder(b)}
                   title="Delete binder"
-                  className="absolute right-4 top-4 text-white/30 opacity-0 transition hover:text-brand-red group-hover:opacity-100"
+                  className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center text-white/40 transition hover:text-brand-red md:opacity-0 md:group-hover:opacity-100"
                 >
                   ✕
                 </button>

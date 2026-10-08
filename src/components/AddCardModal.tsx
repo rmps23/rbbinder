@@ -99,7 +99,7 @@ export function AddCardModal({
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-5xl flex-col rounded-xl border border-white/10 bg-ink p-4 shadow-xl sm:flex-row sm:gap-4"
+        className="flex w-full max-w-5xl flex-col rounded-xl border border-white/10 bg-ink p-4 pb-24 shadow-xl sm:flex-row sm:gap-4 sm:pb-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="min-w-0 flex-1">
@@ -199,7 +199,7 @@ export function AddCardModal({
                       disabled={i === 0}
                       title="Move up"
                       aria-label="Move up"
-                      className="flex h-6 w-6 items-center justify-center rounded text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-20"
+                      className="flex h-9 w-9 items-center justify-center rounded text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-20 sm:h-6 sm:w-6"
                     >
                       ↑
                     </button>
@@ -208,7 +208,7 @@ export function AddCardModal({
                       disabled={i === queue.length - 1}
                       title="Move down"
                       aria-label="Move down"
-                      className="flex h-6 w-6 items-center justify-center rounded text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-20"
+                      className="flex h-9 w-9 items-center justify-center rounded text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-20 sm:h-6 sm:w-6"
                     >
                       ↓
                     </button>
@@ -216,7 +216,7 @@ export function AddCardModal({
                       onClick={() => removeFromQueue(i)}
                       title="Remove from list"
                       aria-label="Remove from list"
-                      className="flex h-6 w-6 items-center justify-center rounded text-red-300/70 hover:bg-red-500/20 hover:text-red-300"
+                      className="flex h-9 w-9 items-center justify-center rounded text-red-300/70 hover:bg-red-500/20 hover:text-red-300 sm:h-6 sm:w-6"
                     >
                       ✕
                     </button>
@@ -226,13 +226,15 @@ export function AddCardModal({
             </div>
           )}
 
-          <button
-            onClick={() => onCommit(queue)}
-            disabled={queue.length === 0}
-            className="mt-3 rounded-full bg-brand-gold px-4 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            Add {queue.length > 0 ? `(${queue.length})` : ""} to binder
-          </button>
+          <div className="fixed inset-x-0 bottom-0 z-10 border-t border-white/10 bg-ink/95 p-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+            <button
+              onClick={() => onCommit(queue)}
+              disabled={queue.length === 0}
+              className="h-12 w-full rounded-full bg-brand-gold px-4 font-display text-sm font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft disabled:cursor-not-allowed disabled:opacity-30 sm:mt-3 sm:h-auto sm:py-2 sm:text-xs"
+            >
+              Add {queue.length > 0 ? `(${queue.length})` : ""} to binder
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -58,6 +58,25 @@ export function useBinderCards(binderId: string) {
     [push]
   );
 
+  // Sets the copy count of the card in a slot (0 empties the slot).
+  const setQty = useCallback(
+    (position: number, cardId: string, qty: number) => {
+      if (qty <= 0) {
+        setSlotsState((prev) => {
+          if (!prev[position]) return prev;
+          const next = { ...prev };
+          delete next[position];
+          return next;
+        });
+        push(position, null, 0);
+        return;
+      }
+      setSlotsState((prev) => ({ ...prev, [position]: { cardId, qty } }));
+      push(position, cardId, qty);
+    },
+    [push]
+  );
+
   // Removes whatever card sits in a slot, emptying it.
   const clearSlot = useCallback(
     (position: number) => {
@@ -132,5 +151,5 @@ export function useBinderCards(binderId: string) {
     [push]
   );
 
-  return { slots, loading, placeCard, addCopy, clearSlot, swapSlots, insertAtBoundary };
+  return { slots, loading, placeCard, addCopy, setQty, clearSlot, swapSlots, insertAtBoundary };
 }

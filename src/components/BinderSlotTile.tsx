@@ -14,6 +14,10 @@ export function BinderSlotTile({
   onRemove,
   onDropCard,
   onInsertAt,
+  onOpen,
+  selected = false,
+  moveActive = false,
+  compact = false,
 }: {
   position: number;
   card: RiftCard | null;
@@ -22,7 +26,14 @@ export function BinderSlotTile({
   onRemove: () => void;
   onDropCard: (fromPosition: number, toPosition: number) => void;
   onInsertAt: (fromPosition: number, insertPosition: number) => void;
+  // Touch mode (phones): tapping a filled slot opens its details instead of
+  // relying on hover/drag, which don't exist there.
+  onOpen?: () => void;
+  selected?: boolean;
+  moveActive?: boolean;
+  compact?: boolean;
 }) {
+  const touch = onOpen !== undefined;
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [dropZone, setDropZone] = useState<DropZone | null>(null);
@@ -43,14 +54,14 @@ export function BinderSlotTile({
           const from = Number(e.dataTransfer.getData("text/plain"));
           if (!Number.isNaN(from) && from !== position) onDropCard(from, position);
         }}
-        className={`flex aspect-[744/1039] w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed transition ${
-          dropZone
-            ? "border-brand-gold bg-brand-gold/10 text-brand-gold"
+        className={`flex aspect-[744/1039] w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed transition active:scale-[0.97] ${
+          dropZone || moveActive
+            ? "border-brand-gold/70 bg-brand-gold/10 text-brand-gold"
             : "border-white/10 bg-ink/40 text-white/15 hover:border-brand-gold/50 hover:text-brand-gold/70"
         }`}
       >
-        <span className="text-3xl leading-none">+</span>
-        <span className="text-[10px] font-medium">Add card</span>
+        <span className={`leading-none ${compact ? "text-2xl" : "text-3xl"}`}>+</span>
+        <span className="text-[10px] font-medium">{moveActive ? "Move here" : "Add card"}</span>
       </button>
     );
   }
@@ -99,13 +110,29 @@ export function BinderSlotTile({
 
   return (
     <div
-      draggable
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragLeave={() => setDropZone(null)}
-      onDrop={handleDrop}
-      className={`group relative aspect-[744/1039] w-full cursor-grab overflow-hidden rounded-lg border border-white/15 bg-[#0a0c10] transition active:cursor-grabbing ${
-        dropZone === "swap" ? "ring-2 ring-brand-gold/60" : ""
+      draggable={!touch}
+      onDragStart={touch ? undefined : handleDragStart}
+      onDragOver={touch ? undefined : handleDragOver}
+      onDragLeave={touch ? undefined : () => setDropZone(null)}
+      onDrop={touch ? undefined : handleDrop}
+      onClick={touch ? onOpen : undefined}
+      onKeyDown={
+        touch
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpen?.();
+              }
+            }
+          : undefined
+      }
+      role={touch ? "button" : undefined}
+      tabIndex={touch ? 0 : undefined}
+      aria-label={touch ? `${card.name}, open details` : undefined}
+      className={`group relative aspect-[744/1039] w-full overflow-hidden rounded-lg border border-white/15 bg-[#0a0c10] transition ${
+        touch ? "cursor-pointer active:scale-[0.97]" : "cursor-grab active:cursor-grabbing"
+      } ${dropZone === "swap" ? "ring-2 ring-brand-gold/60" : ""} ${selected ? "ring-2 ring-brand-cyan" : ""} ${
+        moveActive && !selected ? "ring-1 ring-brand-gold/50" : ""
       }`}
     >
       {card.image.url && !imgError ? (
@@ -121,37 +148,47 @@ export function BinderSlotTile({
           draggable={false}
         />
       ) : (
-        <div className="flex h-full items-center justify-center p-2 text-center text-xs text-white/40">
-          {card.name}
-        </div>
+        <div className="flex h-full items-center justify-center p-2 text-center text-xs text-white/40">{card.name}</div>
       )}
 
       {dropZone === "before" && <span className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-brand-gold" />}
       {dropZone === "after" && <span className="pointer-events-none absolute inset-y-0 right-0 w-1.5 bg-brand-gold" />}
 
-      <span className="absolute left-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/80 font-display text-base font-bold text-brand-gold ring-1 ring-white/10">
+      <span
+        className={`absolute flex items-center justify-center rounded-full bg-ink/80 font-display font-bold text-brand-gold ring-1 ring-white/10 ${
+          compact ? "left-1 top-1 h-5 w-5 text-xs" : "left-1.5 top-1.5 h-7 w-7 text-base"
+        }`}
+      >
         {qty}
       </span>
 
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        title="Remove card from this slot"
-        aria-label="Remove card from this slot"
-        className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-brand-red/90 text-white opacity-0 shadow transition hover:bg-brand-red group-hover:opacity-100"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H9.7a2 2 0 0 1-2-1.9L7 7" />
-        </svg>
-      </button>
+      {!touch && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          title="Remove card from this slot"
+          aria-label="Remove card from this slot"
+          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-brand-red/90 text-white opacity-0 shadow transition hover:bg-brand-red group-hover:opacity-100"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12.1a2 2 0 0 1-2 1.9H9.7a2 2 0 0 1-2-1.9L7 7"
+            />
+          </svg>
+        </button>
+      )}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col justify-end bg-gradient-to-b from-transparent to-black/90 p-2 pt-8 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-        <p className="line-clamp-2 text-xs font-semibold leading-tight text-white">{card.name}</p>
-        <p className="text-[10px] text-white/60">{card.publicCode}</p>
-      </div>
+      {!touch && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col justify-end bg-gradient-to-b from-transparent to-black/90 p-2 pt-8 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          <p className="line-clamp-2 text-xs font-semibold leading-tight text-white">{card.name}</p>
+          <p className="text-[10px] text-white/60">{card.publicCode}</p>
+        </div>
+      )}
     </div>
   );
 }

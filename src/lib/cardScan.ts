@@ -17,7 +17,7 @@ const fixDigits = (s: string) =>
 
 // "OGN-042/298" -> { number: 42, total: 298 }
 function parsePublicCode(code: string): { number: number; total: number } | null {
-  const m = code.match(/-(\d+)[a-zA-Z*]*\/(\d+)/);
+  const m = code.match(/-(?:SP)?(\d+)[a-zA-Z*]*\/(\d+)/);
   return m ? { number: Number(m[1]), total: Number(m[2]) } : null;
 }
 
@@ -25,7 +25,7 @@ const rankBase = (a: RiftCard, b: RiftCard) => Number(isAlternateArt(a) || a.pub
 
 export function matchScan(text: string, cards: RiftCard[]): ScanMatch | null {
   // 1) Collector number: "042/298", optionally preceded by the set code.
-  const re = /([A-Za-z]{3})?\W{0,3}([0-9OoIl|SB]{1,3})\s*([a-z*])?\s*\/\s*([0-9OoIl|SB]{2,3})/g;
+  const re = /([A-Za-z]{3})?\W{0,3}(?:SP)?([0-9OoIl|SB]{1,3})\s*([a-z*])?\s*\/\s*([0-9OoIl|SB]{2,3})/g;
   for (const m of text.matchAll(re)) {
     const number = Number(fixDigits(m[2]));
     const total = Number(fixDigits(m[4]));
@@ -39,7 +39,13 @@ export function matchScan(text: string, cards: RiftCard[]): ScanMatch | null {
     const strong = !!setCode && found.some((c) => c.set.id === setCode);
     if (strong) found = found.filter((c) => c.set.id === setCode);
     if (!found.length) continue;
-    return { via: "code", strong, candidates: [...found].sort(rankBase) };
+    // If the printed number carried a suffix ("007a"), that exact print comes first.
+    const printed = (m[3] ?? "").toLowerCase();
+    const suffixOf = (c: RiftCard) => (c.publicCode.match(/-(?:SP)?\d+([a-zA-Z*]*)\//)?.[1] ?? "").toLowerCase();
+    const ranked = [...found].sort((a, b) =>
+      printed ? Number(suffixOf(b) === printed) - Number(suffixOf(a) === printed) || rankBase(a, b) : rankBase(a, b)
+    );
+    return { via: "code", strong, candidates: ranked };
   }
 
   // 2) Fallback: a card name that appears in the text (longest wins).

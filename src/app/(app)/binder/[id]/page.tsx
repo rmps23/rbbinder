@@ -6,15 +6,17 @@ import { useParams, useRouter } from "next/navigation";
 import { useAppData } from "@/components/AppDataProvider";
 import { useHeaderToolbar } from "@/components/HeaderToolbarContext";
 import { useBinderCards } from "@/lib/useBinderCards";
-import { BinderSlotTile } from "@/components/BinderSlotTile";
 import { AddCardModal } from "@/components/AddCardModal";
 import { ScanCardModal } from "@/components/ScanCardModal";
 import { LayoutSwitcher } from "@/components/LayoutSwitcher";
+import { PageGrid, pageBackground, type PageGridProps, type SlotView } from "@/components/PageGrid";
+import { MobileBinderView } from "@/components/MobileBinderView";
+import { BinderMenuSheet } from "@/components/BinderMenuSheet";
+import { CardSheet } from "@/components/CardSheet";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import { FilterState } from "@/components/Filters";
-import { BINDER_LAYOUTS, GRID_COLS_CLASS } from "@/lib/constants";
+import { BINDER_LAYOUTS } from "@/lib/constants";
 import type { Binder, BinderLayout, RiftCard } from "@/lib/types";
-
-type SlotView = { position: number; card: RiftCard | null; qty: number };
 
 // The book's imperative API (react-pageflip's TS defs type this as `any`).
 type PageFlipHandle = {
@@ -40,34 +42,6 @@ const DEFAULT_FILTERS: FilterState = {
   onlyOwned: false,
 };
 
-type PageGridProps = {
-  slots: SlotView[];
-  cols: number;
-  onPick: (position: number) => void;
-  onRemove: (position: number) => void;
-  onDropCard: (from: number, to: number) => void;
-  onInsertAt: (from: number, insertPosition: number) => void;
-};
-
-function PageGrid({ slots, cols, onPick, onRemove, onDropCard, onInsertAt }: PageGridProps) {
-  return (
-    <div className={`grid ${GRID_COLS_CLASS[cols]} h-full gap-3 p-3`}>
-      {slots.map(({ position, card, qty }) => (
-        <BinderSlotTile
-          key={position}
-          position={position}
-          card={card}
-          qty={qty}
-          onPick={() => onPick(position)}
-          onRemove={() => onRemove(position)}
-          onDropCard={onDropCard}
-          onInsertAt={onInsertAt}
-        />
-      ))}
-    </div>
-  );
-}
-
 // react-pageflip clones each page child to attach its own ref, so a page
 // built from a component (rather than a plain <div>) has to forward it.
 // The library rewrites the root element's inline style on every frame
@@ -76,17 +50,7 @@ function PageGrid({ slots, cols, onPick, onRemove, onDropCard, onInsertAt }: Pag
 // visuals therefore live on an inner div.
 const FlipPage = forwardRef<HTMLDivElement, PageGridProps & { side: "left" | "right" }>(({ side, ...props }, ref) => (
   <div ref={ref} className="h-full w-full">
-    <div
-      className="h-full w-full overflow-hidden rounded-xl"
-      style={{
-        background:
-          // Darkens toward the gutter, like paper curving down into the spine.
-          `linear-gradient(${side === "left" ? 270 : 90}deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 9%, transparent 24%), ` +
-          "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.05), transparent 60%), " +
-          "linear-gradient(180deg, rgba(255,255,255,0.035) 0%, transparent 30%, rgba(0,0,0,0.16) 100%), " +
-          "#1a212c",
-      }}
-    >
+    <div className="h-full w-full overflow-hidden rounded-xl" style={{ background: pageBackground(side) }}>
       <PageGrid {...props} />
     </div>
   </div>
@@ -115,7 +79,13 @@ CoverPage.displayName = "CoverPage";
 function BinderRing({ id }: { id: string }) {
   const gradientId = `ring-metal-${id}`;
   return (
-    <svg width="44" height="26" viewBox="0 0 44 26" className="shrink-0" style={{ filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.6))" }}>
+    <svg
+      width="44"
+      height="26"
+      viewBox="0 0 44 26"
+      className="shrink-0"
+      style={{ filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.6))" }}
+    >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#f3dfa8" />
@@ -133,8 +103,16 @@ export default function BinderDetailPage() {
   const binderId = params.id;
   const router = useRouter();
   const { cards, sets, loading: cardsLoading } = useAppData();
-  const { slots, loading: slotsLoading, placeCard, addCopy, clearSlot, swapSlots, insertAtBoundary } =
-    useBinderCards(binderId);
+  const {
+    slots,
+    loading: slotsLoading,
+    placeCard,
+    addCopy,
+    setQty,
+    clearSlot,
+    swapSlots,
+    insertAtBoundary,
+  } = useBinderCards(binderId);
   const { setToolbar } = useHeaderToolbar();
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const [compactNavVisible, setCompactNavVisible] = useState(false);
@@ -144,6 +122,12 @@ export default function BinderDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [pickerPosition, setPickerPosition] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
+  // Phones get a one-page-at-a-time viewer instead of the two-page flip book.
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const [mobilePage, setMobilePage] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [sheetPosition, setSheetPosition] = useState<number | null>(null);
+  const [moveFrom, setMoveFrom] = useState<number | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
 
@@ -152,6 +136,7 @@ export default function BinderDetailPage() {
   // wrapper doesn't forward refs, which we need for the nav buttons).
   const [FlipBook, setFlipBook] = useState<FlipBookComponent | null>(null);
   useEffect(() => {
+    if (isMobile) return;
     let active = true;
     import("react-pageflip").then((mod) => {
       if (active) setFlipBook(() => mod.default);
@@ -159,7 +144,7 @@ export default function BinderDetailPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isMobile]);
 
   const bookRef = useRef<FlipBookHandle | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -241,6 +226,7 @@ export default function BinderDetailPage() {
   const bookPageCount = Math.ceil((totalPages + 1) / 2) * 2;
   const leftPageIndex = Math.min(currentPage, bookPageCount - 2);
   const rightPageIndex = leftPageIndex + 1;
+  const currentMobilePage = Math.min(mobilePage, totalPages - 1);
   const pageLabel =
     leftPageIndex === 0 ? "1" : rightPageIndex > totalPages ? `${leftPageIndex}` : `${leftPageIndex}–${rightPageIndex}`;
 
@@ -248,7 +234,7 @@ export default function BinderDetailPage() {
     return Array.from({ length: perPage }, (_, i) => {
       const position = pageIndex * perPage + i;
       const slot = slots[position];
-      const card = slot ? cardById.get(slot.cardId) ?? null : null;
+      const card = slot ? (cardById.get(slot.cardId) ?? null) : null;
       return { position, card, qty: slot?.qty ?? 0 };
     });
   }
@@ -256,7 +242,7 @@ export default function BinderDetailPage() {
   const pages = useMemo(
     () => Array.from({ length: bookPageCount }, (_, i) => (i === 0 ? null : buildPageSlots(i - 1))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [bookPageCount, perPage, slots, cardById]
+    [bookPageCount, perPage, slots, cardById],
   );
 
   // The book rebuilds its whole page collection whenever its children change
@@ -272,7 +258,7 @@ export default function BinderDetailPage() {
       onDropCard: (from: number, to: number) => handlersRef.current.swapSlots(from, to),
       onInsertAt: (from: number, insertPosition: number) => handlersRef.current.insertAtBoundary(from, insertPosition),
     }),
-    []
+    [],
   );
   const pageElements = useMemo(
     () =>
@@ -280,10 +266,17 @@ export default function BinderDetailPage() {
         pageSlots === null ? (
           <CoverPage key={i} />
         ) : (
-        <FlipPage key={i} side={i % 2 === 0 ? "left" : "right"} slots={pageSlots} cols={layout.cols} onPick={setPickerPosition} {...stableHandlers} />
-        )
+          <FlipPage
+            key={i}
+            side={i % 2 === 0 ? "left" : "right"}
+            slots={pageSlots}
+            cols={layout.cols}
+            onPick={setPickerPosition}
+            {...stableHandlers}
+          />
+        ),
       ),
-    [pages, layout.cols, stableHandlers]
+    [pages, layout.cols, stableHandlers],
   );
 
   // If pages are removed out from under the page you're looking at, snap
@@ -309,6 +302,7 @@ export default function BinderDetailPage() {
     const newPageCount = totalPages + 1;
     setBinder((b) => (b ? { ...b, pageCount: newPageCount } : b));
     jumpToEndRef.current = true;
+    setMobilePage(totalPages);
     await fetch(`/api/binders/${binderId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -347,6 +341,7 @@ export default function BinderDetailPage() {
   // Scanned cards land in their own slot; bring that spread into view.
   function handleScanAdd(card: RiftCard, position: number) {
     addCopy(position, card.id);
+    setMobilePage(Math.floor(position / perPage));
     const bookIndex = Math.floor(position / perPage) + 1;
     bookRef.current?.pageFlip()?.turnToPage(Math.floor(bookIndex / 2) * 2);
   }
@@ -357,10 +352,10 @@ export default function BinderDetailPage() {
   useEffect(() => {
     const el = toolbarRef.current;
     if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setCompactNavVisible(!entry.isIntersecting),
-      { rootMargin: "-57px 0px 0px 0px", threshold: 0 }
-    );
+    const observer = new IntersectionObserver(([entry]) => setCompactNavVisible(!entry.isIntersecting), {
+      rootMargin: "-57px 0px 0px 0px",
+      threshold: 0,
+    });
     observer.observe(el);
     return () => observer.disconnect();
     // Only needs to (re)attach once the toolbar element actually exists.
@@ -410,10 +405,24 @@ export default function BinderDetailPage() {
   );
 
   useEffect(() => {
+    if (isMobile) return;
     setToolbar({ node: compactNav, visible: compactNavVisible });
     return () => setToolbar(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leftPageIndex, rightPageIndex, totalPages, bookPageCount, compactNavVisible]);
+  }, [leftPageIndex, rightPageIndex, totalPages, bookPageCount, compactNavVisible, isMobile]);
+
+  // Phone interactions: tap a card for its details, tap an empty slot to add
+  // one, and in "move" mode tap the destination slot.
+  function handleMobileTap(position: number) {
+    if (moveFrom !== null) {
+      if (position !== moveFrom) swapSlots(moveFrom, position);
+      setMoveFrom(null);
+      return;
+    }
+    const slot = slots[position];
+    if (slot && slot.qty > 0) setSheetPosition(position);
+    else setPickerPosition(position);
+  }
 
   async function saveName() {
     const name = nameDraft.trim();
@@ -469,25 +478,98 @@ export default function BinderDetailPage() {
     );
   }
 
+  const nameInput = (className: string) => (
+    <input
+      autoFocus
+      value={nameDraft}
+      onChange={(e) => setNameDraft(e.target.value)}
+      onBlur={saveName}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") saveName();
+        if (e.key === "Escape") {
+          setNameDraft(binder.name);
+          setRenaming(false);
+        }
+      }}
+      className={className}
+    />
+  );
+  const sheetSlot = sheetPosition !== null ? slots[sheetPosition] : undefined;
+  const sheetCard = sheetSlot ? cardById.get(sheetSlot.cardId) : undefined;
+  const movingSlot = moveFrom !== null ? slots[moveFrom] : undefined;
+  const movingCard = movingSlot ? cardById.get(movingSlot.cardId) : undefined;
+
   return (
     <div>
-      <div ref={toolbarRef} className="mb-4 overflow-hidden rounded-xl border border-white/[0.06] bg-panel">
+      {/* Phone toolbar: title + the two things you reach for most; the rest lives in the menu sheet. */}
+      <div className="mb-3 flex items-center gap-2 md:hidden">
+        {renaming ? (
+          nameInput(
+            "h-10 min-w-0 flex-1 rounded-lg border border-brand-gold/50 bg-ink px-3 font-display text-lg font-semibold uppercase tracking-wide text-white outline-none",
+          )
+        ) : (
+          <button
+            type="button"
+            onClick={() => setRenaming(true)}
+            aria-label="Rename binder"
+            className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
+          >
+            <h1 className="truncate font-display text-xl font-semibold uppercase tracking-wide text-white">
+              {binder.name}
+            </h1>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              className="h-4 w-4 shrink-0 text-white/35"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"
+              />
+            </svg>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setScanning(true)}
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand-gold px-4 font-display text-xs font-semibold uppercase tracking-wide text-ink active:bg-brand-goldSoft"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 8a2 2 0 0 1 2-2h1.5l1.2-1.6A1 1 0 0 1 9.5 4h5a1 1 0 0 1 .8.4L16.5 6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"
+            />
+            <circle cx="12" cy="12.5" r="3.2" />
+          </svg>
+          Scan
+        </button>
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Binder menu"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/70 active:bg-white/10"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+            <circle cx="5" cy="12" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="19" cy="12" r="1.8" />
+          </svg>
+        </button>
+      </div>
+
+      <div
+        ref={toolbarRef}
+        className="mb-4 hidden overflow-hidden rounded-xl border border-white/[0.06] bg-panel md:block"
+      >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
           {renaming ? (
-            <input
-              autoFocus
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              onBlur={saveName}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") saveName();
-                if (e.key === "Escape") {
-                  setNameDraft(binder.name);
-                  setRenaming(false);
-                }
-              }}
-              className="rounded-md border border-brand-gold/50 bg-ink px-2 py-1 font-display text-xl font-semibold uppercase tracking-wide text-white outline-none"
-            />
+            nameInput(
+              "rounded-md border border-brand-gold/50 bg-ink px-2 py-1 font-display text-xl font-semibold uppercase tracking-wide text-white outline-none",
+            )
           ) : (
             <div className="flex items-center gap-1.5">
               <h1
@@ -570,53 +652,126 @@ export default function BinderDetailPage() {
         </div>
       </div>
 
-      <p className="mb-4 text-center text-sm text-white/40">{binderStats.totalQty} cards placed</p>
+      <p className="mb-3 text-center text-sm text-white/40 md:mb-4">{binderStats.totalQty} cards placed</p>
 
-      <div className="relative flex items-center justify-center rounded-2xl border border-white/[0.07] bg-[#101520] p-2 shadow-2xl sm:p-4">
-        <div className="pointer-events-none absolute inset-y-10 left-1/2 -z-10 flex w-0 -translate-x-1/2 flex-col items-center justify-between sm:inset-y-14">
-          {[0, 1, 2, 3].map((i) => (
-            <BinderRing key={i} id={String(i)} />
-          ))}
-        </div>
-        {FlipBook ? (
-          <FlipBook
-            key={layout.id}
-            ref={bookRef}
-            width={REF_WIDTH}
-            height={Math.round(REF_WIDTH / pageAspect)}
-            size="stretch"
-            minWidth={MIN_WIDTH}
-            maxWidth={MAX_WIDTH}
-            minHeight={Math.round(MIN_WIDTH / pageAspect)}
-            maxHeight={Math.round(MAX_WIDTH / pageAspect)}
-            startPage={0}
-            drawShadow
-            flippingTime={800}
-            usePortrait
-            startZIndex={0}
-            autoSize
-            maxShadowOpacity={0.5}
-            showCover={false}
-            mobileScrollSupport
-            swipeDistance={30}
-            clickEventForward
-            useMouseEvents={false}
-            showPageCorners={false}
-            disableFlipByClick
-            className=""
-            style={{}}
-            onFlip={(e: { data: number }) => setCurrentPage(e.data)}
-            onInit={(e: { data: { page: number } }) => setCurrentPage(e.data.page)}
+      {isMobile && moveFrom !== null && (
+        <div className="sticky top-[66px] z-10 mb-3 flex items-center justify-between gap-3 rounded-xl border border-brand-cyan/40 bg-ink/95 px-3 py-2.5 backdrop-blur">
+          <p className="text-sm text-white/80">
+            Tap a slot to move <span className="font-semibold text-brand-cyan">{movingCard?.name ?? "the card"}</span>{" "}
+            there
+          </p>
+          <button
+            type="button"
+            onClick={() => setMoveFrom(null)}
+            className="shrink-0 rounded-full border border-white/20 px-3 py-1.5 text-xs text-white/80 active:bg-white/10"
           >
-            {pageElements}
-          </FlipBook>
-        ) : (
-          <p className="py-10 text-center text-white/40">Loading binder...</p>
-        )}
-      </div>
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {isMobile ? (
+        <MobileBinderView
+          page={currentMobilePage}
+          totalPages={totalPages}
+          onPageChange={setMobilePage}
+          slotsForPage={buildPageSlots}
+          cols={layout.cols}
+          touch={{ selected: moveFrom, moveActive: moveFrom !== null, onTap: handleMobileTap }}
+          onOpenMenu={() => setMenuOpen(true)}
+        />
+      ) : (
+        <div className="relative flex items-center justify-center rounded-2xl border border-white/[0.07] bg-[#101520] p-2 shadow-2xl sm:p-4">
+          <div className="pointer-events-none absolute inset-y-10 left-1/2 -z-10 flex w-0 -translate-x-1/2 flex-col items-center justify-between sm:inset-y-14">
+            {[0, 1, 2, 3].map((i) => (
+              <BinderRing key={i} id={String(i)} />
+            ))}
+          </div>
+          {FlipBook ? (
+            <FlipBook
+              key={layout.id}
+              ref={bookRef}
+              width={REF_WIDTH}
+              height={Math.round(REF_WIDTH / pageAspect)}
+              size="stretch"
+              minWidth={MIN_WIDTH}
+              maxWidth={MAX_WIDTH}
+              minHeight={Math.round(MIN_WIDTH / pageAspect)}
+              maxHeight={Math.round(MAX_WIDTH / pageAspect)}
+              startPage={0}
+              drawShadow
+              flippingTime={800}
+              usePortrait
+              startZIndex={0}
+              autoSize
+              maxShadowOpacity={0.5}
+              showCover={false}
+              mobileScrollSupport
+              swipeDistance={30}
+              clickEventForward
+              useMouseEvents={false}
+              showPageCorners={false}
+              disableFlipByClick
+              className=""
+              style={{}}
+              onFlip={(e: { data: number }) => setCurrentPage(e.data)}
+              onInit={(e: { data: { page: number } }) => setCurrentPage(e.data.page)}
+            >
+              {pageElements}
+            </FlipBook>
+          ) : (
+            <p className="py-10 text-center text-white/40">Loading binder...</p>
+          )}
+        </div>
+      )}
+
+      {menuOpen && (
+        <BinderMenuSheet
+          layout={binder.layout}
+          onLayout={changeLayout}
+          page={currentMobilePage + 1}
+          totalPages={totalPages}
+          onGoTo={(n) => setMobilePage(n - 1)}
+          canRemovePage={canRemovePage}
+          onAddPage={addPage}
+          onRemovePage={removePage}
+          onRename={() => {
+            setRenaming(true);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          onDelete={deleteBinder}
+          onClose={() => setMenuOpen(false)}
+        />
+      )}
+
+      {sheetPosition !== null && sheetSlot && sheetCard && (
+        <CardSheet
+          card={sheetCard}
+          qty={sheetSlot.qty}
+          onQty={(n) => {
+            setQty(sheetPosition, sheetCard.id, n);
+            if (n <= 0) setSheetPosition(null);
+          }}
+          onMove={() => {
+            setMoveFrom(sheetPosition);
+            setSheetPosition(null);
+          }}
+          onRemove={() => {
+            clearSlot(sheetPosition);
+            setSheetPosition(null);
+          }}
+          onClose={() => setSheetPosition(null)}
+        />
+      )}
 
       {scanning && (
-        <ScanCardModal cards={cards} slots={slots} perPage={perPage} onAdd={handleScanAdd} onClose={() => setScanning(false)} />
+        <ScanCardModal
+          cards={cards}
+          slots={slots}
+          perPage={perPage}
+          onAdd={handleScanAdd}
+          onClose={() => setScanning(false)}
+        />
       )}
 
       {pickerPosition !== null && (
