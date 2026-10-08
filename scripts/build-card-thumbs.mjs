@@ -1,13 +1,28 @@
 // Builds public/card-thumbs.json: a tiny RGB thumbnail of every card in the
 // catalog, used by the camera scanner to recognise cards by their artwork.
-// Run: node scripts/build-card-thumbs.mjs   (needs .data/local-db.json)
-import { readFileSync, writeFileSync } from "node:fs";
+// Reads the live official gallery (so new sets/promos are included the moment
+// Riot publishes them). Run: node scripts/build-card-thumbs.mjs
+import { writeFileSync } from "node:fs";
 import sharp from "sharp";
 
 const W = 24;
 const H = 33;
-const db = JSON.parse(readFileSync(new URL("../.data/local-db.json", import.meta.url), "utf8"));
-const cards = db.cards.map((c) => c.payload).filter((c) => c.image?.url);
+const HEADERS = { "user-agent": "Mozilla/5.0 (RBBinder card fetch)" };
+const html = await (await fetch("https://playriftbound.com/en-us/card-gallery/", { headers: HEADERS })).text();
+const buildId = html.match(/\/_next\/static\/([^/]+)\/_buildManifest\.js/)?.[1];
+if (!buildId) throw new Error("Could not find the gallery buildId");
+const data = await (
+  await fetch(`https://playriftbound.com/_next/data/${buildId}/en-us/card-gallery.json`, { headers: HEADERS })
+).json();
+const gallery = data.pageProps.page.blades.find((b) => b.fragmentId === "card-gallery");
+const cards = gallery.cards.items
+  .filter((c) => c.cardImage?.url)
+  .map((c) => ({
+    id: c.id,
+    publicCode: c.publicCode,
+    image: { url: c.cardImage.url, width: c.cardImage.dimensions?.width ?? 0, height: c.cardImage.dimensions?.height ?? 0 },
+  }));
+console.log(`gallery: ${cards.length} cards`);
 
 // Compare only the inner part of each card (borders are where a hand-held
 // frame is least aligned).
