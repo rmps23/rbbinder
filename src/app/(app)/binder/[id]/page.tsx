@@ -8,6 +8,7 @@ import { useHeaderToolbar } from "@/components/HeaderToolbarContext";
 import { useBinderCards } from "@/lib/useBinderCards";
 import { BinderSlotTile } from "@/components/BinderSlotTile";
 import { AddCardModal } from "@/components/AddCardModal";
+import { ScanCardModal } from "@/components/ScanCardModal";
 import { LayoutSwitcher } from "@/components/LayoutSwitcher";
 import { FilterState } from "@/components/Filters";
 import { BINDER_LAYOUTS, GRID_COLS_CLASS } from "@/lib/constants";
@@ -132,7 +133,8 @@ export default function BinderDetailPage() {
   const binderId = params.id;
   const router = useRouter();
   const { cards, sets, loading: cardsLoading } = useAppData();
-  const { slots, loading: slotsLoading, placeCard, clearSlot, swapSlots, insertAtBoundary } = useBinderCards(binderId);
+  const { slots, loading: slotsLoading, placeCard, addCopy, clearSlot, swapSlots, insertAtBoundary } =
+    useBinderCards(binderId);
   const { setToolbar } = useHeaderToolbar();
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const [compactNavVisible, setCompactNavVisible] = useState(false);
@@ -141,6 +143,7 @@ export default function BinderDetailPage() {
   const [binderLoading, setBinderLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [pickerPosition, setPickerPosition] = useState<number | null>(null);
+  const [scanning, setScanning] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
 
@@ -341,6 +344,13 @@ export default function BinderDetailPage() {
     bookRef.current?.pageFlip()?.flipNext();
   }
 
+  // Scanned cards land in their own slot; bring that spread into view.
+  function handleScanAdd(card: RiftCard, position: number) {
+    addCopy(position, card.id);
+    const bookIndex = Math.floor(position / perPage) + 1;
+    bookRef.current?.pageFlip()?.turnToPage(Math.floor(bookIndex / 2) * 2);
+  }
+
   // Once the toolbar (with the page arrows) scrolls out from under the
   // sticky header, fade in a compact prev/next control in the header itself
   // instead, so paging through the binder never needs a scroll back up.
@@ -504,6 +514,12 @@ export default function BinderDetailPage() {
             </div>
           )}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setScanning(true)}
+              className="rounded-md border border-brand-gold/40 bg-brand-gold/10 px-3 py-1.5 text-xs font-medium text-brand-gold hover:bg-brand-gold/20"
+            >
+              Scan cards
+            </button>
             <LayoutSwitcher value={binder.layout} onChange={changeLayout} />
             <button
               onClick={deleteBinder}
@@ -598,6 +614,10 @@ export default function BinderDetailPage() {
           <p className="py-10 text-center text-white/40">Loading binder...</p>
         )}
       </div>
+
+      {scanning && (
+        <ScanCardModal cards={cards} slots={slots} perPage={perPage} onAdd={handleScanAdd} onClose={() => setScanning(false)} />
+      )}
 
       {pickerPosition !== null && (
         <AddCardModal
