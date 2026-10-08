@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { matchScan, targetPosition, type ScanMatch } from "@/lib/cardScan";
+import { loadThumbIndex, THUMB_MARGIN_X, THUMB_MARGIN_Y } from "@/lib/cardImageIndex";
 import type { BinderSlots, RiftCard } from "@/lib/types";
 
 type Worker = {
@@ -13,6 +14,9 @@ type Worker = {
 
 const SAME_CARD_COOLDOWN_MS = 4000;
 const CARD_RATIO = 744 / 1039;
+const IMAGE_MIN_SCORE = 0.8;
+const IMAGE_MIN_MARGIN = 0.03;
+const IMAGE_STREAK = 3;
 
 export function ScanCardModal({
   cards,
@@ -49,6 +53,7 @@ export function ScanCardModal({
   const [addedCount, setAddedCount] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [debug, setDebug] = useState("");
+  const [imgDebug, setImgDebug] = useState("");
 
   const commit = useCallback((card: RiftCard) => {
     const { position } = targetPosition(card, slotsRef.current);
@@ -171,17 +176,90 @@ export function ScanCardModal({
         }
         lastSeenId = null;
 
-        if (autoAddRef.current && found.via === "code") {
-          commit(best);
-        } else {
-          pendingRef.current = found;
-          setMatch(found);
-          setShown(found);
-          setPick(0);
-        }
+        propose(found);
         return;
       }
       lastSeenId = null;
+    }
+
+    function propose(found: ScanMatch) {
+      if (autoAddRef.current && found.via !== "name") {
+        commit(found.candidates[0]);
+      } else {
+        pendingRef.current = found;
+        setMatch(found);
+        setShown(found);
+        setPick(0);
+      }
+    }
+
+    // Fast path: compare the card art to the catalog thumbnails ~8x a second.
+    async function imageLoop() {
+      let index;
+      try {
+        index = await loadThumbIndex();
+      } catch {
+        return;
+      }
+      const small = document.createElement("canvas");
+      small.width = index.w * 4;
+      small.height = index.h * 4;
+      const tiny = document.createElement("canvas");
+      tiny.width = index.w;
+      tiny.height = index.h;
+      const sctx = small.getContext("2d", { willReadFrequently: true });
+      const tctx = tiny.getContext("2d", { willReadFrequently: true });
+      if (!sctx || !tctx) return;
+      sctx.imageSmoothingQuality = "high";
+      tctx.imageSmoothingQuality = "high";
+
+      const byId = new Map(cards.map((c) => [c.id, c]));
+      const groupOf = (id: string) => {
+        const c = byId.get(id);
+        return c ? `${c.name}|${c.subtitle ?? ""}` : id;
+      };
+      let streakId: string | null = null;
+      let streak = 0;
+
+      while (!cancelled) {
+        await new Promise((r) => setTimeout(r, 110));
+        const video = videoRef.current;
+        const container = containerRef.current;
+        if (!video || !container || !video.videoWidth || pendingRef.current) continue;
+
+        const g = guideRect(video, container);
+        const r = {
+          x: g.x + g.w * THUMB_MARGIN_X,
+          y: g.y + g.h * THUMB_MARGIN_Y,
+          w: g.w * (1 - 2 * THUMB_MARGIN_X),
+          h: g.h * (1 - 2 * THUMB_MARGIN_Y),
+        };
+        sctx.drawImage(video, r.x, r.y, r.w, r.h, 0, 0, small.width, small.height);
+        tctx.drawImage(small, 0, 0, tiny.width, tiny.height);
+        const m = index.match(tctx.getImageData(0, 0, index.w, index.h).data, groupOf);
+        if (!m) continue;
+        setImgDebug(`art ${m.score.toFixed(2)} (next ${m.second.toFixed(2)}) ${byId.get(m.id)?.name ?? ""}`);
+
+        const confident = m.score >= IMAGE_MIN_SCORE && m.score - m.second >= IMAGE_MIN_MARGIN;
+        if (!confident) {
+          streakId = null;
+          streak = 0;
+          continue;
+        }
+        streak = m.id === streakId ? streak + 1 : 1;
+        streakId = m.id;
+        if (streak < IMAGE_STREAK) continue;
+
+        const card = byId.get(m.id);
+        if (!card) continue;
+        const last = lastAddedRef.current;
+        if (last && last.id === card.id && Date.now() - last.at < SAME_CARD_COOLDOWN_MS) continue;
+
+        const sameName = cards.filter((c) => c.name === card.name && c.subtitle === card.subtitle && c.id !== card.id);
+        streakId = null;
+        streak = 0;
+        propose({ via: "image", strong: true, candidates: [card, ...sameName] });
+      }
     }
 
     async function start() {
@@ -213,6 +291,7 @@ export function ScanCardModal({
         }
         workerRef.current = worker;
         setStatus("Fit the card in the frame");
+        void imageLoop();
 
         // Back-to-back scanning: start the next read as soon as the last one ends.
         let attempt = 0;
@@ -276,6 +355,7 @@ export function ScanCardModal({
         <p className="pointer-events-none absolute inset-x-0 top-16 text-center text-xs text-white/80">
           {toast ?? status}
           <span className="mt-0.5 block text-[10px] text-white/40">{debug}</span>
+          <span className="block text-[10px] text-white/40">{imgDebug}</span>
           <span className="block text-[10px] text-white/30">build {process.env.NEXT_PUBLIC_BUILD_SHA}</span>
         </p>
       )}
@@ -302,6 +382,7 @@ export function ScanCardModal({
                   {target.bump ? " (next free slot)" : ""}
                 </p>
                 {shown?.via === "name" && <p className="mt-1 text-[11px] text-white/40">Matched by name - check the print</p>}
+                {shown?.via === "image" && shown.candidates.length > 1 && <p className="mt-1 text-[11px] text-white/40">Other prints of this card are available below</p>}
               </div>
             </div>
 

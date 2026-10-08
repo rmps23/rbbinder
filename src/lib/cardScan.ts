@@ -2,7 +2,7 @@ import { isAlternateArt } from "./cardUtils";
 import type { BinderSlots, RiftCard } from "./types";
 
 export type ScanMatch = {
-  via: "code" | "name";
+  via: "code" | "name" | "image";
   // Set code AND number/total were all read and agree with the catalog.
   strong?: boolean;
   // Best guess first; the rest are other prints the user can switch to.
