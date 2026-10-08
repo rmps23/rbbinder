@@ -276,6 +276,7 @@ export function ScanCardModal({
         <p className="pointer-events-none absolute inset-x-0 top-16 text-center text-xs text-white/80">
           {toast ?? status}
           <span className="mt-0.5 block text-[10px] text-white/40">{debug}</span>
+          <span className="block text-[10px] text-white/30">build {process.env.NEXT_PUBLIC_BUILD_SHA}</span>
         </p>
       )}
 
