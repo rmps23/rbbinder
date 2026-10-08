@@ -94,16 +94,33 @@ export function ScanCardModal({
       return { x: (gx + ox) / scale, y: (gy + oy) / scale, w: gw / scale, h: gh / scale };
     }
 
-    function grab(video: HTMLVideoElement, r: { x: number; y: number; w: number; h: number }, outWidth: number) {
+    function grab(video: HTMLVideoElement, r: { x: number; y: number; w: number; h: number }, outWidth: number, filter: string) {
       const canvas = document.createElement("canvas");
-      const scale = Math.min(1, outWidth / r.w);
+      const scale = outWidth / r.w;
       canvas.width = Math.max(1, Math.round(r.w * scale));
       canvas.height = Math.max(1, Math.round(r.h * scale));
       const ctx = canvas.getContext("2d");
       if (!ctx) return null;
-      ctx.filter = "grayscale(1) contrast(1.5)";
+      ctx.filter = filter;
       ctx.drawImage(video, r.x, r.y, r.w, r.h, 0, 0, canvas.width, canvas.height);
       return canvas;
+    }
+
+    // The printed code ("OGN • 005/298") is tiny, white-on-dark text in the
+    // bottom-left corner, so a tight crop is read as one line first (fast);
+    // only when that keeps missing do we widen out to the strip and card.
+    let lastSeenId: string | null = null;
+    const LINE_FILTER = "invert(1) grayscale(1) contrast(1.8)";
+    const WIDE_FILTER = "grayscale(1) contrast(1.5)";
+
+    async function setMode(mode: "line" | "sparse") {
+      const worker = workerRef.current;
+      if (!worker) return;
+      await worker.setParameters(
+        mode === "line"
+          ? { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/-*" }
+          : { tessedit_pageseg_mode: "11", tessedit_char_whitelist: "" }
+      );
     }
 
     async function scanOnce(attempt: number) {
@@ -113,14 +130,26 @@ export function ScanCardModal({
       if (!video || !container || !worker || !video.videoWidth) return;
 
       const g = guideRect(video, container);
-      // Fast pass: just the bottom strip, where the collector number is.
-      // Every other miss also tries the whole card so the name can match.
+      const line = { x: g.x + g.w * 0.03, y: g.y + g.h * 0.935, w: g.w * 0.42, h: g.h * 0.06 };
       const strip = { x: g.x, y: g.y + g.h * 0.78, w: g.w, h: g.h * 0.22 };
-      const regions = attempt % 2 === 1 ? [strip, g] : [strip];
 
-      for (const region of regions) {
-        const canvas = grab(video, region, region === g ? 640 : 520);
+      // Mostly the fast line read; every 3rd miss also tries the wider reads.
+      const plan: { region: typeof g; width: number; filter: string; mode: "line" | "sparse" }[] = [
+        { region: line, width: 720, filter: LINE_FILTER, mode: "line" },
+      ];
+      if (attempt % 3 === 2) {
+        plan.push({ region: strip, width: 560, filter: WIDE_FILTER, mode: "sparse" });
+        plan.push({ region: g, width: 640, filter: WIDE_FILTER, mode: "sparse" });
+      }
+
+      let currentMode: "line" | "sparse" | null = null;
+      for (const step of plan) {
+        const canvas = grab(video, step.region, step.width, step.filter);
         if (!canvas) continue;
+        if (currentMode !== step.mode) {
+          await setMode(step.mode);
+          currentMode = step.mode;
+        }
         const { data } = await worker.recognize(canvas);
         if (cancelled || pendingRef.current) return;
         const found = matchScan(data.text, cards);
@@ -129,6 +158,13 @@ export function ScanCardModal({
         const best = found.candidates[0];
         const last = lastAddedRef.current;
         if (last && last.id === best.id && Date.now() - last.at < SAME_CARD_COOLDOWN_MS) return;
+
+        // Two reads in a row must agree before we trust it.
+        if (lastSeenId !== best.id) {
+          lastSeenId = best.id;
+          return;
+        }
+        lastSeenId = null;
 
         if (autoAddRef.current && found.via === "code") {
           commit(best);
@@ -140,6 +176,7 @@ export function ScanCardModal({
         }
         return;
       }
+      lastSeenId = null;
     }
 
     async function start() {
@@ -156,11 +193,15 @@ export function ScanCardModal({
         if (!video) return;
         video.srcObject = stream;
         await video.play();
+        // Tiny print needs a sharp image; ask for continuous autofocus where supported.
+        stream
+          .getVideoTracks()[0]
+          ?.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] })
+          .catch(() => {});
 
         setStatus("Loading text recognition (first time only)...");
         const { createWorker } = await import("tesseract.js");
         const worker = (await createWorker("eng")) as unknown as Worker;
-        await worker.setParameters({ tessedit_pageseg_mode: "11" });
         if (cancelled) {
           worker.terminate();
           return;
