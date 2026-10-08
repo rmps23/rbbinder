@@ -3,6 +3,8 @@ import type { BinderSlots, RiftCard } from "./types";
 
 export type ScanMatch = {
   via: "code" | "name";
+  // Set code AND number/total were all read and agree with the catalog.
+  strong?: boolean;
   // Best guess first; the rest are other prints the user can switch to.
   candidates: RiftCard[];
 };
@@ -34,9 +36,10 @@ export function matchScan(text: string, cards: RiftCard[]): ScanMatch | null {
       const p = parsePublicCode(c.publicCode);
       return p && p.number === number && p.total === total;
     });
-    if (setCode && found.some((c) => c.set.id === setCode)) found = found.filter((c) => c.set.id === setCode);
+    const strong = !!setCode && found.some((c) => c.set.id === setCode);
+    if (strong) found = found.filter((c) => c.set.id === setCode);
     if (!found.length) continue;
-    return { via: "code", candidates: [...found].sort(rankBase) };
+    return { via: "code", strong, candidates: [...found].sort(rankBase) };
   }
 
   // 2) Fallback: a card name that appears in the text (longest wins).

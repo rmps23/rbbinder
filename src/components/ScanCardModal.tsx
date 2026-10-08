@@ -48,6 +48,7 @@ export function ScanCardModal({
   autoAddRef.current = autoAdd;
   const [addedCount, setAddedCount] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const [debug, setDebug] = useState("");
 
   const commit = useCallback((card: RiftCard) => {
     const { position } = targetPosition(card, slotsRef.current);
@@ -134,8 +135,10 @@ export function ScanCardModal({
       const strip = { x: g.x, y: g.y + g.h * 0.78, w: g.w, h: g.h * 0.22 };
 
       // Mostly the fast line read; every 3rd miss also tries the wider reads.
+      // The corner is read both ways (inverted / plain) on alternate tries,
+      // since glare and foil can make either one fail.
       const plan: { region: typeof g; width: number; filter: string; mode: "line" | "sparse" }[] = [
-        { region: line, width: 720, filter: LINE_FILTER, mode: "line" },
+        { region: line, width: 560, filter: attempt % 2 === 0 ? LINE_FILTER : "grayscale(1) contrast(1.8)", mode: "line" },
       ];
       if (attempt % 3 === 2) {
         plan.push({ region: strip, width: 560, filter: WIDE_FILTER, mode: "sparse" });
@@ -150,9 +153,11 @@ export function ScanCardModal({
           await setMode(step.mode);
           currentMode = step.mode;
         }
+        const t0 = performance.now();
         const { data } = await worker.recognize(canvas);
         if (cancelled || pendingRef.current) return;
         const found = matchScan(data.text, cards);
+        setDebug(`${step.mode} ${Math.round(performance.now() - t0)}ms: ${data.text.replace(/\s+/g, " ").trim().slice(0, 40)}`);
         if (!found) continue;
 
         const best = found.candidates[0];
@@ -160,7 +165,7 @@ export function ScanCardModal({
         if (last && last.id === best.id && Date.now() - last.at < SAME_CARD_COOLDOWN_MS) return;
 
         // Two reads in a row must agree before we trust it.
-        if (lastSeenId !== best.id) {
+        if (!found.strong && lastSeenId !== best.id) {
           lastSeenId = best.id;
           return;
         }
@@ -270,6 +275,7 @@ export function ScanCardModal({
       {!error && (
         <p className="pointer-events-none absolute inset-x-0 top-16 text-center text-xs text-white/80">
           {toast ?? status}
+          <span className="mt-0.5 block text-[10px] text-white/40">{debug}</span>
         </p>
       )}
 
