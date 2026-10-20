@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 import { BottomSheet } from "@/components/BottomSheet";
+import { useAppData } from "@/components/AppDataProvider";
+import { availableFinishes } from "@/lib/cardFinish";
+import { formatEur } from "@/lib/format";
 import type { RiftCard } from "@/lib/types";
 
 export function CardSheet({
@@ -19,6 +22,13 @@ export function CardSheet({
   onRemove: () => void;
   onClose: () => void;
 }) {
+  const { priceOf } = useAppData();
+  const finishes = availableFinishes(card);
+  const priced = (["normal", "foil"] as const)
+    .filter((f) => finishes[f])
+    .map((f) => ({ finish: f, price: priceOf(card, f) }))
+    .filter((p): p is { finish: "normal" | "foil"; price: number } => p.price !== null);
+
   return (
     <BottomSheet onClose={onClose}>
       <div className="flex gap-4">
@@ -35,6 +45,17 @@ export function CardSheet({
             {card.set.name}
             {card.rarity ? ` · ${card.rarity.label}` : ""}
           </p>
+          {priced.length > 0 && (
+            <p className="mt-2 text-xs text-white/60">
+              {priced.map((p) => (
+                <span key={p.finish} className="mr-3 whitespace-nowrap">
+                  {p.finish === "foil" ? "✦ Foil" : "Normal"}{" "}
+                  <span className="font-semibold text-white">{formatEur(p.price)}</span>
+                </span>
+              ))}
+              <span className="block text-[10px] text-white/35">English market (TCGplayer)</span>
+            </p>
+          )}
 
           <p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wide text-white/40">
             Copies in this slot

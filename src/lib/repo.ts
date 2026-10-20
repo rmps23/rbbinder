@@ -8,7 +8,8 @@
 import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "./supabaseAdmin";
 import { readLocalDb, withLocalDb } from "./localDb";
-import type { Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo } from "./types";
+import { applyCardFixes } from "./cardFixes";
+import type { Deck, DeckEntry, Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo } from "./types";
 
 const CHUNK_SIZE = 200;
 
@@ -22,26 +23,28 @@ function sortCardsAndSets(cards: RiftCard[], sets: SetInfo[]) {
   return { cards, sets };
 }
 
+type BinderStats = { uniqueCount: number; totalQty: number; contents?: Record<string, number> };
+
 function accumulateStats(
   rows: { binderId: string; cardId: string; qty: number }[]
-): Map<string, { uniqueCount: number; totalQty: number }> {
-  const byBinder = new Map<string, { cardIds: Set<string>; totalQty: number }>();
+): Map<string, BinderStats> {
+  const byBinder = new Map<string, { contents: Record<string, number>; totalQty: number }>();
   for (const row of rows) {
-    const s = byBinder.get(row.binderId) ?? { cardIds: new Set<string>(), totalQty: 0 };
-    s.cardIds.add(row.cardId);
+    const s = byBinder.get(row.binderId) ?? { contents: {}, totalQty: 0 };
+    s.contents[row.cardId] = (s.contents[row.cardId] ?? 0) + row.qty;
     s.totalQty += row.qty;
     byBinder.set(row.binderId, s);
   }
-  const result = new Map<string, { uniqueCount: number; totalQty: number }>();
+  const result = new Map<string, BinderStats>();
   for (const [binderId, s] of byBinder) {
-    result.set(binderId, { uniqueCount: s.cardIds.size, totalQty: s.totalQty });
+    result.set(binderId, { uniqueCount: Object.keys(s.contents).length, totalQty: s.totalQty, contents: s.contents });
   }
   return result;
 }
 
 function toBinder(
   b: { id: string; name: string; layout: string; pageCount: number; sortOrder: number; createdAt: string },
-  stats: { uniqueCount: number; totalQty: number }
+  stats: BinderStats
 ): Binder {
   return {
     id: b.id,
@@ -52,6 +55,7 @@ function toBinder(
     createdAt: b.createdAt,
     uniqueCount: stats.uniqueCount,
     totalQty: stats.totalQty,
+    contents: stats.contents,
   };
 }
 
@@ -83,13 +87,13 @@ export async function getCardsAndSets(): Promise<{ cards: RiftCard[]; sets: SetI
     if (setsError) throw new Error(setsError.message);
     const cards = cardRows.map((r) => r.payload as RiftCard);
     const sets = (setRows ?? []).map((r) => ({ id: r.id, name: r.name, cardCount: r.card_count }));
-    return sortCardsAndSets(cards, sets);
+    return sortCardsAndSets(applyCardFixes(cards), sets);
   }
 
   const db = await readLocalDb();
   const cards = db.cards.map((c) => c.payload);
   const sets = db.sets.map((s) => ({ id: s.id, name: s.name, cardCount: s.cardCount }));
-  return sortCardsAndSets(cards, sets);
+  return sortCardsAndSets(applyCardFixes(cards), sets);
 }
 
 export async function getExistingCardIds(): Promise<Set<string>> {
@@ -400,5 +404,92 @@ export async function setBinderSlot(binderId: string, position: number, cardId: 
     } else {
       db.binderCards.push({ binderId, position, cardId, qty, updatedAt: now });
     }
+  });
+}
+
+// ---------- decks ----------
+
+type DeckRow = { id: string; name: string; payload: { entries?: DeckEntry[] } | null; created_at: string; updated_at: string };
+
+function cleanEntries(entries: unknown): DeckEntry[] {
+  if (!Array.isArray(entries)) return [];
+  const zones = ["legend", "champion", "main", "battlefield", "rune", "sideboard"];
+  return entries
+    .filter((e) => e && typeof e.cardId === "string" && zones.includes(e.zone) && Number.isFinite(e.qty) && e.qty > 0)
+    .map((e) => ({ cardId: e.cardId, zone: e.zone, qty: Math.min(99, Math.floor(e.qty)) }));
+}
+
+function fromRow(r: DeckRow): Deck {
+  return {
+    id: r.id,
+    name: r.name,
+    entries: cleanEntries(r.payload?.entries),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+export async function listDecks(): Promise<Deck[]> {
+  if (hasSupabaseConfig()) {
+    const { data, error } = await getSupabaseAdmin().from("decks").select("*").order("updated_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data as DeckRow[]).map(fromRow);
+  }
+  const db = await readLocalDb();
+  return [...db.decks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function getDeck(id: string): Promise<Deck | null> {
+  if (hasSupabaseConfig()) {
+    const { data, error } = await getSupabaseAdmin().from("decks").select("*").eq("id", id).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? fromRow(data as DeckRow) : null;
+  }
+  const db = await readLocalDb();
+  return db.decks.find((d) => d.id === id) ?? null;
+}
+
+export async function createDeck(name: string, entries: unknown): Promise<Deck> {
+  const clean = cleanEntries(entries);
+  if (hasSupabaseConfig()) {
+    const { data, error } = await getSupabaseAdmin().from("decks").insert({ name, payload: { entries: clean } }).select("*").single();
+    if (error) throw new Error(error.message);
+    return fromRow(data as DeckRow);
+  }
+  const now = new Date().toISOString();
+  const deck: Deck = { id: randomUUID(), name, entries: clean, createdAt: now, updatedAt: now };
+  await withLocalDb((db) => {
+    db.decks.push(deck);
+  });
+  return deck;
+}
+
+export async function updateDeck(id: string, patch: { name?: string; entries?: unknown }): Promise<void> {
+  const now = new Date().toISOString();
+  if (hasSupabaseConfig()) {
+    const update: Record<string, unknown> = { updated_at: now };
+    if (patch.name !== undefined) update.name = patch.name;
+    if (patch.entries !== undefined) update.payload = { entries: cleanEntries(patch.entries) };
+    const { error } = await getSupabaseAdmin().from("decks").update(update).eq("id", id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  await withLocalDb((db) => {
+    const deck = db.decks.find((d) => d.id === id);
+    if (!deck) return;
+    if (patch.name !== undefined) deck.name = patch.name;
+    if (patch.entries !== undefined) deck.entries = cleanEntries(patch.entries);
+    deck.updatedAt = now;
+  });
+}
+
+export async function deleteDeck(id: string): Promise<void> {
+  if (hasSupabaseConfig()) {
+    const { error } = await getSupabaseAdmin().from("decks").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  await withLocalDb((db) => {
+    db.decks = db.decks.filter((d) => d.id !== id);
   });
 }

@@ -3,6 +3,9 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { RiftCard } from "@/lib/types";
+import { typicalFinish } from "@/lib/cardFinish";
+import { formatEur } from "@/lib/format";
+import { useAppData } from "./AppDataProvider";
 
 type DropZone = "before" | "after" | "swap";
 
@@ -37,6 +40,10 @@ export function BinderSlotTile({
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [dropZone, setDropZone] = useState<DropZone | null>(null);
+  // Binder slots don't record a finish, so show the plain one's price when a
+  // card exists in both (foil-only cards show the foil price).
+  const { priceOf } = useAppData();
+  const price = card ? priceOf(card, typicalFinish(card)) : null;
 
   if (!card) {
     return (
@@ -187,6 +194,7 @@ export function BinderSlotTile({
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col justify-end bg-gradient-to-b from-transparent to-black/90 p-2 pt-8 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
           <p className="line-clamp-2 text-xs font-semibold leading-tight text-white">{card.name}</p>
           <p className="text-[10px] text-white/60">{card.publicCode}</p>
+          {price !== null && <p className="text-[11px] font-semibold text-brand-gold">≈ {formatEur(price)}</p>}
         </div>
       )}
     </div>

@@ -62,7 +62,13 @@ function flattenCard(c: any): RiftCard {
     might: c.might?.value?.id ?? null,
     mightBonus: c.mightBonus?.value?.id ?? null,
     power: c.power?.value?.id ?? null,
-    tags: (c.tags?.values ?? []).map((t: { label?: string; id?: string }) => t.label ?? t.id ?? t),
+    // The gallery lists tags as plain strings under `tags.tags` (older code looked
+    // under `tags.values`, which is always empty).
+    tags: (c.tags?.tags ?? c.tags?.values ?? []).map((t: string | { label?: string; id?: string }) =>
+      typeof t === "string" ? t : (t.label ?? t.id ?? "")
+    ),
+    // champion / signature / token / basic - needed for the deck rules.
+    superTypes: (c.cardType?.superType ?? []).map((t: { id: string }) => t.id),
     illustrator: c.illustrator?.values?.[0]?.label ?? null,
     abilityText: plainText(c.text?.richText),
     image: {

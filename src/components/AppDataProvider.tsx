@@ -1,13 +1,17 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import type { BulkMap, BulkVariant, RiftCard, SetInfo } from "@/lib/types";
+import type { Finish } from "@/lib/cardFinish";
+import type { BulkMap, BulkVariant, PricesResponse, RiftCard, SetInfo } from "@/lib/types";
 
 type AppData = {
   cards: RiftCard[];
   sets: SetInfo[];
   bulk: BulkMap;
   loading: boolean;
+  // English-market prices in euros; null until they've loaded (or if unavailable).
+  prices: PricesResponse | null;
+  priceOf: (card: Pick<RiftCard, "id">, finish: Finish) => number | null;
   setBulkQty: (cardId: string, variant: BulkVariant, qty: number) => void;
   reloadCards: () => void;
 };
@@ -19,6 +23,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [sets, setSets] = useState<SetInfo[]>([]);
   const [bulk, setBulk] = useState<BulkMap>({});
   const [loading, setLoading] = useState(true);
+  const [prices, setPrices] = useState<PricesResponse | null>(null);
   const [cardsVersion, setCardsVersion] = useState(0);
   const pending = useRef<Map<string, { cardId: string; variant: BulkVariant; qty: number }>>(new Map());
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -41,6 +46,28 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, [cardsVersion]);
+
+  // Prices load after the main data so they never hold up the page.
+  useEffect(() => {
+    if (loading) return;
+    let cancelled = false;
+    fetch("/api/prices")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.prices) setPrices(data);
+      })
+      .catch(() => {
+        // prices are optional - the UI just doesn't show them
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loading]);
+
+  const priceOf = useCallback(
+    (card: Pick<RiftCard, "id">, finish: Finish) => prices?.prices[card.id]?.[finish]?.price ?? null,
+    [prices]
+  );
 
   const reloadCards = useCallback(() => setCardsVersion((v) => v + 1), []);
 
@@ -81,7 +108,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={{ cards, sets, bulk, loading, setBulkQty, reloadCards }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ cards, sets, bulk, loading, prices, priceOf, setBulkQty, reloadCards }}>{children}</Ctx.Provider>
   );
 }
 

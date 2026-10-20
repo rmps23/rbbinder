@@ -8,6 +8,7 @@
 --      binder, like a real album - identified by a flat slot position.
 --   4. bulk: repeated cards available for trade (normal/foil), separate
 --      from any binder.
+--   5. decks: deck lists for the deck builder (entries stored as JSON).
 
 create extension if not exists pgcrypto;
 
@@ -90,6 +91,14 @@ create table if not exists public.bulk (
 alter table public.bulk add column if not exists normal_qty integer not null default 0;
 alter table public.bulk add column if not exists foil_qty integer not null default 0;
 
+create table if not exists public.decks (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  payload jsonb not null default '{"entries": []}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Row Level Security is enabled with no policies: only the server-side
 -- service role key (used in the Next.js API routes) can read/write these
 -- tables. The browser never talks to Supabase directly.
@@ -98,3 +107,4 @@ alter table public.sets enable row level security;
 alter table public.binders enable row level security;
 alter table public.binder_cards enable row level security;
 alter table public.bulk enable row level security;
+alter table public.decks enable row level security;

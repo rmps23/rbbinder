@@ -6,7 +6,7 @@
 
 import { promises as fs } from "fs";
 import path from "path";
-import type { RiftCard } from "./types";
+import type { DeckEntry, RiftCard } from "./types";
 
 const DB_PATH = path.join(process.cwd(), ".data", "local-db.json");
 
@@ -22,6 +22,7 @@ export type LocalBinder = {
   updatedAt: string;
 };
 export type LocalBinderCard = { binderId: string; position: number; cardId: string; qty: number; updatedAt: string };
+export type LocalDeck = { id: string; name: string; entries: DeckEntry[]; createdAt: string; updatedAt: string };
 export type LocalBulk = { cardId: string; normalQty: number; foilQty: number; updatedAt: string };
 
 export type LocalDb = {
@@ -30,9 +31,10 @@ export type LocalDb = {
   binders: LocalBinder[];
   binderCards: LocalBinderCard[];
   bulk: LocalBulk[];
+  decks: LocalDeck[];
 };
 
-const EMPTY_DB: LocalDb = { cards: [], sets: [], binders: [], binderCards: [], bulk: [] };
+const EMPTY_DB: LocalDb = { cards: [], sets: [], binders: [], binderCards: [], bulk: [], decks: [] };
 
 // Serializes reads/writes within this process so concurrent requests don't
 // clobber each other's changes (good enough for a single local dev user).

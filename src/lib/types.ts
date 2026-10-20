@@ -6,6 +6,8 @@ export type RiftCard = {
   collectorNumber: number;
   set: { id: string; name: string };
   types: string[];
+  // champion / signature / token / basic. Missing on cards synced before this existed.
+  superTypes?: string[];
   rarity: { id: string; label: string } | null;
   domains: { id: string; label: string }[];
   energy: number | null;
@@ -19,6 +21,16 @@ export type RiftCard = {
 };
 
 export type SetInfo = { id: string; name: string; cardCount: number };
+
+// Prices are English-market (TCGplayer) averages, already converted to euros.
+export type PriceEntry = { price: number; low: number | null };
+export type CardPrices = { normal?: PriceEntry; foil?: PriceEntry };
+export type PricesResponse = {
+  updatedAt: string;
+  usdToEur: number;
+  rateDate: string | null;
+  prices: Record<string, CardPrices>;
+};
 
 // card_id -> how many normal/foil copies are in the bulk pile
 export type BulkVariant = "normal" | "foil";
@@ -41,6 +53,8 @@ export type Binder = {
   createdAt: string;
   uniqueCount: number;
   totalQty: number;
+  // card id -> copies placed (only from the binders list; used to value each binder)
+  contents?: Record<string, number>;
   // Minimum number of pages the binder always shows, regardless of how much
   // is filled - grows via the "+" button next to the binder pages.
   pageCount: number;
@@ -52,4 +66,18 @@ export type CardsSyncResult = {
   totalSets: number;
   newCards: number;
   newSets: string[];
+};
+
+// ---------- decks ----------
+
+export type DeckZone = "legend" | "champion" | "main" | "battlefield" | "rune" | "sideboard";
+// One printing of a card in one zone of a deck. Which printing is just for the
+// picture - owning any printing (by name) counts as having the card.
+export type DeckEntry = { cardId: string; zone: DeckZone; qty: number };
+export type Deck = {
+  id: string;
+  name: string;
+  entries: DeckEntry[];
+  createdAt: string;
+  updatedAt: string;
 };

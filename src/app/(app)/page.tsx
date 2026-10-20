@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppData } from "@/components/AppDataProvider";
 import { BINDER_LAYOUTS } from "@/lib/constants";
+import { formatEur } from "@/lib/format";
+import { valueBulk, valueContents } from "@/lib/valuation";
 import type { Binder, BinderLayout, CardsSyncResult } from "@/lib/types";
 
 function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-panel p-5">
-      <p className="font-display text-3xl font-bold text-white">
+    <div className="relative h-full animate-card-in overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-4 transition duration-200 hover:-translate-y-1 hover:border-white/20 sm:p-5">
+      <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-brand-gold/80 to-brand-cyan/60" />
+      <p className="font-display text-2xl font-bold text-white sm:text-3xl">
         <span className={accent}>{value}</span>
       </p>
       <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-white/40">{label}</p>
@@ -20,7 +23,7 @@ function StatCard({ label, value, accent }: { label: string; value: string | num
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { cards, bulk, loading: appLoading, reloadCards } = useAppData();
+  const { cards, bulk, prices, priceOf, loading: appLoading, reloadCards } = useAppData();
 
   const [binders, setBinders] = useState<Binder[]>([]);
   const [bindersLoading, setBindersLoading] = useState(true);
@@ -97,13 +100,23 @@ export default function DashboardPage() {
   const bulkTotal = bulkValues.reduce((sum, entry) => sum + entry.normal + entry.foil, 0);
   const bulkUnique = bulkValues.filter((entry) => entry.normal > 0 || entry.foil > 0).length;
 
+  // Worth of each binder / of the bulk pile (English-market prices in euros).
+  const values = useMemo(() => {
+    if (!prices) return null;
+    const cardById = new Map(cards.map((c) => [c.id, c]));
+    const perBinder = new Map(binders.map((b) => [b.id, valueContents(b.contents, cardById, priceOf)]));
+    let bindersTotal = 0;
+    for (const v of perBinder.values()) bindersTotal += v.value;
+    return { perBinder, bindersTotal, bulkTotal: valueBulk(cards, bulk, priceOf).total.value };
+  }, [prices, cards, binders, bulk, priceOf]);
+
   if (appLoading || bindersLoading) {
     return <p className="py-10 text-center text-white/40">Loading collection...</p>;
   }
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-2xl font-semibold uppercase tracking-wide text-white">Dashboard</h1>
+      <h1 className="mb-1 font-display text-3xl font-semibold uppercase tracking-wide text-white">Dashboard</h1>
       <p className="mb-5 text-sm text-white/50">Your Riftbound TCG collection binders.</p>
 
       {cards.length === 0 && (
@@ -113,26 +126,34 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Cards in catalog" value={cards.length} accent="text-white" />
         <StatCard label="Binders created" value={binders.length} accent="text-brand-gold" />
         <StatCard label="Cards in bulk" value={bulkTotal} accent="text-brand-cyan" />
         <Link href="/bulk" className="block">
           <StatCard label="Bulk · unique cards" value={bulkUnique} accent="text-brand-gold" />
         </Link>
+        <StatCard
+          label="Binders value"
+          value={values ? `≈ ${formatEur(values.bindersTotal)}` : "…"}
+          accent="text-brand-gold"
+        />
+        <Link href="/bulk" className="block">
+          <StatCard label="Bulk value" value={values ? `≈ ${formatEur(values.bulkTotal)}` : "…"} accent="text-brand-cyan" />
+        </Link>
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           onClick={() => setCreating((v) => !v)}
-          className="rounded-full border-[1.5px] border-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold hover:bg-brand-gold/10"
+          className="rounded-full border-[1.5px] border-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold transition hover:bg-brand-gold/10 active:scale-95"
         >
           + New binder
         </button>
         <button
           onClick={syncCards}
           disabled={syncing}
-          className="rounded-full bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft disabled:cursor-wait disabled:opacity-60"
+          className="rounded-full bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink shadow-[0_0_18px_-4px_rgba(216,171,82,0.7)] transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-60"
         >
           {syncing ? "Syncing..." : "Sync cards"}
         </button>
@@ -180,21 +201,22 @@ export default function DashboardPage() {
       )}
 
       <div className="mb-3 mt-8 flex items-center gap-3">
-        <span className="inline-block h-5 w-1 rounded-sm bg-brand-gold" />
-        <h2 className="font-display text-lg font-semibold uppercase tracking-wide text-white">Your binders</h2>
+        <span className="inline-block h-5 w-1 rounded-sm bg-gradient-to-b from-brand-gold to-brand-cyan" />
+        <h2 className="font-display text-lg font-semibold uppercase tracking-[0.12em] text-white">Your binders</h2>
+        <span className="h-px flex-1 bg-gradient-to-r from-white/15 to-transparent" />
       </div>
       {binders.length === 0 ? (
         <p className="py-10 text-center text-white/40">
           You haven&apos;t created any binders yet. Use the &quot;+ New binder&quot; button above.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {binders.map((b) => {
             const pct = cards.length ? Math.round((b.uniqueCount / cards.length) * 100) : 0;
             return (
               <div
                 key={b.id}
-                className="group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-panel p-5"
+                className="group relative animate-card-in overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-5 transition duration-200 hover:-translate-y-1 hover:border-brand-gold/40 hover:shadow-[0_16px_40px_-18px_rgba(216,171,82,0.5)]"
               >
                 <div
                   className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-70"
@@ -202,7 +224,7 @@ export default function DashboardPage() {
                 />
                 <Link href={`/binder/${b.id}`} className="relative block">
                   <div className="mb-3 flex items-start justify-between pr-6">
-                    <p className="font-display text-lg font-semibold text-white">{b.name}</p>
+                    <p className="font-display text-xl font-semibold text-white">{b.name}</p>
                     <span className="rounded-md bg-brand-gold px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-ink">
                       {b.layout}
                     </span>
@@ -210,8 +232,13 @@ export default function DashboardPage() {
                   <p className="mb-2 text-xs text-white/40">
                     {b.uniqueCount} unique · {b.totalQty} copies
                   </p>
+                  {values && (
+                    <p className="mb-2 font-display text-base font-semibold text-brand-gold">
+                      ≈ {formatEur(values.perBinder.get(b.id)?.value ?? 0)}
+                    </p>
+                  )}
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-brand-gold" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full bg-gradient-to-r from-brand-gold to-brand-cyan transition-all duration-700" style={{ width: `${pct}%` }} />
                   </div>
                 </Link>
                 <button

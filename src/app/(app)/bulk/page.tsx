@@ -1,12 +1,16 @@
+import { BulkScanner } from "@/components/BulkScanner";
+import { BulkValue } from "@/components/BulkValue";
 import { CardBrowser } from "@/components/CardBrowser";
 
 export default function BulkPage() {
   return (
     <div>
-      <h1 className="mb-1 font-display text-2xl font-semibold uppercase tracking-wide text-white">Bulk</h1>
-      <p className="mb-5 text-sm text-white/50">
-        Duplicate or tradeable cards — kept separate from your main binder.
-      </p>
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-white">Bulk</h1>
+        <BulkScanner />
+      </div>
+      <p className="mb-3 text-sm text-white/50">Duplicate or tradeable cards — kept separate from your main binder.</p>
+      <BulkValue />
       <CardBrowser
         onlyOwnedLabel="Show only available"
         defaultOnlyOwned

@@ -4,7 +4,9 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { matchScan, targetPosition, type ScanMatch } from "@/lib/cardScan";
 import { loadThumbIndex, THUMB_MARGIN_X, THUMB_MARGIN_Y } from "@/lib/cardImageIndex";
-import type { BinderSlots, RiftCard } from "@/lib/types";
+import { availableFinishes, resolveFinish, type Finish } from "@/lib/cardFinish";
+import { formatEur } from "@/lib/format";
+import type { BinderSlots, BulkMap, RiftCard } from "@/lib/types";
 
 type Worker = {
   recognize: (img: HTMLCanvasElement) => Promise<{ data: { text: string } }>;
@@ -18,18 +20,30 @@ const IMAGE_MIN_SCORE = 0.55;
 const OCR_DELAY_MS = 4000;
 const VOTE_WINDOW = 5;
 const VOTE_NEEDED = 4;
+const FINISH_KEY = "rbbinder:scanFinish";
+const NO_SLOTS: BinderSlots = {};
+
+// When scanning for the bulk pile instead of a binder: cards are added by
+// finish (normal / foil) rather than placed in a slot.
+export type BulkScanTarget = {
+  counts: BulkMap;
+  onAdd: (card: RiftCard, finish: Finish) => void;
+  priceOf: (card: RiftCard, finish: Finish) => number | null;
+};
 
 export function ScanCardModal({
   cards,
-  slots,
-  perPage,
+  slots = NO_SLOTS,
+  perPage = 1,
   onAdd,
+  bulk,
   onClose,
 }: {
   cards: RiftCard[];
-  slots: BinderSlots;
-  perPage: number;
-  onAdd: (card: RiftCard, position: number) => void;
+  slots?: BinderSlots;
+  perPage?: number;
+  onAdd?: (card: RiftCard, position: number) => void;
+  bulk?: BulkScanTarget;
   onClose: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -39,6 +53,8 @@ export function ScanCardModal({
   const lastAddedRef = useRef<{ id: string; at: number } | null>(null);
   const onAddRef = useRef(onAdd);
   onAddRef.current = onAdd;
+  const bulkRef = useRef(bulk);
+  bulkRef.current = bulk;
   const slotsRef = useRef(slots);
   slotsRef.current = slots;
 
@@ -53,18 +69,48 @@ export function ScanCardModal({
   autoAddRef.current = autoAdd;
   const [addedCount, setAddedCount] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const [finish, setFinish] = useState<Finish>("normal");
+  const finishRef = useRef(finish);
+  finishRef.current = finish;
   const [debug, setDebug] = useState("");
   const [imgDebug, setImgDebug] = useState("");
 
-  const commit = useCallback((card: RiftCard) => {
-    const { position } = targetPosition(card, slotsRef.current);
-    onAddRef.current(card, position);
+  // The finish picked for scanning is remembered, so a pile of foils only
+  // needs to be switched once.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(FINISH_KEY);
+      if (saved === "foil" || saved === "normal") setFinish(saved);
+    } catch {
+      // localStorage unavailable - keep the default
+    }
+  }, []);
+
+  function chooseFinish(next: Finish) {
+    setFinish(next);
+    try {
+      localStorage.setItem(FINISH_KEY, next);
+    } catch {
+      // best-effort only
+    }
+  }
+
+  const commit = useCallback((card: RiftCard, wanted?: Finish) => {
+    const target = bulkRef.current;
+    if (target) {
+      const used = resolveFinish(card, wanted ?? finishRef.current);
+      target.onAdd(card, used);
+      setToast(`Added ${used === "foil" ? "✦ foil" : "normal"} · ${card.name}`);
+    } else {
+      const { position } = targetPosition(card, slotsRef.current);
+      onAddRef.current?.(card, position);
+      setToast(`Added ${card.name}`);
+    }
     lastAddedRef.current = { id: card.id, at: Date.now() };
     pendingRef.current = null;
     setMatch(null);
     setPick(0);
     setAddedCount((n) => n + 1);
-    setToast(`Added ${card.name}`);
     window.setTimeout(() => setToast(null), 1600);
   }, []);
 
@@ -339,7 +385,11 @@ export function ScanCardModal({
   }, [cards, commit]);
 
   const chosen = shown?.candidates[pick] ?? null;
-  const target = chosen ? targetPosition(chosen, slots) : null;
+  const target = chosen && !bulk ? targetPosition(chosen, slots) : null;
+  const finishesOfChosen = chosen ? availableFinishes(chosen) : null;
+  const activeFinish: Finish = chosen ? resolveFinish(chosen, finish) : finish;
+  const haveInBulk = chosen && bulk ? bulk.counts[chosen.id] : undefined;
+  const priceNow = chosen && bulk ? bulk.priceOf(chosen, activeFinish) : null;
   const open = match !== null;
 
   return (
@@ -364,6 +414,23 @@ export function ScanCardModal({
         <button onClick={onClose} className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur hover:bg-white/25">
           Done{addedCount > 0 ? ` (${addedCount})` : ""}
         </button>
+        {bulk && (
+          <div role="group" aria-label="Finish of the cards you scan" className="flex rounded-full bg-white/15 p-0.5 backdrop-blur">
+            {(["normal", "foil"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                aria-pressed={finish === f}
+                onClick={() => chooseFinish(f)}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  finish === f ? (f === "foil" ? "bg-brand-gold text-ink" : "bg-brand-cyan text-ink") : "text-white/80"
+                }`}
+              >
+                {f === "foil" ? "✦ Foil" : "Normal"}
+              </button>
+            ))}
+          </div>
+        )}
         <label className="flex cursor-pointer items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-xs text-white backdrop-blur">
           <input type="checkbox" checked={autoAdd} onChange={(e) => setAutoAdd(e.target.checked)} />
           Auto-add
@@ -384,7 +451,7 @@ export function ScanCardModal({
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
-        {chosen && target && (
+        {chosen && (
           <>
             <div className="flex gap-3">
               <div className="relative aspect-[744/1039] w-20 shrink-0 overflow-hidden rounded-md bg-black">
@@ -396,10 +463,23 @@ export function ScanCardModal({
                   {chosen.subtitle ? `, ${chosen.subtitle}` : ""}
                 </p>
                 <p className="text-xs text-white/50">{chosen.publicCode}</p>
-                <p className="mt-1 text-xs text-brand-gold">
-                  Page {Math.floor(target.position / perPage) + 1}, slot {(target.position % perPage) + 1}
-                  {target.bump ? " (next free slot)" : ""}
-                </p>
+                {target && (
+                  <p className="mt-1 text-xs text-brand-gold">
+                    Page {Math.floor(target.position / perPage) + 1}, slot {(target.position % perPage) + 1}
+                    {target.bump ? " (next free slot)" : ""}
+                  </p>
+                )}
+                {bulk && (
+                  <p className="mt-1 text-xs text-brand-gold">
+                    In bulk: {haveInBulk?.normal ?? 0} normal · ✦{haveInBulk?.foil ?? 0} foil
+                  </p>
+                )}
+                {priceNow !== null && (
+                  <p className="mt-1 text-xs text-white/70">
+                    ≈ <span className="font-semibold text-white">{formatEur(priceNow)}</span>{" "}
+                    <span className="text-white/40">{activeFinish === "foil" ? "foil" : "normal"} · English market</span>
+                  </p>
+                )}
                 {shown?.via === "name" && <p className="mt-1 text-[11px] text-white/40">Matched by name - check the print</p>}
                 {shown?.via === "image" && shown.candidates.length > 1 && <p className="mt-1 text-[11px] text-white/40">Other prints of this card are available below</p>}
               </div>
@@ -421,12 +501,43 @@ export function ScanCardModal({
               </div>
             )}
 
+            {bulk && finishesOfChosen && (
+              <div className="mt-3">
+                {finishesOfChosen.normal && finishesOfChosen.foil ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["normal", "foil"] as const).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        aria-pressed={activeFinish === f}
+                        onClick={() => chooseFinish(f)}
+                        className={`h-11 rounded-xl font-display text-sm font-semibold uppercase tracking-wide transition ${
+                          activeFinish === f
+                            ? f === "foil"
+                              ? "bg-brand-gold text-ink"
+                              : "bg-brand-cyan text-ink"
+                            : "border border-white/15 text-white/70"
+                        }`}
+                      >
+                        {f === "foil" ? "✦ Foil" : "Normal"}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-white/60">
+                    This card only exists as{" "}
+                    <span className="font-semibold text-brand-gold">{activeFinish === "foil" ? "foil" : "normal"}</span>.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="mt-3 flex gap-2">
               <button
-                onClick={() => commit(chosen)}
+                onClick={() => commit(chosen, activeFinish)}
                 className="flex-1 rounded-full bg-brand-gold px-3 py-3 font-display text-sm font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft"
               >
-                Add
+                {bulk ? `Add ${activeFinish === "foil" ? "foil" : "normal"}` : "Add"}
               </button>
               <button
                 onClick={() => dismiss(chosen)}

@@ -14,6 +14,8 @@ import { MobileBinderView } from "@/components/MobileBinderView";
 import { BinderMenuSheet } from "@/components/BinderMenuSheet";
 import { CardSheet } from "@/components/CardSheet";
 import { useMediaQuery } from "@/lib/useMediaQuery";
+import { typicalFinish } from "@/lib/cardFinish";
+import { formatEur } from "@/lib/format";
 import { FilterState } from "@/components/Filters";
 import { BINDER_LAYOUTS } from "@/lib/constants";
 import type { Binder, BinderLayout, RiftCard } from "@/lib/types";
@@ -102,7 +104,7 @@ export default function BinderDetailPage() {
   const params = useParams<{ id: string }>();
   const binderId = params.id;
   const router = useRouter();
-  const { cards, sets, loading: cardsLoading } = useAppData();
+  const { cards, sets, loading: cardsLoading, prices, priceOf } = useAppData();
   const {
     slots,
     loading: slotsLoading,
@@ -196,13 +198,18 @@ export default function BinderDetailPage() {
   const binderStats = useMemo(() => {
     const cardIds = new Set<string>();
     let totalQty = 0;
+    let value = 0;
     for (const slot of Object.values(slots)) {
       if (slot.qty <= 0) continue;
       cardIds.add(slot.cardId);
       totalQty += slot.qty;
+      const card = cardById.get(slot.cardId);
+      const price = card ? priceOf(card, typicalFinish(card)) : null;
+      if (price !== null) value += price * slot.qty;
     }
-    return { uniqueCount: cardIds.size, totalQty };
-  }, [slots]);
+    return { uniqueCount: cardIds.size, totalQty, value };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots, cardById, prices]);
 
   const layout = BINDER_LAYOUTS.find((l) => l.id === binder?.layout) ?? BINDER_LAYOUTS[1];
   const perPage = layout.cols * layout.rows;
@@ -652,7 +659,14 @@ export default function BinderDetailPage() {
         </div>
       </div>
 
-      <p className="mb-3 text-center text-sm text-white/40 md:mb-4">{binderStats.totalQty} cards placed</p>
+      <p className="mb-3 text-center text-sm text-white/40 md:mb-4">{binderStats.totalQty} cards placed
+        {prices && binderStats.value > 0 && (
+          <span title="English-market prices (TCGplayer) in euros. Cards that exist in both finishes are valued as normal.">
+            {" "}
+            · ≈ {formatEur(binderStats.value)}
+          </span>
+        )}
+      </p>
 
       {isMobile && moveFrom !== null && (
         <div className="sticky top-[66px] z-10 mb-3 flex items-center justify-between gap-3 rounded-xl border border-brand-cyan/40 bg-ink/95 px-3 py-2.5 backdrop-blur">

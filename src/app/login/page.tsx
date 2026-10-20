@@ -36,11 +36,12 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ink px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl border border-white/10 bg-panel p-6 shadow-xl"
+        className="relative w-full max-w-sm animate-card-in overflow-hidden rounded-2xl border border-white/10 bg-panel p-6 shadow-[0_20px_60px_-20px_rgba(216,171,82,0.35)]"
       >
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-gold via-brand-cyan to-brand-gold" />
         <div className="mb-1 flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg border-[1.5px] border-brand-gold bg-ink font-display text-sm font-bold text-brand-gold">
             RB

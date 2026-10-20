@@ -2,6 +2,7 @@
 
 import type { SetInfo } from "@/lib/types";
 import { DOMAIN_OPTIONS, RARITY_OPTIONS, TYPE_OPTIONS } from "@/lib/constants";
+import { domainColor } from "@/lib/style";
 
 export type AltArtFilter = "all" | "hide" | "only";
 
@@ -34,14 +35,14 @@ export function Filters({
     "rounded-md border border-white/10 bg-panel px-2.5 py-1.5 text-sm text-white/80 outline-none focus:border-brand-gold";
 
   return (
-    <div className="mb-4 flex flex-col gap-2.5 rounded-xl border border-white/[0.06] bg-panel/60 p-3">
+    <div className="mb-4 flex flex-col gap-2.5 rounded-2xl border border-white/[0.07] bg-panel/70 p-3 backdrop-blur">
       <div className="flex flex-wrap gap-2">
         <input
           type="text"
           placeholder="Search card..."
           value={state.search}
           onChange={(e) => set("search", e.target.value)}
-          className="min-w-[180px] flex-1 rounded-md border border-white/10 bg-ink px-3 py-1.5 text-sm text-white outline-none focus:border-brand-gold"
+          className="min-w-[180px] flex-1 rounded-lg border border-white/10 bg-ink px-3 py-2 text-sm text-white outline-none transition focus:border-brand-gold focus:shadow-[0_0_0_3px_rgba(216,171,82,0.15)]"
         />
         <select className={selectClass} value={state.setId} onChange={(e) => set("setId", e.target.value)}>
           <option value="">All sets</option>
@@ -67,14 +68,6 @@ export function Filters({
             </option>
           ))}
         </select>
-        <select className={selectClass} value={state.domainId} onChange={(e) => set("domainId", e.target.value)}>
-          <option value="">All domains</option>
-          {DOMAIN_OPTIONS.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.label}
-            </option>
-          ))}
-        </select>
         <select
           className={selectClass}
           value={state.altArt}
@@ -84,6 +77,25 @@ export function Filters({
           <option value="hide">Hide alternate arts</option>
           <option value="only">Alternate arts only</option>
         </select>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {DOMAIN_OPTIONS.map((d) => {
+          const on = state.domainId === d.id;
+          return (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => set("domainId", on ? "" : d.id)}
+              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
+                on ? "text-ink" : "bg-white/5 text-white/60 hover:bg-white/10"
+              }`}
+              style={on ? { background: domainColor(d.id) } : undefined}
+            >
+              <span className="h-2 w-2 rounded-full" style={{ background: domainColor(d.id) }} />
+              {d.label}
+            </button>
+          );
+        })}
       </div>
       {onlyOwnedLabel && (
         <label className="flex w-fit items-center gap-2 text-sm text-white/70">

@@ -37,6 +37,19 @@ const config: Config = {
           from: { transform: "translateY(100%)" },
           to: { transform: "translateY(0)" },
         },
+        pop: {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.35)" },
+          "100%": { transform: "scale(1)" },
+        },
+        "card-in": {
+          from: { opacity: "0", transform: "translateY(8px) scale(0.97)" },
+          to: { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
         "fade-in": {
           from: { opacity: "0" },
           to: { opacity: "1" },
@@ -47,6 +60,9 @@ const config: Config = {
         "page-in-left": "page-in-left 280ms cubic-bezier(0.22, 1, 0.36, 1)",
         "sheet-up": "sheet-up 260ms cubic-bezier(0.22, 1, 0.36, 1)",
         "fade-in": "fade-in 200ms ease-out",
+        pop: "pop 260ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "card-in": "card-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        shimmer: "shimmer 3s linear infinite",
       },
       fontFamily: {
         sans: ["var(--font-public-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
