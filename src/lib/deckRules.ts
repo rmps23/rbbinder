@@ -136,7 +136,10 @@ export function checkDeck(ctx: Ctx): { checks: Check[]; problems: string[]; lega
   add("bf", "3 battlefields", s.zoneCount.battlefield === LIMITS.battlefields, `${s.zoneCount.battlefield}/${LIMITS.battlefields}`);
 
   const overCopies = [...s.copies].filter(([, q]) => q > LIMITS.copies);
-  for (const [key, q] of overCopies) problems.push(`${displayName(cardById.get(entries.find((e) => cardKey(cardById.get(e.cardId)!) === key)!.cardId)!)}: ${q} copies (max 3)`);
+  for (const [key, q] of overCopies) {
+    const card = entries.map((e) => cardById.get(e.cardId)).find((c) => c && cardKey(c) === key);
+    if (card) problems.push(`${displayName(card)}: ${q} copies (max 3)`);
+  }
   add("copies", "Max 3 copies per card name", overCopies.length === 0, overCopies.length ? `${overCopies.length} over` : "ok");
 
   const dupBf = [...s.battlefieldNames].filter(([, q]) => q > 1);
@@ -153,7 +156,10 @@ export function checkDeck(ctx: Ctx): { checks: Check[]; problems: string[]; lega
   add("identity", "Everything within the legend's domains", outside.length === 0, outside.length ? `${outside.length} outside` : "ok");
 
   const side = s.zoneCount.sideboard;
-  const sideBad = entries.filter((e) => e.zone === "sideboard" && !belongsInPool(cardById.get(e.cardId)!, "sideboard", s.legend));
+  const sideBad = entries.filter((e) => {
+    const card = cardById.get(e.cardId);
+    return e.zone === "sideboard" && !!card && !belongsInPool(card, "sideboard", s.legend);
+  });
   add("side", "Sideboard up to 10 cards", side <= LIMITS.sideboard && sideBad.length === 0, `${side}/${LIMITS.sideboard}`);
 
   const tokens = entries.filter((e) => cardById.get(e.cardId) && isToken(cardById.get(e.cardId)!));
