@@ -101,13 +101,6 @@ export function exportDeck(deck: Pick<Deck, "entries">, cardById: Map<string, Ri
       }
       counts.set(name, (counts.get(name) ?? 0) + e.qty);
     }
-    // The champion is one of the main deck's cards, so the list repeats it there.
-    if (zone.id === "main") {
-      for (const e of deck.entries) {
-        const card = cardById.get(e.cardId);
-        if (card && e.zone === "champion" && e.qty > 0) counts.set(displayName(card), (counts.get(displayName(card)) ?? 0) + e.qty);
-      }
-    }
     if (!counts.size) continue;
     const lines = [...counts].sort((a, b) => a[0].localeCompare(b[0])).map(([name, qty]) => `${qty} ${name}`);
     blocks.push(`${zone.heading}:\n${lines.join("\n")}`);
@@ -179,17 +172,8 @@ export function parseDeck(text: string, index: DeckIndex): { entries: DeckEntry[
     if (existing) existing.qty += qty;
     else entries.set(id, { cardId: card.id, zone: z, qty });
   }
-  // Lists repeat the champion inside MainDeck; here the champion is its own
-  // slot, so take that copy out of the main deck to avoid counting it twice.
   const all = [...entries.values()];
-  const byId = new Map<string, RiftCard>();
-  for (const list of index.byKey.values()) for (const c of list) byId.set(c.id, c);
-  for (const champ of all.filter((e) => e.zone === "champion")) {
-    const key = cardKey(byId.get(champ.cardId)!);
-    const inMain = all.find((e) => e.zone === "main" && cardKey(byId.get(e.cardId)!) === key);
-    if (inMain) inMain.qty -= 1;
-  }
-  return { entries: all.filter((e) => e.qty > 0), unknown };
+  return { entries: all, unknown };
 }
 
 // ---------- comparison with the bulk pile ----------

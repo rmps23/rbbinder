@@ -13,7 +13,9 @@ export const LIMITS = {
 };
 
 const hasSuper = (c: RiftCard, s: string) => c.superTypes?.includes(s) ?? false;
-export const isChampionUnit = (c: RiftCard) => c.types.includes("unit") && hasSuper(c, "champion");
+// Cards synced before supertypes were stored have none; then any unit may be offered.
+export const isChampionUnit = (c: RiftCard) =>
+  c.types.includes("unit") && (c.superTypes === undefined || hasSuper(c, "champion"));
 export const isSignature = (c: RiftCard) => hasSuper(c, "signature");
 export const isToken = (c: RiftCard) => hasSuper(c, "token");
 

@@ -7,7 +7,6 @@ import { domainColor } from "@/lib/style";
 import type { DeckEntry, DeckZone, RiftCard } from "@/lib/types";
 
 export type Row = { entry: DeckEntry; card: RiftCard };
-export type Owned = "full" | "partial" | "none" | null;
 
 export function primaryColor(card: RiftCard): string {
   return domainColor(card.domains[0]?.id);
@@ -40,26 +39,6 @@ export function DomainDots({ card }: { card: RiftCard }) {
   );
 }
 
-const OWNED_STYLE: Record<Exclude<Owned, null>, { color: string; label: string }> = {
-  full: { color: "#34d399", label: "All copies in your bulk" },
-  partial: { color: "#fbbf24", label: "Only some copies in your bulk" },
-  none: { color: "#ef4360", label: "Not in your bulk" },
-};
-
-export function OwnedDot({ owned }: { owned: Owned }) {
-  if (!owned) return null;
-  const s = OWNED_STYLE[owned];
-  return (
-    <span
-      title={s.label}
-      className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-semibold"
-      style={{ background: `${s.color}22`, color: s.color }}
-    >
-      {owned === "full" ? "✓" : owned === "partial" ? "½" : "✗"} bulk
-    </span>
-  );
-}
-
 function Pip({ children, tone = "gold" }: { children: React.ReactNode; tone?: "gold" | "cyan" }) {
   return (
     <span
@@ -73,20 +52,47 @@ function Pip({ children, tone = "gold" }: { children: React.ReactNode; tone?: "g
 }
 export { Pip };
 
+function RowButton({
+  children,
+  onClick,
+  title,
+  tone = "plain",
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  title: string;
+  tone?: "gold" | "plain";
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none transition active:scale-95 ${
+        tone === "gold"
+          ? "border-brand-gold/50 bg-brand-gold/10 text-brand-gold hover:bg-brand-gold hover:text-ink"
+          : "border-white/15 bg-white/[0.04] text-white/65 hover:border-white/35 hover:bg-white/10 hover:text-white"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 // ---------- list ----------
 
 export function ListView({
   zones,
   rowsByZone,
   countOf,
-  ownedOf,
+  canChampion,
   onAdjust,
   onMove,
 }: {
   zones: { id: DeckZone; label: string; target: number | null; max: number | null }[];
   rowsByZone: Map<DeckZone, Row[]>;
   countOf: (z: DeckZone) => number;
-  ownedOf: (card: RiftCard) => Owned;
+  canChampion: (card: RiftCard) => boolean;
   onAdjust: (row: Row, delta: number) => void;
   onMove: (row: Row, to: DeckZone) => void;
 }) {
@@ -131,36 +137,27 @@ export function ListView({
                         <span className="flex items-center gap-1.5 text-[11px] text-white/40">
                           {card.energy !== null && <Pip>{card.energy}</Pip>}
                           <DomainDots card={card} />
-                          <OwnedDot owned={ownedOf(card)} />
                         </span>
-                        <span className="mt-0.5 flex gap-1 opacity-60 transition group-hover:opacity-100">
-                          {entry.zone === "main" && card.types.includes("unit") && (
-                            <button
-                              type="button"
-                              onClick={() => onMove(row, "champion")}
-                              className="rounded bg-white/5 px-1.5 text-[10px] hover:bg-brand-gold hover:text-ink"
-                              title="Make this your champion"
-                            >
+                        <span className="mt-1.5 flex gap-1.5">
+                          {entry.zone === "main" && card.types.includes("unit") && canChampion(card) && (
+                            <RowButton tone="gold" onClick={() => onMove(row, "champion")} title="Use as your chosen champion">
                               ★ Champion
-                            </button>
+                            </RowButton>
                           )}
                           {entry.zone === "main" && (
-                            <button
-                              type="button"
-                              onClick={() => onMove(row, "sideboard")}
-                              className="rounded bg-white/5 px-1.5 text-[10px] hover:bg-white/20"
-                            >
-                              → Side
-                            </button>
+                            <RowButton onClick={() => onMove(row, "sideboard")} title="Move one copy to the sideboard">
+                              ⇄ Sideboard
+                            </RowButton>
                           )}
-                          {(entry.zone === "sideboard" || entry.zone === "champion") && (
-                            <button
-                              type="button"
-                              onClick={() => onMove(row, "main")}
-                              className="rounded bg-white/5 px-1.5 text-[10px] hover:bg-white/20"
-                            >
-                              → Main
-                            </button>
+                          {entry.zone === "sideboard" && (
+                            <RowButton onClick={() => onMove(row, "main")} title="Move one copy to the main deck">
+                              ⇄ Main deck
+                            </RowButton>
+                          )}
+                          {entry.zone === "champion" && (
+                            <RowButton onClick={() => onMove(row, "main")} title="Put it back in the main deck">
+                              ✕ Unset
+                            </RowButton>
                           )}
                         </span>
                       </span>
@@ -358,7 +355,6 @@ export function BulkView({
   onIncludeRunes: (v: boolean) => void;
 }) {
   const pct = compare.totalNeeded ? Math.round((compare.totalHave / compare.totalNeeded) * 100) : 0;
-  const list = (cls: string) => `flex flex-col gap-1.5 ${cls}`;
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-white/[0.07] bg-panel2 p-4">
@@ -392,18 +388,20 @@ export function BulkView({
         {compare.have.length === 0 ? (
           <p className="text-xs text-white/30">Nothing from the deck is in your bulk.</p>
         ) : (
-          <ul className={list("")}>
+          <div className="grid grid-cols-3 gap-2.5">
             {compare.have.map((r) => (
-              <li key={r.key} className="flex items-center gap-2.5 rounded-lg bg-panel2 p-1.5 ring-1 ring-inset ring-brand-cyan/15">
-                <CardArt card={r.card} sizes="40px" className="w-9 shrink-0 rounded" />
-                <span className="min-w-0 flex-1 truncate text-sm text-white/90">{displayName(r.card)}</span>
-                <span className="shrink-0 pr-1 font-display text-base font-bold text-brand-cyan">
-                  {r.qty}
-                  {r.qty < r.needed && <span className="text-white/35"> / {r.needed}</span>}
-                </span>
-              </li>
+              <div key={r.key} className="animate-card-in">
+                <div className="relative rounded-lg ring-2 ring-brand-cyan/40" title={displayName(r.card)}>
+                  <CardArt card={r.card} sizes="140px" className="rounded-lg" />
+                  <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-cyan px-1.5 text-xs font-bold text-ink shadow-lg">
+                    {r.qty}
+                    {r.qty < r.needed ? `/${r.needed}` : ""}
+                  </span>
+                </div>
+                <p className="mt-1 truncate text-[11px] text-white/70">{displayName(r.card)}</p>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </section>
 
@@ -412,18 +410,20 @@ export function BulkView({
         {compare.missing.length === 0 ? (
           <p className="text-xs text-white/30">{hasCards ? "You have everything. Time to sleeve up!" : "Add cards to the deck."}</p>
         ) : (
-          <ul className={list("")}>
+          <div className="grid grid-cols-3 gap-2.5">
             {compare.missing.map((r) => (
-              <li key={r.key} className="flex items-center gap-2.5 rounded-lg bg-panel2 p-1.5 ring-1 ring-inset ring-brand-red/15">
-                <CardArt card={r.card} sizes="40px" className="w-9 shrink-0 rounded" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-white/90">{displayName(r.card)}</span>
-                  {r.price !== null && <span className="text-[11px] text-white/40">from {formatEur(r.price)}</span>}
-                </span>
-                <span className="shrink-0 pr-1 font-display text-base font-bold text-brand-red">×{r.qty}</span>
-              </li>
+              <div key={r.key} className="animate-card-in">
+                <div className="relative rounded-lg ring-2 ring-brand-red/40" title={displayName(r.card)}>
+                  <CardArt card={r.card} sizes="140px" className="rounded-lg opacity-80" />
+                  <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-red px-1.5 text-xs font-bold text-white shadow-lg">
+                    ×{r.qty}
+                  </span>
+                </div>
+                <p className="mt-1 truncate text-[11px] text-white/70">{displayName(r.card)}</p>
+                {r.price !== null && <p className="text-[10px] text-white/40">from {formatEur(r.price)}</p>}
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </div>

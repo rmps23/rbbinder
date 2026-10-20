@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppData } from "./AppDataProvider";
 import { DeckTextModal } from "./DeckTextModal";
-import { ArtView, BulkView, CardArt, DomainDots, ListView, Pip, RulesPanel, StatsView, primaryColor, type CompareData, type Owned, type Row } from "./DeckViews";
+import { ArtView, BulkView, CardArt, DomainDots, ListView, Pip, RulesPanel, StatsView, primaryColor, type CompareData, type Row } from "./DeckViews";
 import { DOMAIN_OPTIONS } from "@/lib/constants";
 import { availableFinishes } from "@/lib/cardFinish";
 import { buildDeckIndex, cardKey, displayName, exportDeck, neededByKey, parseDeck, ZONES } from "@/lib/deck";
@@ -235,17 +235,6 @@ export function DeckBuilder({ id }: { id: string }) {
     return m;
   }, [cards, bulk]);
 
-  const neededAll = useMemo(() => neededByKey(entries, cardById), [entries, cardById]);
-  const ownedOf = useCallback(
-    (card: RiftCard): Owned => {
-      if (card.types.includes("rune")) return null;
-      const needed = neededAll.get(cardKey(card))?.needed ?? 1;
-      const owned = ownedByKey.get(cardKey(card)) ?? 0;
-      return owned >= needed ? "full" : owned > 0 ? "partial" : "none";
-    },
-    [neededAll, ownedByKey]
-  );
-
   const cheapest = useCallback(
     (key: string): number | null => {
       let best: number | null = null;
@@ -395,9 +384,9 @@ export function DeckBuilder({ id }: { id: string }) {
               const z0 = tgt(z);
               return (
                 <button key={z} type="button" onClick={() => setPoolZone(z)} className={`shrink-0 ${chip(poolZone === z)}`}>
-                  {z0.label.replace("Battlefields", "Battlefields")}
+                  {z0.label}
                   <span className={`ml-1.5 ${poolZone === z ? "text-ink/60" : "text-white/35"}`}>
-                    {countOf(z)}
+                    {z === "main" ? mainTotal : countOf(z)}
                     {z0.target ? `/${z0.target}` : z0.max ? `/${z0.max}` : ""}
                   </span>
                 </button>
@@ -539,7 +528,7 @@ export function DeckBuilder({ id }: { id: string }) {
               rowsByZone={rowsByZone}
               // the champion is one of the main deck's 40 cards
               countOf={(z) => (z === "main" ? countOf("main") + countOf("champion") : countOf(z))}
-              ownedOf={ownedOf}
+              canChampion={(card) => belongsInPool(card, "champion", legend)}
               onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)}
               onMove={moveOne}
             />
