@@ -524,10 +524,10 @@ export function DeckBuilder({ id }: { id: string }) {
 
           {view === "list" && (
             <ListView
-              zones={ZONES}
+              // the champion fills 1 of the 40, so the main zone needs 39 with it placed
+              zones={ZONES.map((z) => (z.id === "main" ? { ...z, target: LIMITS.main - Math.min(1, countOf("champion")) } : z))}
               rowsByZone={rowsByZone}
-              // the champion is one of the main deck's 40 cards
-              countOf={(z) => (z === "main" ? countOf("main") + countOf("champion") : countOf(z))}
+              countOf={countOf}
               canChampion={(card) => belongsInPool(card, "champion", legend)}
               onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)}
               onMove={moveOne}
