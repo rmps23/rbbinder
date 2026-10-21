@@ -115,6 +115,21 @@ export function Header() {
             </div>
           )}
         </div>
+        <Link
+          href="/maintenance"
+          aria-label="Data and updates"
+          title="Data & updates"
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition active:scale-95 ${
+            pathname.startsWith("/maintenance")
+              ? "border-brand-gold bg-brand-gold/15 text-brand-gold"
+              : "border-white/[0.07] bg-white/[0.04] text-white/55 hover:border-white/25 hover:text-white"
+          }`}
+        >
+          <svg viewBox="0 0 24 24" {...ICON} className="h-[18px] w-[18px]">
+            <path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9" />
+            <path d="M18.5 3v4.5H14M5.5 21v-4.5H10" />
+          </svg>
+        </Link>
         <button
           onClick={logout}
           aria-label="Sign out"

@@ -477,7 +477,7 @@ export function ScanCardModal({
                 {priceNow !== null && (
                   <p className="mt-1 text-xs text-white/70">
                     ≈ <span className="font-semibold text-white">{formatEur(priceNow)}</span>{" "}
-                    <span className="text-white/40">{activeFinish === "foil" ? "foil" : "normal"} · English market</span>
+                    <span className="text-white/40">{activeFinish === "foil" ? "foil" : "normal"} · Cardmarket trend</span>
                   </p>
                 )}
                 {shown?.via === "name" && <p className="mt-1 text-[11px] text-white/40">Matched by name - check the print</p>}

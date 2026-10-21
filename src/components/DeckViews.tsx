@@ -376,7 +376,7 @@ export function BulkView({
           <p className="mt-3 text-sm text-white/60">
             To complete it <span className="font-display text-lg font-semibold text-brand-gold">≈ {formatEur(compare.missingCost)}</span>
             <span className="block text-[11px] text-white/35">
-              cheapest English-market printing (TCGplayer){compare.missingUnpriced ? ` · ${compare.missingUnpriced} without a price` : ""}
+              cheapest printing (Cardmarket trend){compare.missingUnpriced ? ` · ${compare.missingUnpriced} without a price` : ""}
             </span>
           </p>
         )}

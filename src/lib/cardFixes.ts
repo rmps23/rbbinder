@@ -1,8 +1,4 @@
-import domainFixes from "./cardDomainFixes.json";
 import type { RiftCard } from "./types";
-
-// Domains of unreleased cards, from TCGplayer (see scripts/build-domain-fixes.mjs).
-const DOMAINS = domainFixes as Record<string, string[]>;
 
 // Corrections that neither source has right. Demon Shade (RAD-102) is listed as
 // Fury by Riot and TCGplayer, but sits in the Chaos block of the set and is legal
@@ -21,9 +17,10 @@ const LABELS: Record<string, string> = {
   colorless: "Colorless",
 };
 
-export function applyCardFixes(cards: RiftCard[]): RiftCard[] {
+// `domainFixes`: domains of unreleased cards from TCGplayer (Maintenance page).
+export function applyCardFixes(cards: RiftCard[], domainFixes: Record<string, string[]>): RiftCard[] {
   return cards.map((card) => {
-    const ids = MANUAL[card.id] ?? DOMAINS[card.id];
+    const ids = MANUAL[card.id] ?? domainFixes[card.id];
     if (!ids) return card;
     return { ...card, domains: ids.map((id) => ({ id, label: LABELS[id] ?? id })) };
   });

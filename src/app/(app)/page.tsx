@@ -155,7 +155,7 @@ export default function DashboardPage() {
                   <span className="font-display text-xl font-semibold text-brand-gold">
                     ≈ {formatEur(stats.bindersValue + stats.bulkValue)}
                   </span>{" "}
-                  <span className="text-white/35">· English market (TCGplayer) in euros</span>
+                  <span className="text-white/35">· Cardmarket trend, in euros</span>
                 </>
               ) : (
                 "Your Riftbound collection at a glance."

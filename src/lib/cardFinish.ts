@@ -7,10 +7,20 @@ export type Finishes = { normal: boolean; foil: boolean };
 type FinishCard = Pick<RiftCard, "id" | "publicCode" | "rarity">;
 
 // Exceptions to the rules below, taken from the English market's product list
-// (TCGplayer) by scripts/build-card-finishes.mjs.
-const FOIL_ONLY = new Set<string>(finishes.foilOnly);
-const NORMAL_ONLY = new Set<string>(finishes.normalOnly);
-const BOTH = new Set<string>(finishes.both);
+// (TCGplayer) by the "Update finishes" button on the Maintenance page.
+export type FinishData = { generatedAt?: string; foilOnly: string[]; normalOnly: string[]; both: string[] };
+
+let FOIL_ONLY = new Set<string>(finishes.foilOnly);
+let NORMAL_ONLY = new Set<string>(finishes.normalOnly);
+let BOTH = new Set<string>(finishes.both);
+
+// The exceptions can be refreshed from the Maintenance page; they're stored in
+// the database and handed to the app when it loads (the bundled file is the default).
+export function setFinishData(data: FinishData) {
+  FOIL_ONLY = new Set(data.foilOnly);
+  NORMAL_ONLY = new Set(data.normalOnly);
+  BOTH = new Set(data.both);
+}
 
 // Which finishes a card exists in. Default rules:
 //  - Rare and Epic cards are always foil (Riot: "Every Rare and Epic will

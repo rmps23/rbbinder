@@ -99,6 +99,14 @@ create table if not exists public.decks (
   updated_at timestamptz not null default now()
 );
 
+-- Generated reference data (Cardmarket links, finish availability, domain fixes)
+-- written by the buttons on the Maintenance page.
+create table if not exists public.app_data (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 -- Row Level Security is enabled with no policies: only the server-side
 -- service role key (used in the Next.js API routes) can read/write these
 -- tables. The browser never talks to Supabase directly.
@@ -108,3 +116,4 @@ alter table public.binders enable row level security;
 alter table public.binder_cards enable row level security;
 alter table public.bulk enable row level security;
 alter table public.decks enable row level security;
+alter table public.app_data enable row level security;

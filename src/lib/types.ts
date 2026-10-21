@@ -22,14 +22,16 @@ export type RiftCard = {
 
 export type SetInfo = { id: string; name: string; cardCount: number };
 
-// Prices are English-market (TCGplayer) averages, already converted to euros.
-export type PriceEntry = { price: number; low: number | null };
+// Prices are in euros: Cardmarket trend where the card is linked, TCGplayer otherwise.
+export type PriceEntry = { price: number; low: number | null; source?: "cardmarket" };
 export type CardPrices = { normal?: PriceEntry; foil?: PriceEntry };
 export type PricesResponse = {
   updatedAt: string;
   usdToEur: number;
   rateDate: string | null;
   prices: Record<string, CardPrices>;
+  // how many card prices come from Cardmarket (the rest are TCGplayer)
+  fromCardmarket?: number;
 };
 
 // card_id -> how many normal/foil copies are in the bulk pile

@@ -661,7 +661,7 @@ export default function BinderDetailPage() {
 
       <p className="mb-3 text-center text-sm text-white/40 md:mb-4">{binderStats.totalQty} cards placed
         {prices && binderStats.value > 0 && (
-          <span title="English-market prices (TCGplayer) in euros. Cards that exist in both finishes are valued as normal.">
+          <span title="Cardmarket price trend in euros (TCGplayer where unavailable). Cards that exist in both finishes are valued as normal.">
             {" "}
             · ≈ {formatEur(binderStats.value)}
           </span>

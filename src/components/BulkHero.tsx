@@ -91,7 +91,7 @@ export function BulkHero({ activeSet, onPickSet }: { activeSet: string; onPickSe
                     {prices ? <Money value={data.total.value} /> : "…"}
                   </p>
                   <p className="mt-1 text-[11px] uppercase tracking-wide text-white/40">
-                    English market (TCGplayer){data.total.unpriced ? ` · ${data.total.unpriced} unpriced` : ""}
+                    Cardmarket trend{data.total.unpriced ? ` · ${data.total.unpriced} unpriced` : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">

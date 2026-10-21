@@ -53,7 +53,7 @@ export function CardSheet({
                   <span className="font-semibold text-white">{formatEur(p.price)}</span>
                 </span>
               ))}
-              <span className="block text-[10px] text-white/35">English market (TCGplayer)</span>
+              <span className="block text-[10px] text-white/35">Cardmarket trend</span>
             </p>
           )}
 

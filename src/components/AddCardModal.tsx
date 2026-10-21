@@ -95,15 +95,15 @@ export function AddCardModal({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/70 p-4 sm:items-center"
+      className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/70 p-4 sm:items-center sm:overflow-hidden"
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-5xl flex-col rounded-xl border border-white/10 bg-ink p-4 pb-24 shadow-xl sm:flex-row sm:gap-4 sm:pb-4"
+        className="flex w-full max-w-5xl flex-col rounded-xl border border-white/10 bg-ink p-4 pb-24 shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:flex-row sm:gap-4 sm:pb-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center justify-between">
+        <div className="min-w-0 flex-1 sm:flex sm:min-h-0 sm:flex-col">
+          <div className="mb-1 flex shrink-0 items-center justify-between">
             <h2 className="font-display text-lg font-semibold uppercase tracking-wide text-white">Choose cards</h2>
             <button
               onClick={onClose}
@@ -123,11 +123,12 @@ export function AddCardModal({
             {filtered.length} card{filtered.length === 1 ? "" : "s"}
           </p>
 
+          <div className="sm:min-h-0 sm:flex-1 sm:overflow-y-auto sm:pr-1">
           {filtered.length === 0 ? (
             <p className="py-10 text-center text-white/40">No cards found with these filters.</p>
           ) : (
             <>
-              <div className="grid max-h-[55vh] grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
+              <div className="grid max-h-[45vh] grid-cols-3 gap-2 overflow-y-auto sm:max-h-none sm:grid-cols-4 sm:overflow-visible">
                 {visible.map((card, i) => (
                   <button
                     key={card.id}
@@ -169,9 +170,10 @@ export function AddCardModal({
               )}
             </>
           )}
+          </div>
         </div>
 
-        <div className="mt-4 flex w-full flex-col border-t border-white/10 pt-4 sm:mt-0 sm:w-64 sm:shrink-0 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+        <div className="mt-4 flex w-full flex-col border-t border-white/10 pt-4 sm:mt-0 sm:min-h-0 sm:w-64 sm:shrink-0 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
           <div className="mb-2 hidden items-center justify-between sm:flex">
             <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-white">Adding</h3>
             <button onClick={onClose} className="rounded-md px-2 py-1 text-white/50 hover:bg-white/10 hover:text-white" aria-label="Close">
@@ -185,7 +187,7 @@ export function AddCardModal({
               You haven&apos;t chosen any cards yet. Click one on the left to add it here.
             </p>
           ) : (
-            <div className="flex-1 space-y-1.5 overflow-y-auto sm:max-h-[50vh]">
+            <div className="flex-1 space-y-1.5 overflow-y-auto sm:min-h-0">
               {queue.map((card, i) => (
                 <div key={`${card.id}-${i}`} className="flex items-center gap-2 rounded-md border border-white/10 bg-panel p-1.5">
                   <span className="w-5 shrink-0 text-center text-xs text-white/30">{i + 1}</span>

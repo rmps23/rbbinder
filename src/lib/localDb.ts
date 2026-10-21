@@ -23,6 +23,7 @@ export type LocalBinder = {
 };
 export type LocalBinderCard = { binderId: string; position: number; cardId: string; qty: number; updatedAt: string };
 export type LocalDeck = { id: string; name: string; entries: DeckEntry[]; createdAt: string; updatedAt: string };
+export type LocalAppData = { key: string; value: unknown; updatedAt: string };
 export type LocalBulk = { cardId: string; normalQty: number; foilQty: number; updatedAt: string };
 
 export type LocalDb = {
@@ -32,9 +33,10 @@ export type LocalDb = {
   binderCards: LocalBinderCard[];
   bulk: LocalBulk[];
   decks: LocalDeck[];
+  appData: LocalAppData[];
 };
 
-const EMPTY_DB: LocalDb = { cards: [], sets: [], binders: [], binderCards: [], bulk: [], decks: [] };
+const EMPTY_DB: LocalDb = { cards: [], sets: [], binders: [], binderCards: [], bulk: [], decks: [], appData: [] };
 
 // Serializes reads/writes within this process so concurrent requests don't
 // clobber each other's changes (good enough for a single local dev user).
