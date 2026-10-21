@@ -8,14 +8,14 @@ import type { Binder } from "@/lib/types";
 // Each binder gets its own leather-and-gradient cover, picked from its id so it
 // never changes.
 export const COVERS = [
-  { from: "#7a2330", to: "#2b0d14", glow: "#ef4360", name: "Crimson" },
-  { from: "#1c4d8a", to: "#0b1d36", glow: "#3d7fe0", name: "Ocean" },
-  { from: "#2f6b45", to: "#0d2216", glow: "#3fbf6b", name: "Forest" },
-  { from: "#6a3a8f", to: "#1e0f2e", glow: "#a35de0", name: "Amethyst" },
-  { from: "#9a6a1c", to: "#2e1d06", glow: "#d8ab52", name: "Gold" },
-  { from: "#157a78", to: "#06282a", glow: "#0ac8b9", name: "Teal" },
-  { from: "#8a3a1c", to: "#2b1006", glow: "#f2803c", name: "Ember" },
-  { from: "#3a4a5e", to: "#10161f", glow: "#8aa4c4", name: "Steel" },
+  { from: "#26452f", to: "#0b1610", glow: "#a3e635", name: "Moss" },
+  { from: "#1c4d8a", to: "#0b1d36", glow: "#5aa2ff", name: "Ocean" },
+  { from: "#157a78", to: "#06282a", glow: "#2dd4bf", name: "Teal" },
+  { from: "#3d3a7a", to: "#14122e", glow: "#8f8cff", name: "Indigo" },
+  { from: "#3a4a5e", to: "#10161f", glow: "#9fb4cc", name: "Steel" },
+  { from: "#4a4f55", to: "#141516", glow: "#d4d8dc", name: "Graphite" },
+  { from: "#1e5a4a", to: "#08241d", glow: "#34d399", name: "Pine" },
+  { from: "#2a5a7a", to: "#0b2233", glow: "#22d3ee", name: "Lagoon" },
 ];
 
 export function coverFor(id: string) {

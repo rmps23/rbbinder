@@ -8,8 +8,11 @@ import type { DeckEntry, DeckZone, RiftCard } from "@/lib/types";
 
 export type Row = { entry: DeckEntry; card: RiftCard };
 
-export function primaryColor(card: RiftCard): string {
-  return domainColor(card.domains[0]?.id);
+// Glows and highlights around cards use the site accent rather than the card's
+// domain colour (some of those are gold/brown and clash with the palette) - the
+// domain is shown by its dots instead.
+export function primaryColor(_card?: RiftCard): string {
+  return "rgb(var(--accent))";
 }
 
 export function CardArt({ card, sizes, className = "" }: { card: RiftCard; sizes: string; className?: string }) {

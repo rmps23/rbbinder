@@ -317,9 +317,7 @@ export function DeckBuilder({ id }: { id: string }) {
   }
   if (loading || !deck) return <p className="py-10 text-center text-white/40">Loading deck...</p>;
 
-  const accent = legend?.domains.length
-    ? `linear-gradient(90deg, ${legend.domains.map((d) => domainColor(d.id)).join(", ")})`
-    : "linear-gradient(90deg, rgb(var(--accent)), rgb(var(--mint)))";
+  const accent = "linear-gradient(90deg, rgb(var(--accent)), rgb(var(--mint)))";
   const tgt = (z: DeckZone) => ZONES.find((x) => x.id === z)!;
   
   return (
