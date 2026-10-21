@@ -4,6 +4,14 @@ import type { BinderLayout } from "@/lib/types";
 
 const VALID_LAYOUTS: BinderLayout[] = ["2x2", "3x3", "3x4", "4x4"];
 
+// The set_id column is new: point at the fix instead of a raw database error.
+function friendly(message: string) {
+  return /set_id/i.test(message)
+    ? "The binders table needs the new set column - run supabase/schema.sql in the Supabase SQL editor."
+    : message;
+}
+
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
@@ -18,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json().catch(() => null);
-  const patch: { name?: string; layout?: BinderLayout; pageCount?: number; sortOrder?: number } = {};
+  const patch: { name?: string; layout?: BinderLayout; pageCount?: number; sortOrder?: number; setId?: string | null } = {};
 
   if (body?.name !== undefined) {
     const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -43,6 +51,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     patch.sortOrder = body.sortOrder;
   }
+  if (body?.setId !== undefined) {
+    if (body.setId !== null && typeof body.setId !== "string") {
+      return NextResponse.json({ error: "setId must be a set id or null" }, { status: 400 });
+    }
+    patch.setId = body.setId ? String(body.setId).trim().slice(0, 20) : null;
+  }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
@@ -53,7 +67,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(binder);
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to update binder" },
+      { error: friendly(err instanceof Error ? err.message : "Failed to update binder") },
       { status: 500 }
     );
   }

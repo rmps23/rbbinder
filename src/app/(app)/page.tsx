@@ -9,6 +9,8 @@ import { PriceModeSwitch } from "@/components/PriceModeSwitch";
 import { typicalFinish } from "@/lib/cardFinish";
 import { displayName } from "@/lib/deck";
 import { formatEur } from "@/lib/format";
+import { binderProgress } from "@/lib/binderProgress";
+import { isBaseCard } from "@/lib/setCollection";
 import { useBinders } from "@/lib/useBinders";
 import { valueBulk, valueContents } from "@/lib/valuation";
 import type { CardsSyncResult, Deck } from "@/lib/types";
@@ -117,7 +119,8 @@ export default function DashboardPage() {
 
     const perSet = sets
       .map((s) => {
-        const inSet = cards.filter((c) => c.set.id === s.id);
+        // one of each regular card - alt arts, overnumbered and showcase don't count
+        const inSet = cards.filter((c) => c.set.id === s.id && isBaseCard(c));
         const have = inSet.filter((c) => owned.has(c.id)).length;
         return { id: s.id, name: s.name, have, total: inSet.length };
       })
@@ -128,12 +131,16 @@ export default function DashboardPage() {
       .slice(0, 6)
       .map(([id, price]) => ({ card: cardById.get(id)!, price }));
 
-    return { owned: owned.size, copies, bindersValue, bulkValue, perSet, top };
+    // The collection goal: one of each regular card of every set.
+    const base = cards.filter(isBaseCard);
+    const baseOwned = base.filter((c) => owned.has(c.id)).length;
+
+    return { owned: owned.size, copies, bindersValue, bulkValue, perSet, top, baseOwned, baseTotal: base.length };
   }, [binders, bulk, cards, sets, cardById, priceOf, prices]);
 
   if (appLoading || bindersLoading) return <p className="py-10 text-center text-white/40">Loading collection...</p>;
 
-  const completion = cards.length ? stats.owned / cards.length : 0;
+  const completion = stats.baseTotal ? stats.baseOwned / stats.baseTotal : 0;
   const bindersByValue = [...binders]
     .map((b) => ({ b, v: valueContents(b.contents, cardById, priceOf).value }))
     .sort((a, b) => b.v - a.v)
@@ -210,10 +217,10 @@ export default function DashboardPage() {
             </div>
             <div className="text-sm">
               <p className="font-display text-2xl font-bold text-white">
-                {stats.owned}
-                <span className="text-white/35"> / {cards.length}</span>
+                {stats.baseOwned}
+                <span className="text-white/35"> / {stats.baseTotal}</span>
               </p>
-              <p className="text-[11px] uppercase tracking-wide text-white/40">unique cards collected</p>
+              <p className="text-[11px] uppercase tracking-wide text-white/40">cards collected · one of each, specials not counted</p>
             </div>
           </div>
         </div>
@@ -302,7 +309,13 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {bindersByValue.map(({ b, v }) => (
-              <BinderCard key={b.id} binder={b} value={prices ? v : null} completion={cards.length ? b.uniqueCount / cards.length : 0} />
+              <BinderCard
+                key={b.id}
+                binder={b}
+                value={prices ? v : null}
+                completion={binderProgress(b, cards, sets).completion}
+                progressLabel={binderProgress(b, cards, sets).label}
+              />
             ))}
           </div>
         )}

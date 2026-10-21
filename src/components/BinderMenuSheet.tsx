@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { BottomSheet } from "@/components/BottomSheet";
 import { BINDER_LAYOUTS } from "@/lib/constants";
-import type { BinderLayout } from "@/lib/types";
+import type { BinderLayout, SetInfo } from "@/lib/types";
 
 const row =
   "flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] font-display text-sm font-semibold uppercase tracking-wide text-white/80 transition active:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30";
@@ -11,6 +11,9 @@ const row =
 export function BinderMenuSheet({
   layout,
   onLayout,
+  sets,
+  setId,
+  onSet,
   page,
   totalPages,
   onGoTo,
@@ -23,6 +26,9 @@ export function BinderMenuSheet({
 }: {
   layout: BinderLayout;
   onLayout: (layout: BinderLayout) => void;
+  sets: SetInfo[];
+  setId: string | null;
+  onSet: (setId: string | null) => void;
   page: number;
   totalPages: number;
   onGoTo: (page: number) => void;
@@ -102,6 +108,25 @@ export function BinderMenuSheet({
             }`}
           >
             {l.label}
+          </button>
+        ))}
+      </div>
+
+      <p className={label}>Collecting set</p>
+      <div className="flex flex-wrap gap-2">
+        {[{ id: "", name: "No set" }, ...sets].map((s) => (
+          <button
+            key={s.id || "none"}
+            type="button"
+            onClick={() => {
+              onSet(s.id || null);
+              onClose();
+            }}
+            className={`h-10 rounded-xl px-3 text-xs font-semibold transition ${
+              (setId ?? "") === s.id ? "bg-brand-gold text-ink" : "border border-white/10 text-white/70 active:bg-white/10"
+            }`}
+          >
+            {s.id || s.name}
           </button>
         ))}
       </div>

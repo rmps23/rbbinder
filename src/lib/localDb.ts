@@ -17,6 +17,7 @@ export type LocalBinder = {
   name: string;
   layout: string;
   pageCount: number;
+  setId?: string | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

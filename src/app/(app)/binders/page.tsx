@@ -6,18 +6,20 @@ import { useAppData } from "@/components/AppDataProvider";
 import { BinderCard, PocketGrid, COVERS } from "@/components/BinderCard";
 import { BINDER_LAYOUTS } from "@/lib/constants";
 import { formatEur } from "@/lib/format";
+import { binderProgress } from "@/lib/binderProgress";
 import { useBinders } from "@/lib/useBinders";
 import { valueContents } from "@/lib/valuation";
 import type { Binder, BinderLayout } from "@/lib/types";
 
 export default function BindersPage() {
   const router = useRouter();
-  const { cards, prices, priceOf, loading: appLoading } = useAppData();
+  const { cards, sets, prices, priceOf, loading: appLoading } = useAppData();
   const { binders, loading, reload } = useBinders();
 
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [layout, setLayout] = useState<BinderLayout>("3x3");
+  const [setId, setSetId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const values = useMemo(() => {
@@ -37,7 +39,7 @@ export default function BindersPage() {
     const res = await fetch("/api/binders", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: trimmed, layout }),
+      body: JSON.stringify({ name: trimmed, layout, setId: setId || null }),
     });
     const data = await res.json();
     if (!res.ok) return setError(data.error ?? "Couldn't create the binder.");
@@ -110,6 +112,27 @@ export default function BindersPage() {
                   ))}
                 </div>
               </div>
+              <div>
+                <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Collecting a set?</span>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {[{ id: "", name: "No set" }, ...sets].map((s) => (
+                    <button
+                      key={s.id || "none"}
+                      type="button"
+                      onClick={() => setSetId(s.id)}
+                      title={s.name}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
+                        setId === s.id ? "border-brand-gold bg-brand-gold text-ink" : "border-white/10 bg-white/[0.03] text-white/60 hover:border-white/30"
+                      }`}
+                    >
+                      {s.id ? `${s.id} · ${s.name}` : s.name}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] text-white/35">
+                  Progress then counts one of each regular card of the set - alternate arts, overnumbered and showcase cards don&apos;t count.
+                </p>
+              </div>
               <div className="flex items-center gap-3">
                 <button
                   type="submit"
@@ -140,15 +163,19 @@ export default function BindersPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {binders.map((b) => (
-            <BinderCard
-              key={b.id}
-              binder={b}
-              value={values ? (values.per.get(b.id)?.value ?? 0) : null}
-              completion={cards.length ? b.uniqueCount / cards.length : 0}
-              onDelete={() => remove(b)}
-            />
-          ))}
+          {binders.map((b) => {
+            const p = binderProgress(b, cards, sets);
+            return (
+              <BinderCard
+                key={b.id}
+                binder={b}
+                value={values ? (values.per.get(b.id)?.value ?? 0) : null}
+                completion={p.completion}
+                progressLabel={p.label}
+                onDelete={() => remove(b)}
+              />
+            );
+          })}
         </div>
       )}
     </div>

@@ -50,11 +50,13 @@ export function BinderCard({
   binder,
   value,
   completion,
+  progressLabel,
   onDelete,
 }: {
   binder: Binder;
   value: number | null;
-  completion: number; // 0..1 of the catalog this binder holds (unique)
+  completion: number; // 0..1 - of its set's base cards when it collects a set
+  progressLabel?: string; // e.g. "120 / 298 of Origins"
   onDelete?: () => void;
 }) {
   const cover = coverFor(binder.id);
@@ -94,7 +96,13 @@ export function BinderCard({
             <span className="rounded-md bg-black/40 px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-widest text-white/80">
               {l.label}
             </span>
-            <span className="rounded-md bg-black/40 px-2 py-0.5 text-[10px] font-semibold text-white/70">{binder.pageCount} pages</span>
+            {binder.setId ? (
+              <span className="rounded-md bg-black/50 px-2 py-0.5 font-display text-[10px] font-bold tracking-widest" style={{ color: cover.glow }}>
+                {binder.setId}
+              </span>
+            ) : (
+              <span className="rounded-md bg-black/40 px-2 py-0.5 text-[10px] font-semibold text-white/70">{binder.pageCount} pages</span>
+            )}
           </span>
 
           {/* embossed name plate */}
@@ -125,7 +133,13 @@ export function BinderCard({
             </span>
           </span>
 
-          <span className="relative mt-3 block h-1.5 overflow-hidden rounded-full bg-black/40">
+          {progressLabel && (
+            <span className="relative mt-3 flex items-baseline justify-between text-[11px] text-white/70">
+              <span className="truncate">{progressLabel}</span>
+              <b className="text-white">{Math.round(completion * 100)}%</b>
+            </span>
+          )}
+          <span className={`relative ${progressLabel ? "mt-1" : "mt-3"} block h-1.5 overflow-hidden rounded-full bg-black/40`}>
             <span
               className="block h-full rounded-full transition-all duration-700"
               style={{ width: `${Math.min(100, completion * 100)}%`, background: `linear-gradient(90deg, ${cover.glow}, #fff)` }}

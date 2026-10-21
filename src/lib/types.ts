@@ -63,6 +63,8 @@ export type Binder = {
   // Minimum number of pages the binder always shows, regardless of how much
   // is filled - grows via the "+" button next to the binder pages.
   pageCount: number;
+  // The Riftbound set this binder collects (progress counts its base cards), if any.
+  setId?: string | null;
 };
 
 export type CardsSyncResult = {

@@ -16,6 +16,7 @@ import { CardSheet } from "@/components/CardSheet";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { typicalFinish } from "@/lib/cardFinish";
 import { formatEur } from "@/lib/format";
+import { setProgress } from "@/lib/setCollection";
 import { FilterState } from "@/components/Filters";
 import { BINDER_LAYOUTS } from "@/lib/constants";
 import type { Binder, BinderLayout, RiftCard } from "@/lib/types";
@@ -207,9 +208,16 @@ export default function BinderDetailPage() {
       const price = card ? priceOf(card, typicalFinish(card)) : null;
       if (price !== null) value += price * slot.qty;
     }
-    return { uniqueCount: cardIds.size, totalQty, value };
+    return { uniqueCount: cardIds.size, totalQty, value, cardIds };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slots, cardById, prices]);
+
+  // Set collection progress: one of each regular card of the binder's set.
+  const setProg = useMemo(
+    () => (binder?.setId ? setProgress(cards, binder.setId, binderStats.cardIds) : null),
+    [binder?.setId, cards, binderStats.cardIds]
+  );
+  const setName = binder?.setId ? (sets.find((s) => s.id === binder.setId)?.name ?? binder.setId) : null;
 
   const layout = BINDER_LAYOUTS.find((l) => l.id === binder?.layout) ?? BINDER_LAYOUTS[1];
   const perPage = layout.cols * layout.rows;
@@ -303,6 +311,21 @@ export default function BinderDetailPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ layout: newLayout }),
     });
+  }
+
+  async function changeSet(setId: string | null) {
+    const previous = binder?.setId ?? null;
+    setBinder((b) => (b ? { ...b, setId } : b));
+    const res = await fetch(`/api/binders/${binderId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ setId }),
+    });
+    if (!res.ok) {
+      setBinder((b) => (b ? { ...b, setId: previous } : b));
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Couldn't change the set.");
+    }
   }
 
   async function addPage() {
@@ -609,6 +632,19 @@ export default function BinderDetailPage() {
             >
               Scan cards
             </button>
+            <select
+              value={binder.setId ?? ""}
+              onChange={(e) => changeSet(e.target.value || null)}
+              title="Set this binder collects"
+              className="rounded-md border border-white/10 bg-panel px-2.5 py-1.5 text-xs text-white/80 outline-none focus:border-brand-gold"
+            >
+              <option value="">No set</option>
+              {sets.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.id} · {s.name}
+                </option>
+              ))}
+            </select>
             <LayoutSwitcher value={binder.layout} onChange={changeLayout} />
             <button
               onClick={deleteBinder}
@@ -667,6 +703,24 @@ export default function BinderDetailPage() {
           </span>
         )}
       </p>
+      {setProg && (
+        <div className="mx-auto mb-4 max-w-md" title="One of each regular card - alternate arts, overnumbered and showcase cards don't count">
+          <div className="mb-1 flex items-baseline justify-between text-xs text-white/55">
+            <span>
+              <b className="font-display tracking-widest text-brand-gold">{binder.setId}</b> {setName}
+            </span>
+            <span>
+              <b className="text-white">{setProg.have}</b> / {setProg.total} · {Math.round(setProg.pct * 100)}%
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-brand-gold to-brand-cyan transition-all duration-700"
+              style={{ width: `${setProg.pct * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {isMobile && moveFrom !== null && (
         <div className="sticky top-[66px] z-10 mb-3 flex items-center justify-between gap-3 rounded-xl border border-brand-cyan/40 bg-ink/95 px-3 py-2.5 backdrop-blur">
@@ -743,6 +797,9 @@ export default function BinderDetailPage() {
         <BinderMenuSheet
           layout={binder.layout}
           onLayout={changeLayout}
+          sets={sets}
+          setId={binder.setId ?? null}
+          onSet={changeSet}
           page={currentMobilePage + 1}
           totalPages={totalPages}
           onGoTo={(n) => setMobilePage(n - 1)}

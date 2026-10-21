@@ -44,7 +44,7 @@ function accumulateStats(
 }
 
 function toBinder(
-  b: { id: string; name: string; layout: string; pageCount: number; sortOrder: number; createdAt: string },
+  b: { id: string; name: string; layout: string; pageCount: number; sortOrder: number; createdAt: string; setId?: string | null },
   stats: BinderStats
 ): Binder {
   return {
@@ -52,6 +52,7 @@ function toBinder(
     name: b.name,
     layout: b.layout as BinderLayout,
     pageCount: b.pageCount,
+    setId: b.setId ?? null,
     sortOrder: b.sortOrder,
     createdAt: b.createdAt,
     uniqueCount: stats.uniqueCount,
@@ -212,7 +213,7 @@ export async function listBinders(): Promise<Binder[]> {
     const stats = accumulateStats(qtyRows.map((r) => ({ binderId: r.binder_id, cardId: r.card_id, qty: r.qty })));
     return (binders ?? []).map((b) =>
       toBinder(
-        { id: b.id, name: b.name, layout: b.layout, pageCount: b.page_count, sortOrder: b.sort_order, createdAt: b.created_at },
+        { id: b.id, name: b.name, layout: b.layout, pageCount: b.page_count, sortOrder: b.sort_order, createdAt: b.created_at, setId: b.set_id ?? null },
         stats.get(b.id) ?? { uniqueCount: 0, totalQty: 0 }
       )
     );
@@ -227,12 +228,12 @@ export async function listBinders(): Promise<Binder[]> {
 
 const DEFAULT_PAGE_COUNT = 2;
 
-export async function createBinder(name: string, layout: BinderLayout): Promise<Binder> {
+export async function createBinder(name: string, layout: BinderLayout, setId: string | null = null): Promise<Binder> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("binders")
-      .insert({ name, layout, page_count: DEFAULT_PAGE_COUNT })
+      .insert({ name, layout, page_count: DEFAULT_PAGE_COUNT, ...(setId ? { set_id: setId } : {}) })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
@@ -244,6 +245,7 @@ export async function createBinder(name: string, layout: BinderLayout): Promise<
         pageCount: data.page_count,
         sortOrder: data.sort_order,
         createdAt: data.created_at,
+        setId: data.set_id ?? null,
       },
       { uniqueCount: 0, totalQty: 0 }
     );
@@ -255,6 +257,7 @@ export async function createBinder(name: string, layout: BinderLayout): Promise<
     name,
     layout,
     pageCount: DEFAULT_PAGE_COUNT,
+    setId,
     sortOrder: 0,
     createdAt: now,
     updatedAt: now,
@@ -284,6 +287,7 @@ export async function getBinder(id: string): Promise<Binder | null> {
         pageCount: binder.page_count,
         sortOrder: binder.sort_order,
         createdAt: binder.created_at,
+        setId: binder.set_id ?? null,
       },
       stats.get(id) ?? { uniqueCount: 0, totalQty: 0 }
     );
@@ -298,7 +302,7 @@ export async function getBinder(id: string): Promise<Binder | null> {
 
 export async function updateBinder(
   id: string,
-  patch: { name?: string; layout?: BinderLayout; pageCount?: number; sortOrder?: number }
+  patch: { name?: string; layout?: BinderLayout; pageCount?: number; sortOrder?: number; setId?: string | null }
 ): Promise<Binder | null> {
   const now = new Date().toISOString();
 
@@ -309,6 +313,7 @@ export async function updateBinder(
     if (patch.layout !== undefined) update.layout = patch.layout;
     if (patch.pageCount !== undefined) update.page_count = patch.pageCount;
     if (patch.sortOrder !== undefined) update.sort_order = patch.sortOrder;
+    if (patch.setId !== undefined) update.set_id = patch.setId;
     const { data, error } = await supabase.from("binders").update(update).eq("id", id).select("*").maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return null;
@@ -320,6 +325,7 @@ export async function updateBinder(
         pageCount: data.page_count,
         sortOrder: data.sort_order,
         createdAt: data.created_at,
+        setId: data.set_id ?? null,
       },
       { uniqueCount: 0, totalQty: 0 }
     );
@@ -332,6 +338,7 @@ export async function updateBinder(
     if (patch.layout !== undefined) binder.layout = patch.layout;
     if (patch.pageCount !== undefined) binder.pageCount = patch.pageCount;
     if (patch.sortOrder !== undefined) binder.sortOrder = patch.sortOrder;
+    if (patch.setId !== undefined) binder.setId = patch.setId;
     binder.updatedAt = now;
     const stats = accumulateStats(db.binderCards.filter((r) => r.binderId === id && r.qty > 0));
     return toBinder(binder, stats.get(id) ?? { uniqueCount: 0, totalQty: 0 });

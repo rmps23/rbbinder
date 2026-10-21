@@ -39,6 +39,8 @@ create table if not exists public.binders (
   updated_at timestamptz not null default now()
 );
 alter table public.binders add column if not exists page_count integer not null default 2;
+-- The Riftbound set a binder collects (optional).
+alter table public.binders add column if not exists set_id text;
 
 -- binder_cards used to be keyed by card_id (one row per card per binder,
 -- with a qty). It's now keyed by a flat slot position instead, so the same
