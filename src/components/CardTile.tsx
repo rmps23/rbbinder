@@ -8,6 +8,7 @@ import { availableFinishes } from "@/lib/cardFinish";
 import { formatEur } from "@/lib/format";
 import { useAppData } from "./AppDataProvider";
 import { QuantityStepper } from "./QuantityStepper";
+import { FoilShine } from "./BulkHero";
 
 export function CardTile({
   card,
@@ -58,6 +59,7 @@ export function CardTile({
             {card.name}
           </div>
         )}
+        {foilQty > 0 && <FoilShine />}
         {owned && (
           <div className="absolute inset-x-0 bottom-0 flex bg-ink/85 backdrop-blur-[2px]">
             {showNormal && (
@@ -66,17 +68,21 @@ export function CardTile({
                   normalQty > 0 ? "text-brand-cyan" : "text-white/25"
                 }`}
               >
-                {normalQty}
+                <span key={normalQty} className="animate-pop">
+                  {normalQty}
+                </span>
               </div>
             )}
             {showNormal && showFoil && <div className="w-px shrink-0 bg-white/10" />}
             {showFoil && (
               <div
                 className={`flex flex-1 items-center justify-center gap-1 py-1 font-display text-sm font-bold ${
-                  foilQty > 0 ? "text-brand-gold" : "text-white/25"
+                  foilQty > 0 ? "text-foil" : "text-white/25"
                 }`}
               >
-                ✦{foilQty}
+                <span key={foilQty} className="animate-pop">
+                  ✦{foilQty}
+                </span>
               </div>
             )}
           </div>

@@ -27,7 +27,7 @@ const VIEWS: { id: View; label: string }[] = [
 
 const chip = (on: boolean) =>
   `rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
-    on ? "bg-brand-gold text-ink shadow-[0_0_14px_-2px_rgba(216,171,82,0.7)]" : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+    on ? "bg-brand-gold text-ink shadow-[0_0_14px_-2px_rgb(var(--accent)/0.7)]" : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
   }`;
 
 function Ring({ pct }: { pct: number }) {
@@ -41,7 +41,7 @@ function Ring({ pct }: { pct: number }) {
         cy="24"
         r={r}
         fill="none"
-        stroke={pct >= 100 ? "#34d399" : "#d8ab52"}
+        className={pct >= 100 ? "stroke-emerald-400" : "stroke-brand-gold"}
         strokeWidth="5"
         strokeLinecap="round"
         strokeDasharray={c}
@@ -319,7 +319,7 @@ export function DeckBuilder({ id }: { id: string }) {
 
   const accent = legend?.domains.length
     ? `linear-gradient(90deg, ${legend.domains.map((d) => domainColor(d.id)).join(", ")})`
-    : "linear-gradient(90deg, #d8ab52, #0ac8b9)";
+    : "linear-gradient(90deg, rgb(var(--accent)), rgb(var(--mint)))";
   const tgt = (z: DeckZone) => ZONES.find((x) => x.id === z)!;
   
   return (

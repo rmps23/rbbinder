@@ -25,10 +25,15 @@ export function CardBrowser({
   onlyOwnedLabel,
   defaultOnlyOwned = false,
   emptyMessage,
+  setFilter,
+  onSetFilterChange,
 }: {
   onlyOwnedLabel: string;
   defaultOnlyOwned?: boolean;
   emptyMessage: string;
+  // Optional: let a parent drive (and follow) the set filter.
+  setFilter?: string;
+  onSetFilterChange?: (id: string) => void;
 }) {
   const { cards, sets, bulk, loading, setBulkQty } = useAppData();
   const [filters, setFilters] = useState<FilterState>({
@@ -43,6 +48,10 @@ export function CardBrowser({
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [filters]);
+
+  useEffect(() => {
+    if (setFilter !== undefined) setFilters((f) => (f.setId === setFilter ? f : { ...f, setId: setFilter }));
+  }, [setFilter]);
 
   const filtered = useMemo(() => {
     const search = filters.search.trim().toLowerCase();
@@ -82,7 +91,15 @@ export function CardBrowser({
 
   return (
     <div>
-      <Filters sets={availableSets} state={filters} onChange={setFilters} onlyOwnedLabel={onlyOwnedLabel} />
+      <Filters
+        sets={availableSets}
+        state={filters}
+        onChange={(next) => {
+          setFilters(next);
+          if (next.setId !== filters.setId) onSetFilterChange?.(next.setId);
+        }}
+        onlyOwnedLabel={onlyOwnedLabel}
+      />
 
       <p className="mb-3 text-sm text-white/40">
         {filtered.length} card{filtered.length === 1 ? "" : "s"}

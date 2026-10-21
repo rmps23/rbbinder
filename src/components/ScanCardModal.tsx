@@ -423,7 +423,7 @@ export function ScanCardModal({
                 aria-pressed={finish === f}
                 onClick={() => chooseFinish(f)}
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                  finish === f ? (f === "foil" ? "bg-brand-gold text-ink" : "bg-brand-cyan text-ink") : "text-white/80"
+                  finish === f ? (f === "foil" ? "bg-foil text-ink" : "bg-brand-cyan text-ink") : "text-white/80"
                 }`}
               >
                 {f === "foil" ? "✦ Foil" : "Normal"}
@@ -526,7 +526,7 @@ export function ScanCardModal({
                 ) : (
                   <p className="text-xs text-white/60">
                     This card only exists as{" "}
-                    <span className="font-semibold text-brand-gold">{activeFinish === "foil" ? "foil" : "normal"}</span>.
+                    <span className="font-semibold text-foil">{activeFinish === "foil" ? "foil" : "normal"}</span>.
                   </p>
                 )}
               </div>

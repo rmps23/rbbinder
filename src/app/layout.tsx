@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${publicSans.variable} ${oswald.variable}`}>
+    <html lang="en" className={`${publicSans.variable} ${oswald.variable}`} suppressHydrationWarning>
       {/* Browser extensions (e.g. ColorZilla's cz-shortcut-listen) inject attributes into <body> before hydration. */}
       <body suppressHydrationWarning>{children}</body>
     </html>

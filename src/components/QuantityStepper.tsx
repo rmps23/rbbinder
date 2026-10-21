@@ -1,12 +1,12 @@
 "use client";
 
 const ACCENT_TEXT: Record<string, string> = {
-  gold: "text-brand-gold",
+  gold: "text-foil",
   cyan: "text-brand-cyan",
 };
 
 const ACCENT_RING: Record<string, string> = {
-  gold: "focus-within:ring-brand-gold/50",
+  gold: "focus-within:ring-foil/50",
   cyan: "focus-within:ring-brand-cyan/50",
 };
 

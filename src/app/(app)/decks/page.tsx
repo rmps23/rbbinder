@@ -101,7 +101,7 @@ export default function DecksPage() {
             const legend = d.entries.find((e) => e.zone === "legend");
             const legendCard = legend && cardById.get(legend.cardId);
             const count = d.entries.reduce((n, e) => n + (e.zone === "main" || e.zone === "champion" ? e.qty : 0), 0);
-            const color = legendCard ? primaryColor(legendCard) : "#d8ab52";
+            const color = legendCard ? primaryColor(legendCard) : "rgb(var(--accent))";
             return (
               <div
                 key={d.id}

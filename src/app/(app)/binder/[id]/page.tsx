@@ -450,7 +450,7 @@ export default function BinderDetailPage() {
     if (!binder) return;
     if (!confirm(`Delete binder "${binder.name}"? This action cannot be undone.`)) return;
     await fetch(`/api/binders/${binderId}`, { method: "DELETE" });
-    router.push("/");
+    router.push("/binders");
   }
 
   // Places the queued cards (built up in the popup) one after another,
@@ -478,8 +478,8 @@ export default function BinderDetailPage() {
     return (
       <div className="py-10 text-center">
         <p className="mb-3 text-white/40">Binder not found.</p>
-        <Link href="/" className="text-sm font-medium text-brand-gold hover:underline">
-          Back to dashboard
+        <Link href="/binders" className="text-sm font-medium text-brand-gold hover:underline">
+          Back to binders
         </Link>
       </div>
     );

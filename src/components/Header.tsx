@@ -9,7 +9,23 @@ const ICON = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLin
 const LINKS = [
   {
     href: "/",
+    label: "Dashboard",
+    short: "Home",
+    match: (p: string) => p === "/",
+    icon: (
+      <svg viewBox="0 0 24 24" {...ICON} className="h-4 w-4">
+        <rect x="3" y="3" width="7" height="9" rx="1.5" />
+        <rect x="14" y="3" width="7" height="5" rx="1.5" />
+        <rect x="14" y="12" width="7" height="9" rx="1.5" />
+        <rect x="3" y="16" width="7" height="5" rx="1.5" />
+      </svg>
+    ),
+  },
+  {
+    href: "/binders",
     label: "Binders",
+    short: "Binders",
+    match: (p: string) => p.startsWith("/binder"),
     icon: (
       <svg viewBox="0 0 24 24" {...ICON} className="h-4 w-4">
         <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z" />
@@ -20,6 +36,8 @@ const LINKS = [
   {
     href: "/bulk",
     label: "Bulk",
+    short: "Bulk",
+    match: (p: string) => p.startsWith("/bulk"),
     icon: (
       <svg viewBox="0 0 24 24" {...ICON} className="h-4 w-4">
         <path d="m12 3 9 5-9 5-9-5 9-5Z" />
@@ -30,6 +48,8 @@ const LINKS = [
   {
     href: "/decks",
     label: "Decks",
+    short: "Decks",
+    match: (p: string) => p.startsWith("/decks"),
     icon: (
       <svg viewBox="0 0 24 24" {...ICON} className="h-4 w-4">
         <rect x="7" y="3" width="13" height="17" rx="2" />
@@ -55,7 +75,7 @@ export function Header() {
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand-gold/50 to-transparent" />
       <div className="mx-auto flex max-w-[1680px] items-center gap-3 px-4 py-3 sm:gap-5 sm:px-6 lg:px-8">
         <Link href="/" aria-label="RBBinder home" className="group flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-gold to-[#a9792a] font-display text-sm font-bold text-ink shadow-[0_0_18px_-2px_rgba(216,171,82,0.6)] transition group-hover:rotate-6 group-hover:scale-110">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-gold to-[#a9792a] font-display text-sm font-bold text-ink shadow-[0_0_18px_-2px_rgb(var(--accent)/0.6)] transition group-hover:rotate-6 group-hover:scale-110">
             RB
           </span>
           <span className="hidden font-display text-lg font-semibold uppercase tracking-[0.14em] text-white sm:inline">
@@ -64,19 +84,20 @@ export function Header() {
         </Link>
         <nav className="flex items-center gap-0.5 rounded-full border border-white/[0.07] bg-white/[0.04] p-1">
           {LINKS.map((l) => {
-            const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+            const active = l.match(pathname);
             return (
               <Link
                 key={l.href}
                 href={l.href}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold uppercase tracking-wide transition active:scale-95 sm:px-4 sm:text-[13px] ${
                   active
-                    ? "bg-brand-gold text-ink shadow-[0_0_16px_-4px_rgba(216,171,82,0.9)]"
+                    ? "bg-brand-gold text-ink shadow-[0_0_16px_-4px_rgb(var(--accent)/0.9)]"
                     : "text-white/55 hover:bg-white/[0.06] hover:text-white"
                 }`}
               >
                 <span className="hidden sm:inline">{l.icon}</span>
-                {l.label}
+                <span className="sm:hidden">{l.short}</span>
+                <span className="hidden sm:inline">{l.label}</span>
               </Link>
             );
           })}
