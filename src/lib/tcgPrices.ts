@@ -29,7 +29,10 @@ type Guide = Record<string, number | null> & { idProduct: number };
 
 // Cardmarket's own price: the "trend" (what the site shows), then the 30-day
 // and 7-day averages and finally the cheapest listing when there's no trend.
-function cardmarketPrice(g: Guide, finish: "normal" | "foil"): { price: number; low: number | null } | null {
+function cardmarketPrice(
+  g: Guide,
+  finish: "normal" | "foil"
+): { price: number; low: number | null; avg1?: number; avg7?: number; avg30?: number } | null {
   const suffix = finish === "foil" ? "-foil" : "";
   const pick = (...keys: string[]) => {
     for (const k of keys) {
@@ -40,7 +43,14 @@ function cardmarketPrice(g: Guide, finish: "normal" | "foil"): { price: number; 
   };
   const price = pick("trend", "avg30", "avg7", "low");
   if (price === null) return null;
-  return { price, low: pick("low") };
+  const extra = { avg1: pick("avg1"), avg7: pick("avg7"), avg30: pick("avg30") };
+  return {
+    price,
+    low: pick("low"),
+    ...(extra.avg1 !== null && { avg1: extra.avg1 }),
+    ...(extra.avg7 !== null && { avg7: extra.avg7 }),
+    ...(extra.avg30 !== null && { avg30: extra.avg30 }),
+  };
 }
 
 type Group = { groupId: number; abbreviation: string; publishedOn: string };
@@ -131,7 +141,7 @@ async function build(): Promise<PricesResponse> {
         const tcg = prices[card.id]?.[finish]?.price;
         // A pairing mistake would show up as wildly different prices - trust TCGplayer then.
         if (tcg !== undefined && (cm.price > tcg * 5 || cm.price < tcg * 0.2)) continue;
-        (prices[card.id] ??= {})[finish] = { price: cm.price, low: cm.low, source: "cardmarket" };
+        (prices[card.id] ??= {})[finish] = { ...cm, source: "cardmarket" };
         fromCardmarket++;
       }
     }

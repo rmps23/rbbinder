@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { setFinishData, type Finish } from "@/lib/cardFinish";
-import type { BulkMap, BulkVariant, PricesResponse, RiftCard, SetInfo } from "@/lib/types";
+import type { BulkMap, BulkVariant, PriceMode, PricesResponse, RiftCard, SetInfo } from "@/lib/types";
 
 type AppData = {
   cards: RiftCard[];
@@ -15,6 +15,9 @@ type AppData = {
   setBulkQty: (cardId: string, variant: BulkVariant, qty: number) => void;
   reloadCards: () => void;
   reloadPrices: () => void;
+  // which Cardmarket figure the prices show (kept in this browser)
+  priceMode: PriceMode;
+  setPriceMode: (m: PriceMode) => void;
 };
 
 const Ctx = createContext<AppData | null>(null);
@@ -27,6 +30,25 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [prices, setPrices] = useState<PricesResponse | null>(null);
   const [cardsVersion, setCardsVersion] = useState(0);
   const [pricesVersion, setPricesVersion] = useState(0);
+  const [priceMode, setPriceModeState] = useState<PriceMode>("trend");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("rbbinder:priceMode");
+      if (saved === "trend" || saved === "avg7" || saved === "low") setPriceModeState(saved);
+    } catch {
+      // no storage - stay on the default
+    }
+  }, []);
+
+  const setPriceMode = useCallback((m: PriceMode) => {
+    setPriceModeState(m);
+    try {
+      localStorage.setItem("rbbinder:priceMode", m);
+    } catch {
+      // not remembered
+    }
+  }, []);
   const pending = useRef<Map<string, { cardId: string; variant: BulkVariant; qty: number }>>(new Map());
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -68,8 +90,14 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, [loading, pricesVersion]);
 
   const priceOf = useCallback(
-    (card: Pick<RiftCard, "id">, finish: Finish) => prices?.prices[card.id]?.[finish]?.price ?? null,
-    [prices]
+    (card: Pick<RiftCard, "id">, finish: Finish) => {
+      const e = prices?.prices[card.id]?.[finish];
+      if (!e) return null;
+      if (priceMode === "low") return e.low ?? e.price;
+      if (priceMode === "avg7") return e.avg7 ?? e.price;
+      return e.price;
+    },
+    [prices, priceMode]
   );
 
   const reloadCards = useCallback(() => setCardsVersion((v) => v + 1), []);
@@ -112,7 +140,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={{ cards, sets, bulk, loading, prices, priceOf, setBulkQty, reloadCards, reloadPrices }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ cards, sets, bulk, loading, prices, priceOf, setBulkQty, reloadCards, reloadPrices, priceMode, setPriceMode }}>{children}</Ctx.Provider>
   );
 }
 

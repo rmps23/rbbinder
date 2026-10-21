@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppData } from "@/components/AppDataProvider";
 import { BinderCard, coverFor } from "@/components/BinderCard";
 import { CardArt, primaryColor } from "@/components/DeckViews";
+import { PriceModeSwitch } from "@/components/PriceModeSwitch";
 import { typicalFinish } from "@/lib/cardFinish";
 import { displayName } from "@/lib/deck";
 import { formatEur } from "@/lib/format";
@@ -155,12 +156,15 @@ export default function DashboardPage() {
                   <span className="font-display text-xl font-semibold text-brand-gold">
                     ≈ {formatEur(stats.bindersValue + stats.bulkValue)}
                   </span>{" "}
-                  <span className="text-white/35">· Cardmarket trend, in euros</span>
+                  <span className="text-white/35">· Cardmarket, in euros</span>
                 </>
               ) : (
                 "Your Riftbound collection at a glance."
               )}
             </p>
+            <div className="mt-3">
+              <PriceModeSwitch />
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link href="/binders" className="rounded-full border-[1.5px] border-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold transition hover:bg-brand-gold/10 active:scale-95">
                 + New binder

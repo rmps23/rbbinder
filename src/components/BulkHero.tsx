@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppData } from "@/components/AppDataProvider";
 import { BulkScanner } from "@/components/BulkScanner";
 import { CardArt, primaryColor } from "@/components/DeckViews";
+import { PriceModeSwitch } from "@/components/PriceModeSwitch";
 import { displayName } from "@/lib/deck";
 import { formatEur } from "@/lib/format";
 import { valueBulk } from "@/lib/valuation";
@@ -84,6 +85,9 @@ export function BulkHero({ activeSet, onPickSet }: { activeSet: string; onPickSe
           <div>
             <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-white sm:text-4xl">Bulk</h1>
             <p className="mt-1 text-sm text-white/50">Duplicates and trade fodder - kept apart from your binders.</p>
+            <div className="mt-3">
+              <PriceModeSwitch />
+            </div>
             {!empty && (
               <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-2">
                 <div>
@@ -91,7 +95,7 @@ export function BulkHero({ activeSet, onPickSet }: { activeSet: string; onPickSe
                     {prices ? <Money value={data.total.value} /> : "…"}
                   </p>
                   <p className="mt-1 text-[11px] uppercase tracking-wide text-white/40">
-                    Cardmarket trend{data.total.unpriced ? ` · ${data.total.unpriced} unpriced` : ""}
+                    Cardmarket{data.total.unpriced ? ` · ${data.total.unpriced} unpriced` : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">

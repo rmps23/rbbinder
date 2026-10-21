@@ -23,7 +23,10 @@ export type RiftCard = {
 export type SetInfo = { id: string; name: string; cardCount: number };
 
 // Prices are in euros: Cardmarket trend where the card is linked, TCGplayer otherwise.
-export type PriceEntry = { price: number; low: number | null; source?: "cardmarket" };
+// price = the default figure (Cardmarket "trend"); the others are Cardmarket's own
+// 1-day / 7-day / 30-day averages and the cheapest listing (any language).
+export type PriceEntry = { price: number; low: number | null; avg1?: number; avg7?: number; avg30?: number; source?: "cardmarket" };
+export type PriceMode = "trend" | "avg7" | "low";
 export type CardPrices = { normal?: PriceEntry; foil?: PriceEntry };
 export type PricesResponse = {
   updatedAt: string;
