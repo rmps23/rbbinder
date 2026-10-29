@@ -121,6 +121,7 @@ const HEADINGS: Record<string, DeckZone> = {
   rune: "rune",
   runes: "rune",
   "rune deck": "rune",
+  "rune pool": "rune",
   sideboard: "sideboard",
   side: "sideboard",
 };

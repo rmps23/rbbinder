@@ -5,7 +5,7 @@
 import { getSupabaseAdmin } from "./supabaseAdmin";
 import { readLocalDb, withLocalDb } from "./localDb";
 
-export type AppDataKey = "cardmarketMap" | "finishes" | "domainFixes";
+export type AppDataKey = "cardmarketMap" | "finishes" | "domainFixes" | "metaDecks";
 
 const hasSupabaseConfig = () => Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 

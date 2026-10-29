@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
   try {
     const rec = await recommendDeck({
       legendId: typeof body.legendId === "string" ? body.legendId : undefined,
+      metaId: typeof body.metaId === "string" ? body.metaId : undefined,
       style: STYLES.includes(body.style) ? body.style : "any",
       note: typeof body.note === "string" ? body.note : "",
     });

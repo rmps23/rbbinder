@@ -96,7 +96,7 @@ export default function DecksPage() {
           onClick={() => setAdvising(true)}
           className="rounded-md bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:brightness-110 active:scale-95"
         >
-          Deck from my bulk
+          Deck from my cards
         </button>
       </form>
 

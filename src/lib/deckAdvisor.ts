@@ -4,7 +4,9 @@
 
 import { buildDeckIndex, cardKey, displayName } from "./deck";
 import { belongsInPool, checkDeck, isChampionUnit, isSignature, LIMITS } from "./deckRules";
-import { getBulk, getCardsAndSets } from "./repo";
+import { getMetaDecks, type MetaDeck } from "./metaDecks";
+import { getBulk, getCardsAndSets, listBinders } from "./repo";
+import { isBaseCard } from "./setCollection";
 import type { DeckEntry, RiftCard } from "./types";
 
 export type Style = "any" | "aggro" | "midrange" | "control";
@@ -31,6 +33,25 @@ export type Recommendation = {
   missing: string[]; // cards the deck uses that aren't in the bulk (runes, battlefields)
   problems: string[];
   legal: boolean;
+  swaps: { out: string; in: string; reason: string }[];
+  basedOn: string | null; // "Vegas' Top Decks · player (Top 8)" when built from a meta list
+};
+
+export type MetaOption = {
+  id: string;
+  event: string;
+  date: string;
+  url: string;
+  player: string;
+  placement: string;
+  section: "top8" | "best";
+  legendId: string;
+  legendName: string;
+  legendOwned: boolean;
+  champion: string | null;
+  have: number; // copies of the list you own (legend, champion, main deck, battlefields)
+  total: number;
+  missing: { name: string; qty: number }[];
 };
 
 // Tried in order. The newest Flash model sometimes queues for minutes on the free
@@ -40,15 +61,21 @@ const API = "https://generativelanguage.googleapis.com/v1beta/models";
 
 // ---------- what you own ----------
 
+// Cards you can play: everything in the bulk AND in your binders, but only
+// regular printings - alternate arts, overnumbered, signature and showcase
+// copies are collection pieces and never leave the binder.
 async function loadOwned() {
-  const [{ cards }, bulk] = await Promise.all([getCardsAndSets(), getBulk()]);
-  const owned = new Map<string, number>(); // card name key -> copies (any printing / finish)
+  const [{ cards }, bulk, binders] = await Promise.all([getCardsAndSets(), getBulk(), listBinders()]);
+  const copies = new Map<string, number>(); // card id -> copies
+  for (const [id, e] of Object.entries(bulk)) copies.set(id, (copies.get(id) ?? 0) + (e.normal ?? 0) + (e.foil ?? 0));
+  for (const b of binders) for (const [id, q] of Object.entries(b.contents ?? {})) copies.set(id, (copies.get(id) ?? 0) + q);
+
+  const owned = new Map<string, number>(); // card name key -> copies
   const printing = new Map<string, RiftCard>(); // key -> the printing you have most of
   const best = new Map<string, number>();
   for (const c of cards) {
-    const e = bulk[c.id];
-    const q = (e?.normal ?? 0) + (e?.foil ?? 0);
-    if (q <= 0) continue;
+    const q = copies.get(c.id) ?? 0;
+    if (q <= 0 || !isBaseCard(c)) continue;
     const k = cardKey(c);
     owned.set(k, (owned.get(k) ?? 0) + q);
     if (q > (best.get(k) ?? 0)) {
@@ -148,6 +175,14 @@ const SCHEMA = {
     },
     battlefields: { type: "ARRAY", items: { type: "STRING" } },
     tips: { type: "ARRAY", items: { type: "STRING" } },
+    swaps: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: { out: { type: "STRING" }, in: { type: "STRING" }, reason: { type: "STRING" } },
+        required: ["out", "in", "reason"],
+      },
+    },
   },
   required: ["deckName", "archetype", "plan", "champion", "main", "battlefields", "tips"],
 };
@@ -160,6 +195,7 @@ type ModelDeck = {
   main: { name: string; qty: number }[];
   battlefields: string[];
   tips: string[];
+  swaps?: { out: string; in: string; reason: string }[];
 };
 
 async function callModel(model: string, prompt: string, key: string, timeoutMs: number): Promise<ModelDeck> {
@@ -373,8 +409,119 @@ function assemble(legend: RiftCard, model: ModelDeck, o: Owned, pool: ReturnType
   return { entries, missing };
 }
 
-export async function recommendDeck(opts: { legendId?: string; style?: Style; note?: string }): Promise<Recommendation> {
+// ---------- meta decks ----------
+
+const PLAYED: DeckEntry["zone"][] = ["legend", "champion", "main", "battlefield"];
+
+function coverage(meta: MetaDeck, o: Owned, cardById: Map<string, RiftCard>) {
+  const need = new Map<string, { card: RiftCard; qty: number }>();
+  for (const e of meta.entries) {
+    const card = cardById.get(e.cardId);
+    if (!card || !PLAYED.includes(e.zone)) continue;
+    const k = cardKey(card);
+    const cur = need.get(k);
+    if (cur) cur.qty += e.qty;
+    else need.set(k, { card, qty: e.qty });
+  }
+  let have = 0;
+  let total = 0;
+  const missing: { name: string; qty: number }[] = [];
+  for (const [k, { card, qty }] of need) {
+    const got = Math.min(qty, o.owned.get(k) ?? 0);
+    have += got;
+    total += qty;
+    if (got < qty) missing.push({ name: displayName(card), qty: qty - got });
+  }
+  return { have, total, missing };
+}
+
+export async function metaOptions(refresh = false) {
   const o = await loadOwned();
+  const cache = await getMetaDecks(o.cards, refresh);
+  const cardById = new Map(o.cards.map((c) => [c.id, c]));
+  const decks: MetaOption[] = cache.decks.flatMap((d) => {
+    const legendEntry = d.entries.find((e) => e.zone === "legend");
+    const legend = legendEntry && cardById.get(legendEntry.cardId);
+    if (!legend) return [];
+    const champ = d.entries.find((e) => e.zone === "champion");
+    const champCard = champ && cardById.get(champ.cardId);
+    const cov = coverage(d, o, cardById);
+    return [
+      {
+        id: d.id,
+        event: d.event,
+        date: d.date,
+        url: d.url,
+        player: d.player,
+        placement: d.placement,
+        section: d.section,
+        legendId: (o.printing.get(cardKey(legend)) ?? legend).id,
+        legendName: legend.tags[0] ? `${legend.tags[0]}, ${displayName(legend)}` : displayName(legend),
+        legendOwned: (o.owned.get(cardKey(legend)) ?? 0) > 0,
+        champion: champCard ? displayName(champCard) : null,
+        ...cov,
+      },
+    ];
+  });
+  decks.sort((a, b) => b.have / b.total - a.have / a.total || b.date.localeCompare(a.date));
+  return { fetchedAt: cache.fetchedAt, events: cache.events, decks };
+}
+
+function metaPrompt(legend: RiftCard, meta: MetaDeck, o: Owned, pool: ReturnType<typeof poolFor>, note: string) {
+  const cardById = new Map(o.cards.map((c) => [c.id, c]));
+  const line = (e: DeckEntry) => {
+    const c = cardById.get(e.cardId);
+    if (!c) return null;
+    const own = o.owned.get(cardKey(c)) ?? 0;
+    return `${e.qty} ${displayName(c)} (player owns ${own})`;
+  };
+  const zone = (z: DeckEntry["zone"]) => meta.entries.filter((e) => e.zone === z).map(line).filter(Boolean).join("\n");
+  return `You are an expert Riftbound TCG (League of Legends card game) deck builder.
+The player wants to play a proven META deck at a casual Constructed "Nexus Night" store event, but can only use cards they own.
+
+This is the target list: ${meta.player}'s deck from Riot's official "${meta.event}" (${meta.placement}).
+Legend: ${displayName(legend)}
+Champion:
+${zone("champion")}
+MainDeck:
+${zone("main")}
+Battlefields:
+${zone("battlefield")}
+
+Your job: rebuild this list as closely as possible using ONLY the POOL below (the player's cards, "xN" = copies available).
+- Keep every meta card the player owns, up to the copies they own.
+- For each missing copy, pick the best replacement from POOL that plays the same role (similar cost, same card type, same game plan). Never use cards that aren't in the POOL.
+- Champion: the meta champion if it is in CHAMPIONS, otherwise the best one from CHAMPIONS.
+- Main deck exactly ${LIMITS.main - 1} cards (+ champion = ${LIMITS.main}), max 3 copies per name (champion included), max 3 signature cards.
+- 3 battlefields with different names, from BATTLEFIELDS (prefer the meta ones you own).
+- List every replacement in "swaps" (out = meta card, in = your card, reason = one short sentence).
+${note ? `Player's note: ${note.slice(0, 300)}` : ""}
+
+LEGEND:
+${describe(legend)}
+
+CHAMPIONS:
+${pool.ownsChampion ? "" : "(The player owns none of these yet - pick the meta one if listed; they'll get that card.)\n"}${pool.champions.map((c) => describe(c)).join("\n")}
+
+POOL:
+${pool.main.map((m) => describe(m.card, m.copies)).join("\n")}
+
+BATTLEFIELDS:
+${pool.battlefields.map((c) => describe(c)).join("\n") || "(none owned)"}
+
+Answer as JSON: deckName (e.g. "${displayName(legend)} - ${meta.event.replace(/’s Top Decks|'s Top Decks|’ Top Decks/, "")} build"), archetype (2-4 words), plan (3-5 sentences: how the meta deck wins and what your replacements change), champion, main (name + qty), battlefields, tips (3-5 short play tips), swaps.`;
+}
+
+export async function recommendDeck(opts: { legendId?: string; metaId?: string; style?: Style; note?: string }): Promise<Recommendation> {
+  const o = await loadOwned();
+  let meta: MetaDeck | undefined;
+  if (opts.metaId) {
+    meta = (await getMetaDecks(o.cards)).decks.find((d) => d.id === opts.metaId);
+    if (!meta) throw new Error("That meta deck isn't in the list any more - refresh the meta decks.");
+    const legendEntry = meta.entries.find((e) => e.zone === "legend");
+    const metaLegend = legendEntry && o.cards.find((c) => c.id === legendEntry.cardId);
+    if (metaLegend) opts = { ...opts, legendId: (o.printing.get(cardKey(metaLegend)) ?? metaLegend).id };
+  }
   const options = legendOptionsFrom(o);
   const pickId = opts.legendId ?? options.find((x) => x.viable)?.legendId ?? options[0]?.legendId;
   const legend = o.cards.find((c) => c.id === pickId);
@@ -382,7 +529,9 @@ export async function recommendDeck(opts: { legendId?: string; style?: Style; no
   const pool = poolFor(legend, o);
   if (!pool.champions.length) throw new Error(`There's no champion unit for ${displayName(legend)} in the card list - try "Sync cards".`);
 
-  const model = await askGemini(prompt(legend, pool, opts.style ?? "any", opts.note ?? ""));
+  const model = await askGemini(
+    meta ? metaPrompt(legend, meta, o, pool, opts.note ?? "") : prompt(legend, pool, opts.style ?? "any", opts.note ?? "")
+  );
   const { entries, missing } = assemble(legend, model, o, pool);
   if (!(o.owned.get(cardKey(legend)) ?? 0)) missing.unshift(`${displayName(legend)} (legend)`);
   const champ = entries.find((e) => e.zone === "champion");
@@ -399,8 +548,10 @@ export async function recommendDeck(opts: { legendId?: string; style?: Style; no
     missing,
     problems: check.checks.filter((c) => !c.ok).map((c) => `${c.label} (${c.detail})`).concat(check.problems),
     legal: check.legal,
+    swaps: (model.swaps ?? []).filter((s) => s.out.trim().toLowerCase() !== s.in.trim().toLowerCase()).slice(0, 20),
+    basedOn: meta ? `${meta.event} · ${meta.player} (${meta.placement})` : null,
   };
 }
 
 // For tests/debugging only.
-export const _internals = { loadOwned, poolFor, prompt, assemble, legendOptionsFrom, askGemini };
+export const _internals = { loadOwned, poolFor, prompt, metaPrompt, assemble, legendOptionsFrom, askGemini, coverage };
