@@ -15,9 +15,11 @@ export type LegendOption = {
   domains: string[];
   owned: boolean; // the legend card itself is in your bulk
   champions: number; // champion units for this legend you own
+  championsInGame: number; // all champion units that fit it (you can use one you don't own)
   poolCopies: number; // main-deck copies you could play (max 3 per name)
   battlefields: number;
-  viable: boolean; // enough for a 40-card deck
+  viable: boolean; // your bulk has enough cards for a 40-card deck
+  imageCardId: string; // the printing to show
 };
 
 export type Recommendation = {
@@ -54,12 +56,13 @@ async function loadOwned() {
       printing.set(k, c);
     }
   }
-  return { cards, owned, printing };
+  return { cards, owned, printing, index: buildDeckIndex(cards) };
 }
 
 type Owned = Awaited<ReturnType<typeof loadOwned>>;
 
-function poolFor(legend: RiftCard, { owned, printing }: Owned) {
+function poolFor(legend: RiftCard, o: Owned) {
+  const { owned, printing } = o;
   const champions: RiftCard[] = [];
   const main: { card: RiftCard; copies: number }[] = [];
   const battlefields: RiftCard[] = [];
@@ -69,7 +72,16 @@ function poolFor(legend: RiftCard, { owned, printing }: Owned) {
     if (belongsInPool(card, "main", legend)) main.push({ card, copies: Math.min(LIMITS.copies, q) });
     if (belongsInPool(card, "battlefield", legend)) battlefields.push(card);
   }
-  return { champions, main, battlefields };
+  // No champion for this legend in the bulk? Offer all of them - the deck then
+  // just needs that one card.
+  const ownsChampion = champions.length > 0;
+  if (!ownsChampion) {
+    for (const list of o.index.byKey.values()) {
+      const c = list[0];
+      if (isChampionUnit(c) && belongsInPool(c, "champion", legend)) champions.push(c);
+    }
+  }
+  return { champions, ownsChampion, main, battlefields };
 }
 
 export async function legendOptions(): Promise<LegendOption[]> {
@@ -79,7 +91,7 @@ export async function legendOptions(): Promise<LegendOption[]> {
 // Every legend in the game (you only need the one legend card), ranked by how
 // much of a deck your bulk can build around it.
 function legendOptionsFrom(o: Owned): LegendOption[] {
-  const index = buildDeckIndex(o.cards);
+  const index = o.index;
   const legends = [...index.byKey.entries()]
     .filter(([, list]) => list[0].types.includes("legend"))
     .map(([k, list]) => o.printing.get(k) ?? list[0]);
@@ -92,10 +104,12 @@ function legendOptionsFrom(o: Owned): LegendOption[] {
         name: legend.tags[0] ? `${legend.tags[0]}, ${displayName(legend)}` : displayName(legend),
         domains: legend.domains.map((d) => d.label),
         owned: (o.owned.get(cardKey(legend)) ?? 0) > 0,
-        champions: p.champions.length,
+        champions: p.ownsChampion ? p.champions.length : 0,
+        championsInGame: p.champions.length,
+        imageCardId: legend.id,
         poolCopies,
         battlefields: p.battlefields.length,
-        viable: p.champions.length > 0 && poolCopies >= LIMITS.main,
+        viable: p.champions.length > 0 && poolCopies >= LIMITS.main - 1,
       };
     })
     .sort((a, b) => Number(b.viable) - Number(a.viable) || b.poolCopies - a.poolCopies);
@@ -226,7 +240,7 @@ LEGEND:
 ${describe(legend)}
 
 CHAMPIONS:
-${pool.champions.map((c) => describe(c)).join("\n")}
+${pool.ownsChampion ? "" : "(The player owns none of these yet - pick the one that fits the deck best; they'll get that card.)\n"}${pool.champions.map((c) => describe(c)).join("\n")}
 
 POOL:
 ${pool.main.map((m) => describe(m.card, m.copies)).join("\n")}
@@ -366,11 +380,14 @@ export async function recommendDeck(opts: { legendId?: string; style?: Style; no
   const legend = o.cards.find((c) => c.id === pickId);
   if (!legend) throw new Error("Couldn't find that legend.");
   const pool = poolFor(legend, o);
-  if (!pool.champions.length) throw new Error(`You don't own a champion unit for ${displayName(legend)} in your bulk.`);
+  if (!pool.champions.length) throw new Error(`There's no champion unit for ${displayName(legend)} in the card list - try "Sync cards".`);
 
   const model = await askGemini(prompt(legend, pool, opts.style ?? "any", opts.note ?? ""));
   const { entries, missing } = assemble(legend, model, o, pool);
   if (!(o.owned.get(cardKey(legend)) ?? 0)) missing.unshift(`${displayName(legend)} (legend)`);
+  const champ = entries.find((e) => e.zone === "champion");
+  const champCard = champ && o.cards.find((c) => c.id === champ.cardId);
+  if (champCard && !(o.owned.get(cardKey(champCard)) ?? 0)) missing.unshift(`${displayName(champCard)} (champion)`);
   const cardById = new Map(o.cards.map((c) => [c.id, c]));
   const check = checkDeck({ entries, cardById });
   return {

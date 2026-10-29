@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAppData } from "./AppDataProvider";
 import { CardArt } from "./DeckViews";
 import { displayName, ZONES } from "@/lib/deck";
+import { DOMAIN_OPTIONS } from "@/lib/constants";
+import { domainColor } from "@/lib/style";
 import type { LegendOption, Recommendation, Style } from "@/lib/deckAdvisor";
 
 const STYLES: { id: Style; label: string }[] = [
@@ -30,6 +32,19 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
+  const [domain, setDomain] = useState("");
+  const [onlyBuildable, setOnlyBuildable] = useState(false);
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (options ?? []).filter(
+      (o) =>
+        (!q || o.name.toLowerCase().includes(q)) &&
+        (!domain || o.domains.some((d) => d.toLowerCase() === domain)) &&
+        (!onlyBuildable || o.viable)
+    );
+  }, [options, query, domain, onlyBuildable]);
 
   useEffect(() => {
     fetch("/api/decks/recommend")
@@ -118,35 +133,98 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
 
         {!rec && (
           <div className="flex flex-col gap-4">
-            <label className="flex flex-col gap-1.5">
-              <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Legend</span>
-              {options === null ? (
-                <span className="text-sm text-white/40">{error ? "" : "Looking through your bulk…"}</span>
-              ) : (
-                <select
-                  value={legendId}
-                  onChange={(e) => setLegendId(e.target.value)}
-                  className="rounded-xl border border-white/10 bg-ink px-3 py-2.5 text-sm text-white outline-none focus:border-brand-gold"
+            <div className="flex flex-col gap-2">
+              <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+                Legend - any legend works, owned or not
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search a legend or champion (e.g. Evelynn)…"
+                  className="min-w-[200px] flex-1 rounded-full border border-white/10 bg-ink px-4 py-2 text-sm text-white outline-none focus:border-brand-gold"
+                />
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={onlyBuildable}
+                  onClick={() => setOnlyBuildable((v) => !v)}
+                  className={`rounded-full border px-3 py-2 text-xs font-semibold transition active:scale-95 ${
+                    onlyBuildable ? "border-brand-gold bg-brand-gold/15 text-brand-gold" : "border-white/10 text-white/55"
+                  }`}
                 >
-                  {options.map((o) => (
-                    <option key={o.legendId} value={o.legendId}>
-                      {o.viable ? "✓ " : "· "}
-                      {o.name} ({o.domains.join("/")}) - {o.poolCopies} playable cards{o.owned ? " · legend owned" : ""}
-                    </option>
-                  ))}
-                </select>
+                  ✓ Buildable from bulk
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {DOMAIN_OPTIONS.filter((d) => d.id !== "colorless").map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    title={d.label}
+                    onClick={() => setDomain(domain === d.id ? "" : d.id)}
+                    className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
+                      domain === d.id ? "text-ink" : "bg-white/[0.05] text-white/55 hover:bg-white/10"
+                    }`}
+                    style={domain === d.id ? { background: domainColor(d.id) } : undefined}
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ background: domainColor(d.id) }} />
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+
+              {options === null ? (
+                <p className="py-6 text-center text-sm text-white/40">{error ? "" : "Looking through your bulk…"}</p>
+              ) : shown.length === 0 ? (
+                <p className="py-6 text-center text-sm text-white/40">No legend matches.</p>
+              ) : (
+                <div className="-mx-1 grid max-h-[38vh] grid-cols-3 gap-2 overflow-y-auto px-1 py-1 sm:grid-cols-5">
+                  {shown.map((o) => {
+                    const card = cardById.get(o.imageCardId);
+                    const on = o.legendId === legendId;
+                    return (
+                      <button
+                        key={o.legendId}
+                        type="button"
+                        onClick={() => setLegendId(o.legendId)}
+                        className={`group relative rounded-xl p-1 text-left transition active:scale-95 ${
+                          on ? "bg-brand-gold/15 ring-2 ring-brand-gold" : "hover:bg-white/[0.05]"
+                        }`}
+                      >
+                        <div className="relative">
+                          {card && <CardArt card={card} sizes="120px" className={`rounded-lg ${o.viable ? "" : "opacity-70"}`} />}
+                          {o.owned && (
+                            <span className="absolute left-1 top-1 rounded-full bg-black/70 px-1.5 text-[9px] font-semibold text-white/85">owned</span>
+                          )}
+                          {o.viable && (
+                            <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-gold text-[11px] font-bold text-ink">✓</span>
+                          )}
+                        </div>
+                        <p className="mt-1 truncate text-[11px] font-semibold text-white/85" title={o.name}>{o.name}</p>
+                        <p className="flex items-center gap-1 text-[10px] text-white/45">
+                          {o.domains.map((d) => (
+                            <span key={d} className="h-1.5 w-1.5 rounded-full" style={{ background: domainColor(d.toLowerCase()) }} />
+                          ))}
+                          {o.poolCopies} cards
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
+
               {chosen && (
-                <span className={`text-xs ${chosen.viable ? "text-white/45" : "text-brand-red"}`}>
-                  {chosen.viable
-                    ? `${chosen.champions} champion option${chosen.champions === 1 ? "" : "s"}, ${chosen.poolCopies} cards to choose from, ${chosen.battlefields} battlefields.`
-                    : chosen.champions === 0
-                      ? "You don't have a champion for this legend in your bulk."
-                      : `Only ${chosen.poolCopies} playable cards - the deck will be short.`}
-                  {!chosen.owned && " You'd also need the legend card itself."}
-                </span>
+                <p className="rounded-xl bg-white/[0.04] px-3 py-2 text-xs text-white/60">
+                  <b className="text-white">{chosen.name}</b> · {chosen.poolCopies} playable cards in your bulk
+                  {chosen.poolCopies < 39 ? " (the deck will be short)" : ""} ·{" "}
+                  {chosen.champions > 0
+                    ? `${chosen.champions} champion option${chosen.champions === 1 ? "" : "s"} owned`
+                    : `no champion owned - the AI picks one of ${chosen.championsInGame} for you to get`}
+                  {!chosen.owned && " · you'd need the legend card"}
+                </p>
               )}
-            </label>
+            </div>
 
             <div>
               <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Play style</span>
