@@ -72,26 +72,25 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-20 border-b border-white/[0.07] bg-ink/75 backdrop-blur-xl">
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand-gold/50 to-transparent" />
       <div className="mx-auto flex max-w-[1680px] items-center gap-3 px-4 py-3 sm:gap-5 sm:px-6 lg:px-8">
         <Link href="/" aria-label="RBBinder home" className="group flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-gold to-[#a9792a] font-display text-sm font-bold text-ink shadow-[0_0_18px_-2px_rgb(var(--accent)/0.6)] transition group-hover:rotate-6 group-hover:scale-110">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white font-display text-sm font-bold text-ink transition group-hover:scale-110">
             RB
           </span>
           <span className="hidden font-display text-lg font-semibold uppercase tracking-[0.14em] text-white sm:inline">
             RB<span className="text-brand-gold">Binder</span>
           </span>
         </Link>
-        <nav className="flex items-center gap-0.5 rounded-full border border-white/[0.07] bg-white/[0.04] p-1">
+        <nav className="flex items-center gap-0.5 rounded-md border border-white/[0.07] bg-white/[0.04] p-1">
           {LINKS.map((l) => {
             const active = l.match(pathname);
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold uppercase tracking-wide transition active:scale-95 sm:px-4 sm:text-[13px] ${
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 font-display text-[12px] font-semibold uppercase tracking-wide transition active:scale-95 sm:px-4 sm:text-[13px] ${
                   active
-                    ? "bg-brand-gold text-ink shadow-[0_0_16px_-4px_rgb(var(--accent)/0.9)]"
+                    ? "bg-brand-gold text-ink"
                     : "text-white/55 hover:bg-white/[0.06] hover:text-white"
                 }`}
               >
@@ -119,7 +118,7 @@ export function Header() {
           href="/maintenance"
           aria-label="Data and updates"
           title="Data & updates"
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition active:scale-95 ${
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border transition active:scale-95 ${
             pathname.startsWith("/maintenance")
               ? "border-brand-gold bg-brand-gold/15 text-brand-gold"
               : "border-white/[0.07] bg-white/[0.04] text-white/55 hover:border-white/25 hover:text-white"
@@ -134,7 +133,7 @@ export function Header() {
           onClick={logout}
           aria-label="Sign out"
           title="Sign out"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.07] bg-white/[0.04] text-white/55 transition hover:border-brand-red/50 hover:bg-brand-red/10 hover:text-brand-red active:scale-95"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/[0.07] bg-white/[0.04] text-white/55 transition hover:border-brand-red/50 hover:bg-brand-red/10 hover:text-brand-red active:scale-95"
         >
           <svg viewBox="0 0 24 24" {...ICON} className="h-[18px] w-[18px]">
             <path d="M15 12H3m0 0 3-3m-3 3 3 3M9 5V4a1 1 0 0 1 1-1h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8a1 1 0 0 1-1-1v-1" />

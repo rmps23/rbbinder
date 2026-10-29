@@ -8,14 +8,12 @@ import type { Binder } from "@/lib/types";
 // Each binder gets its own leather-and-gradient cover, picked from its id so it
 // never changes.
 export const COVERS = [
-  { from: "#26452f", to: "#0b1610", glow: "#a3e635", name: "Moss" },
-  { from: "#1c4d8a", to: "#0b1d36", glow: "#5aa2ff", name: "Ocean" },
-  { from: "#157a78", to: "#06282a", glow: "#2dd4bf", name: "Teal" },
-  { from: "#3d3a7a", to: "#14122e", glow: "#8f8cff", name: "Indigo" },
-  { from: "#3a4a5e", to: "#10161f", glow: "#9fb4cc", name: "Steel" },
-  { from: "#4a4f55", to: "#141516", glow: "#d4d8dc", name: "Graphite" },
-  { from: "#1e5a4a", to: "#08241d", glow: "#34d399", name: "Pine" },
-  { from: "#2a5a7a", to: "#0b2233", glow: "#22d3ee", name: "Lagoon" },
+  { from: "#2a2c30", to: "#151618", glow: "#a1a1aa", name: "Graphite" },
+  { from: "#26303a", to: "#13181d", glow: "#94a3b8", name: "Slate" },
+  { from: "#2b302b", to: "#151815", glow: "#a3ab9f", name: "Sage" },
+  { from: "#302c28", to: "#181614", glow: "#b0a89e", name: "Stone" },
+  { from: "#2a2a35", to: "#14141a", glow: "#a5a3b8", name: "Dusk" },
+  { from: "#233033", to: "#111819", glow: "#93aaad", name: "Teal grey" },
 ];
 
 export function coverFor(id: string) {
@@ -37,7 +35,7 @@ export function PocketGrid({ layout, fill, glow }: { layout: Binder["layout"]; f
           className="aspect-[744/1039] rounded-[3px] border transition-all duration-500"
           style={
             i < lit
-              ? { background: `${glow}`, borderColor: glow, boxShadow: `0 0 8px ${glow}99`, transitionDelay: `${i * 25}ms` }
+              ? { background: glow, borderColor: glow, transitionDelay: `${i * 25}ms` }
               : { background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }
           }
         />
@@ -68,10 +66,10 @@ export function BinderCard({
     <div className="group relative [perspective:900px]">
       <Link
         href={`/binder/${binder.id}`}
-        className="relative flex aspect-[5/6] animate-card-in overflow-hidden rounded-r-2xl rounded-l-md border border-white/10 transition duration-300 [transform-style:preserve-3d] hover:-translate-y-2 hover:[transform:rotateY(-9deg)_translateY(-8px)] sm:aspect-[4/5]"
+        className="relative flex aspect-[5/6] animate-card-in overflow-hidden rounded-r-2xl rounded-l-md border border-white/10 transition duration-300 [transform-style:preserve-3d] hover:-translate-y-2 sm:aspect-[4/5]"
         style={{
           background: `linear-gradient(145deg, ${cover.from}, ${cover.to})`,
-          boxShadow: `0 18px 40px -22px ${cover.glow}, inset 0 1px 0 rgba(255,255,255,0.12)`,
+          boxShadow: "0 12px 30px -18px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06)",
         }}
       >
         {/* spine with the rings */}
@@ -87,10 +85,9 @@ export function BinderCard({
         <span className="relative flex min-w-0 flex-1 flex-col p-4">
           {/* leather grain + shine */}
           <span
-            className="pointer-events-none absolute inset-0 opacity-[0.12]"
+            className="pointer-events-none absolute inset-0 opacity-[0.05]"
             style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 0.5px, transparent 0.6px)", backgroundSize: "4px 4px" }}
           />
-          <span className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full opacity-30 blur-2xl transition group-hover:opacity-60" style={{ background: cover.glow }} />
 
           <span className="relative flex items-start justify-between gap-2">
             <span className="rounded-md bg-black/40 px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-widest text-white/80">
@@ -109,7 +106,6 @@ export function BinderCard({
           <span className="relative my-auto py-3">
             <span
               className="block rounded-lg border border-white/20 bg-black/30 px-3 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-[2px]"
-              style={{ boxShadow: `0 0 24px -8px ${cover.glow}` }}
             >
               <span className="block break-words font-display text-xl font-bold uppercase leading-tight tracking-wide text-white [text-shadow:0_2px_0_rgba(0,0,0,0.5)]">
                 {binder.name}
@@ -139,10 +135,10 @@ export function BinderCard({
               <b className="text-white">{Math.round(completion * 100)}%</b>
             </span>
           )}
-          <span className={`relative ${progressLabel ? "mt-1" : "mt-3"} block h-1.5 overflow-hidden rounded-full bg-black/40`}>
+          <span className={`relative ${progressLabel ? "mt-1" : "mt-3"} block h-1.5 overflow-hidden rounded-sm bg-black/40`}>
             <span
-              className="block h-full rounded-full transition-all duration-700"
-              style={{ width: `${Math.min(100, completion * 100)}%`, background: `linear-gradient(90deg, ${cover.glow}, #fff)` }}
+              className="block h-full rounded-md transition-all duration-700"
+              style={{ width: `${Math.min(100, completion * 100)}%`, background: cover.glow }}
             />
           </span>
         </span>
@@ -152,7 +148,7 @@ export function BinderCard({
         <button
           onClick={onDelete}
           title="Delete binder"
-          className="absolute right-1.5 top-1.5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white/70 backdrop-blur transition hover:bg-brand-red hover:text-white md:opacity-0 md:group-hover:opacity-100"
+          className="absolute right-1.5 top-1.5 z-10 flex h-9 w-9 items-center justify-center rounded-md bg-black/50 text-white/70 backdrop-blur transition hover:bg-brand-red hover:text-white md:opacity-0 md:group-hover:opacity-100"
         >
           ✕
         </button>

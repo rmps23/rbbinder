@@ -393,12 +393,12 @@ export default function BinderDetailPage() {
   }, [!!binder]);
 
   const compactNav = (
-    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pl-2 pr-1.5 shadow-inner">
+    <div className="flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] py-1 pl-2 pr-1.5 shadow-inner">
       <button
         onClick={goPrev}
         disabled={leftPageIndex === 0}
         aria-label="Previous pages"
-        className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+        className="flex h-6 w-6 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
       >
         ←
       </button>
@@ -409,7 +409,7 @@ export default function BinderDetailPage() {
         onClick={goNext}
         disabled={rightPageIndex >= bookPageCount - 1}
         aria-label="Next pages"
-        className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+        className="flex h-6 w-6 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
       >
         →
       </button>
@@ -418,7 +418,7 @@ export default function BinderDetailPage() {
         onClick={addPage}
         title="Add page"
         aria-label="Add page"
-        className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-gold font-display text-sm font-semibold text-ink hover:bg-brand-goldSoft"
+        className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-gold font-display text-sm font-semibold text-ink hover:bg-brand-goldSoft"
       >
         +
       </button>
@@ -427,7 +427,7 @@ export default function BinderDetailPage() {
         disabled={!canRemovePage}
         title="Remove the last page"
         aria-label="Remove the last page"
-        className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 font-display text-sm font-semibold text-white/60 hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-20"
+        className="flex h-6 w-6 items-center justify-center rounded-md border border-white/10 font-display text-sm font-semibold text-white/60 hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-20"
       >
         −
       </button>
@@ -565,7 +565,7 @@ export default function BinderDetailPage() {
         <button
           type="button"
           onClick={() => setScanning(true)}
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand-gold px-4 font-display text-xs font-semibold uppercase tracking-wide text-ink active:bg-brand-goldSoft"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-brand-gold px-4 font-display text-xs font-semibold uppercase tracking-wide text-ink active:bg-brand-goldSoft"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
             <path
@@ -581,7 +581,7 @@ export default function BinderDetailPage() {
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-label="Binder menu"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/70 active:bg-white/10"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/15 text-white/70 active:bg-white/10"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
             <circle cx="5" cy="12" r="1.8" />
@@ -659,7 +659,7 @@ export default function BinderDetailPage() {
             onClick={goPrev}
             disabled={leftPageIndex === 0}
             aria-label="Previous pages"
-            className="flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] border-brand-gold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+            className="flex h-8 w-8 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
           >
             ←
           </button>
@@ -670,7 +670,7 @@ export default function BinderDetailPage() {
             onClick={goNext}
             disabled={rightPageIndex >= bookPageCount - 1}
             aria-label="Next pages"
-            className="flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] border-brand-gold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+            className="flex h-8 w-8 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
           >
             →
           </button>
@@ -679,7 +679,7 @@ export default function BinderDetailPage() {
             onClick={addPage}
             title="Add page"
             aria-label="Add page"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-gold font-display text-base font-semibold text-ink hover:bg-brand-goldSoft"
+            className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-gold font-display text-base font-semibold text-ink hover:bg-brand-goldSoft"
           >
             +
           </button>
@@ -688,7 +688,7 @@ export default function BinderDetailPage() {
             disabled={!canRemovePage}
             title="Remove the last page"
             aria-label="Remove the last page"
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-ink font-display text-base font-semibold text-white/60 hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-20"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-ink font-display text-base font-semibold text-white/60 hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-20"
           >
             −
           </button>
@@ -713,9 +713,9 @@ export default function BinderDetailPage() {
               <b className="text-white">{setProg.have}</b> / {setProg.total} · {Math.round(setProg.pct * 100)}%
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/10">
+          <div className="h-2 overflow-hidden rounded-sm bg-white/10">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-brand-gold to-brand-cyan transition-all duration-700"
+              className="h-full rounded-md bg-brand-gold transition-all duration-700"
               style={{ width: `${setProg.pct * 100}%` }}
             />
           </div>
@@ -731,7 +731,7 @@ export default function BinderDetailPage() {
           <button
             type="button"
             onClick={() => setMoveFrom(null)}
-            className="shrink-0 rounded-full border border-white/20 px-3 py-1.5 text-xs text-white/80 active:bg-white/10"
+            className="shrink-0 rounded-md border border-white/20 px-3 py-1.5 text-xs text-white/80 active:bg-white/10"
           >
             Cancel
           </button>

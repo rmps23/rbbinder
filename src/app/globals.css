@@ -2,29 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Colour palette as space-separated RGB triplets (so Tailwind opacity modifiers keep working):
-   neutral graphite surfaces with a lime accent. --ink page background, --panel/--panel2 surfaces,
-   --accent main buttons and highlights, --mint secondary light accent, --danger destructive.
+/* Colour palette as space-separated RGB triplets (so Tailwind opacity modifiers keep working).
+   Deliberately quiet: neutral zinc surfaces, an off-white accent for primary actions and a muted
+   grey secondary. --ink page background, --panel/--panel2 surfaces, --danger destructive.
    Card colours (rarity/domain/foil) are fixed elsewhere. */
 :root {
   color-scheme: dark;
-  --ink: 10 10 10;
-  --panel: 20 20 20;
-  --panel2: 30 30 30;
-  --accent: 163 230 53;
-  --accent-soft: 190 242 100;
-  --mint: 205 210 205;
-  --danger: 251 113 133;
-  --scroll: 50 50 50;
+  --ink: 24 24 27;
+  --panel: 33 33 37;
+  --panel2: 42 42 47;
+  --accent: 228 228 231;
+  --accent-soft: 244 244 245;
+  --mint: 161 161 170;
+  --danger: 239 106 106;
+  --scroll: 63 63 70;
 }
 
 body {
   background-color: rgb(var(--ink));
-  background-image: radial-gradient(900px 420px at 12% -8%, rgb(var(--accent) / 0.13), transparent 70%),
-    radial-gradient(800px 400px at 95% 0%, rgb(var(--mint) / 0.07), transparent 70%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  color: #eef1f6;
+  color: #e4e4e7;
   font-family: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
 }
 

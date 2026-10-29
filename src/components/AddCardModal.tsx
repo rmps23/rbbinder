@@ -162,7 +162,7 @@ export function AddCardModal({
                 <div className="mt-4 flex justify-center">
                   <button
                     onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
-                    className="rounded-full border border-white/15 bg-white/5 px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-white/80 hover:bg-white/10"
+                    className="rounded-md border border-white/15 bg-white/5 px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-white/80 hover:bg-white/10"
                   >
                     Show more ({filtered.length - visibleCount} left)
                   </button>
@@ -232,7 +232,7 @@ export function AddCardModal({
             <button
               onClick={() => onCommit(queue)}
               disabled={queue.length === 0}
-              className="h-12 w-full rounded-full bg-brand-gold px-4 font-display text-sm font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft disabled:cursor-not-allowed disabled:opacity-30 sm:mt-3 sm:h-auto sm:py-2 sm:text-xs"
+              className="h-12 w-full rounded-md bg-brand-gold px-4 font-display text-sm font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft disabled:cursor-not-allowed disabled:opacity-30 sm:mt-3 sm:h-auto sm:py-2 sm:text-xs"
             >
               Add {queue.length > 0 ? `(${queue.length})` : ""} to binder
             </button>

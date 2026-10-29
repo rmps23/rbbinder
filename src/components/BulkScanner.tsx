@@ -24,7 +24,7 @@ export function BulkScanner() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand-gold px-4 font-display text-xs font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft active:bg-brand-goldSoft"
+        className="flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-brand-gold px-4 font-display text-xs font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft active:bg-brand-goldSoft"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
           <path

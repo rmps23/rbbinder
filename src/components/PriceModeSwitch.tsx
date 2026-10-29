@@ -17,7 +17,7 @@ const MODES: { id: PriceMode; label: string; hint: string }[] = [
 export function PriceModeSwitch() {
   const { priceMode, setPriceMode } = useAppData();
   return (
-    <div className="flex items-center gap-1 rounded-full border border-white/[0.07] bg-white/[0.04] p-0.5" role="group" aria-label="Price basis">
+    <div className="flex items-center gap-1 rounded-md border border-white/[0.07] bg-white/[0.04] p-0.5" role="group" aria-label="Price basis">
       {MODES.map((m) => (
         <button
           key={m.id}
@@ -25,7 +25,7 @@ export function PriceModeSwitch() {
           title={m.hint}
           onClick={() => setPriceMode(m.id)}
           aria-pressed={priceMode === m.id}
-          className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition active:scale-95 ${
+          className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition active:scale-95 ${
             priceMode === m.id ? "bg-brand-gold text-ink" : "text-white/55 hover:text-white"
           }`}
         >

@@ -26,8 +26,8 @@ const VIEWS: { id: View; label: string }[] = [
 ];
 
 const chip = (on: boolean) =>
-  `rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
-    on ? "bg-brand-gold text-ink shadow-[0_0_14px_-2px_rgb(var(--accent)/0.7)]" : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+  `rounded-md px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
+    on ? "bg-brand-gold text-ink" : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
   }`;
 
 function Ring({ pct }: { pct: number }) {
@@ -324,7 +324,6 @@ export function DeckBuilder({ id }: { id: string }) {
     <div>
       {/* header */}
       <div className="relative mb-4 overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-3 sm:p-4">
-        <div className="absolute inset-x-0 top-0 h-1" style={{ background: accent }} />
         <div className="flex flex-wrap items-center gap-3">
           <Link href="/decks" className="text-sm text-white/50 hover:text-white">
             ←
@@ -355,10 +354,10 @@ export function DeckBuilder({ id }: { id: string }) {
             </p>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setModal("import")} className="rounded-full border-[1.5px] border-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold transition hover:bg-brand-gold/10 active:scale-95">
+            <button type="button" onClick={() => setModal("import")} className="rounded-md border-[1.5px] border-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold transition hover:bg-brand-gold/10 active:scale-95">
               Import
             </button>
-            <button type="button" onClick={() => setModal("export")} className="rounded-full bg-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95">
+            <button type="button" onClick={() => setModal("export")} className="rounded-md bg-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95">
               Export
             </button>
           </div>
@@ -366,7 +365,7 @@ export function DeckBuilder({ id }: { id: string }) {
       </div>
 
       {/* mobile switch */}
-      <div className="sticky top-[57px] z-10 mb-3 flex gap-1 rounded-full bg-ink/90 p-1 backdrop-blur lg:hidden">
+      <div className="sticky top-[57px] z-10 mb-3 flex gap-1 rounded-md bg-ink/90 p-1 backdrop-blur lg:hidden">
         {(["pool", "deck"] as Mobile[]).map((m) => (
           <button key={m} type="button" onClick={() => setMobile(m)} className={`flex-1 ${chip(mobile === m)}`}>
             {m === "pool" ? "Cards" : `Deck · ${mainTotal}/40`}
@@ -421,7 +420,7 @@ export function DeckBuilder({ id }: { id: string }) {
                   type="button"
                   title={d.label}
                   onClick={() => setDomainId(domainId === d.id ? "" : d.id)}
-                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
                     domainId === d.id ? "text-ink" : "bg-white/5 text-white/60 hover:bg-white/10"
                   }`}
                   style={domainId === d.id ? { background: domainColor(d.id) } : undefined}
@@ -460,14 +459,14 @@ export function DeckBuilder({ id }: { id: string }) {
                   </button>
                   {qty > 0 && (
                     <>
-                      <span key={qty} className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-6 min-w-6 animate-pop items-center justify-center rounded-full bg-brand-gold px-1 text-xs font-bold text-ink shadow-lg">
+                      <span key={qty} className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-6 min-w-6 animate-pop items-center justify-center rounded-md bg-brand-gold px-1 text-xs font-bold text-ink shadow-lg">
                         {qty}
                       </span>
                       <button
                         type="button"
                         aria-label="Remove one"
                         onClick={() => adjust(card, poolZone, -1)}
-                        className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/75 text-base opacity-100 transition hover:bg-brand-red sm:opacity-0 sm:group-hover:opacity-100"
+                        className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-md bg-black/75 text-base opacity-100 transition hover:bg-brand-red sm:opacity-0 sm:group-hover:opacity-100"
                       >
                         −
                       </button>
@@ -505,7 +504,7 @@ export function DeckBuilder({ id }: { id: string }) {
         <section
           className={`${mobile === "deck" ? "" : "hidden"} rounded-2xl border border-white/[0.07] bg-panel p-3 sm:p-4 lg:sticky lg:top-[76px] lg:block lg:max-h-[calc(100vh-92px)] lg:overflow-y-auto`}
         >
-          <div className="mb-4 flex gap-1 rounded-full bg-ink/60 p-1">
+          <div className="mb-4 flex gap-1 rounded-md bg-ink/60 p-1">
             {VIEWS.map((v) => (
               <button key={v.id} type="button" onClick={() => setView(v.id)} className={`flex-1 ${chip(view === v.id)}`}>
                 {v.label}
@@ -546,7 +545,7 @@ export function DeckBuilder({ id }: { id: string }) {
 
       {notice && (
         <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
-          <p className="animate-card-in rounded-full border border-brand-red/40 bg-ink/95 px-5 py-2.5 text-sm text-white shadow-2xl backdrop-blur">
+          <p className="animate-card-in rounded-md border border-brand-red/40 bg-ink/95 px-5 py-2.5 text-sm text-white shadow-2xl backdrop-blur">
             ⚠ {notice}
           </p>
         </div>

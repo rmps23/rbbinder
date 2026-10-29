@@ -411,18 +411,18 @@ export function ScanCardModal({
       )}
 
       <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 bg-gradient-to-b from-black/80 to-transparent px-4 pb-6 pt-4">
-        <button onClick={onClose} className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur hover:bg-white/25">
+        <button onClick={onClose} className="rounded-md bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur hover:bg-white/25">
           Done{addedCount > 0 ? ` (${addedCount})` : ""}
         </button>
         {bulk && (
-          <div role="group" aria-label="Finish of the cards you scan" className="flex rounded-full bg-white/15 p-0.5 backdrop-blur">
+          <div role="group" aria-label="Finish of the cards you scan" className="flex rounded-md bg-white/15 p-0.5 backdrop-blur">
             {(["normal", "foil"] as const).map((f) => (
               <button
                 key={f}
                 type="button"
                 aria-pressed={finish === f}
                 onClick={() => chooseFinish(f)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
                   finish === f ? (f === "foil" ? "bg-foil text-ink" : "bg-brand-cyan text-ink") : "text-white/80"
                 }`}
               >
@@ -431,7 +431,7 @@ export function ScanCardModal({
             ))}
           </div>
         )}
-        <label className="flex cursor-pointer items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-xs text-white backdrop-blur">
+        <label className="flex cursor-pointer items-center gap-2 rounded-md bg-white/15 px-3 py-2 text-xs text-white backdrop-blur">
           <input type="checkbox" checked={autoAdd} onChange={(e) => setAutoAdd(e.target.checked)} />
           Auto-add
         </label>
@@ -535,13 +535,13 @@ export function ScanCardModal({
             <div className="mt-3 flex gap-2">
               <button
                 onClick={() => commit(chosen, activeFinish)}
-                className="flex-1 rounded-full bg-brand-gold px-3 py-3 font-display text-sm font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft"
+                className="flex-1 rounded-md bg-brand-gold px-3 py-3 font-display text-sm font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft"
               >
                 {bulk ? `Add ${activeFinish === "foil" ? "foil" : "normal"}` : "Add"}
               </button>
               <button
                 onClick={() => dismiss(chosen)}
-                className="rounded-full border border-white/15 px-5 py-3 text-sm text-white/70 hover:text-white"
+                className="rounded-md border border-white/15 px-5 py-3 text-sm text-white/70 hover:text-white"
               >
                 Skip
               </button>

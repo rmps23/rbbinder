@@ -39,9 +39,8 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <form
         onSubmit={onSubmit}
-        className="relative w-full max-w-sm animate-card-in overflow-hidden rounded-2xl border border-white/10 bg-panel p-6 shadow-[0_20px_60px_-20px_rgb(var(--accent)/0.35)]"
+        className="relative w-full max-w-sm animate-card-in overflow-hidden rounded-2xl border border-white/10 bg-panel p-6 shadow-xl"
       >
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-gold via-brand-cyan to-brand-gold" />
         <div className="mb-1 flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg border-[1.5px] border-brand-gold bg-ink font-display text-sm font-bold text-brand-gold">
             RB
@@ -61,7 +60,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={busy || !password}
-          className="w-full rounded-full bg-brand-gold px-3 py-2 font-display text-sm font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft disabled:opacity-50"
+          className="w-full rounded-md bg-brand-gold px-3 py-2 font-display text-sm font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft disabled:opacity-50"
         >
           {busy ? "Signing in..." : "Sign in"}
         </button>

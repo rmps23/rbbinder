@@ -78,9 +78,6 @@ export function BulkHero({ activeSet, onPickSet }: { activeSet: string; onPickSe
     <div className="mb-6">
       {/* hero */}
       <div className="relative mb-5 overflow-hidden rounded-3xl border border-white/[0.08] bg-panel p-5 sm:p-7">
-        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-cyan via-brand-gold to-brand-cyan" />
-        <span className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full bg-brand-cyan/15 blur-3xl" />
-        <span className="pointer-events-none absolute -bottom-20 left-10 h-56 w-56 rounded-full bg-brand-gold/10 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-5">
           <div>
             <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-white sm:text-4xl">Bulk</h1>
@@ -99,23 +96,23 @@ export function BulkHero({ activeSet, onPickSet }: { activeSet: string; onPickSe
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-white/70">
+                  <span className="rounded-md bg-white/[0.06] px-3 py-1.5 text-white/70">
                     <b className="text-white">{data.total.copies}</b> cards
                   </span>
-                  <span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-white/70">
+                  <span className="rounded-md bg-white/[0.06] px-3 py-1.5 text-white/70">
                     <b className="text-white">{data.total.unique}</b> unique
                   </span>
-                  <span className="rounded-full bg-brand-cyan/10 px-3 py-1.5 text-brand-cyan">
+                  <span className="rounded-md bg-brand-cyan/10 px-3 py-1.5 text-brand-cyan">
                     <b>{data.normal}</b> normal
                   </span>
-                  <span className="rounded-full bg-foil/10 px-3 py-1.5 text-foil">
+                  <span className="rounded-md bg-foil/10 px-3 py-1.5 text-foil">
                     ✦ <b>{data.foil}</b> foil
                   </span>
                 </div>
               </div>
             )}
           </div>
-          <div className="[&_button]:h-12 [&_button]:px-6 [&_button]:text-sm [&_button]:shadow-[0_0_28px_-4px_rgb(var(--accent)/0.8)]">
+          <div className="[&_button]:h-12 [&_button]:px-6 [&_button]:text-sm [&_button]:">
             <BulkScanner />
           </div>
         </div>
@@ -139,7 +136,7 @@ export function BulkHero({ activeSet, onPickSet }: { activeSet: string; onPickSe
                   type="button"
                   onClick={() => onPickSet(on ? "" : r.id)}
                   className={`group relative min-w-[150px] shrink-0 animate-card-in overflow-hidden rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-1 active:scale-95 ${
-                    on ? "border-brand-gold bg-brand-gold/10 shadow-[0_0_24px_-6px_rgb(var(--accent)/0.6)]" : "border-white/[0.07] bg-panel hover:border-white/25"
+                    on ? "border-brand-gold bg-brand-gold/10" : "border-white/[0.07] bg-panel hover:border-white/25"
                   }`}
                 >
                   <span className="pointer-events-none absolute -right-3 -top-4 font-display text-6xl font-bold text-white/[0.05] transition group-hover:text-white/10">
@@ -150,9 +147,9 @@ export function BulkHero({ activeSet, onPickSet }: { activeSet: string; onPickSe
                   <span className="relative block text-[11px] text-white/40">
                     {r.copies} card{r.copies === 1 ? "" : "s"} · {r.unique} unique
                   </span>
-                  <span className="relative mt-2 block h-1 overflow-hidden rounded-full bg-white/10">
+                  <span className="relative mt-2 block h-1 overflow-hidden rounded-sm bg-white/10">
                     <span
-                      className="block h-full rounded-full bg-gradient-to-r from-brand-gold to-brand-cyan transition-all duration-700"
+                      className="block h-full rounded-md bg-brand-gold transition-all duration-700"
                       style={{ width: `${(r.value / biggest) * 100}%` }}
                     />
                   </span>
@@ -166,20 +163,20 @@ export function BulkHero({ activeSet, onPickSet }: { activeSet: string; onPickSe
       {/* jackpot cards */}
       {data.top.length > 0 && (
         <>
-          <p className="mb-2 font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">💎 Jackpot cards</p>
+          <p className="mb-2 font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Most valuable</p>
           <div className="-mx-2 flex gap-3 overflow-x-auto px-2 pb-4 pt-3">
             {data.top.map(({ card, price, foil }, i) => (
               <div key={card.id} className="w-24 shrink-0 animate-card-in sm:w-28" style={{ animationDelay: `${i * 50}ms` }}>
                 <div
-                  className="relative overflow-hidden rounded-xl ring-2 ring-transparent transition duration-200 hover:-translate-y-1.5 hover:rotate-1 hover:ring-brand-gold/70"
+                  className="relative overflow-hidden rounded-xl ring-2 ring-transparent transition duration-200 hover:-translate-y-1.5 hover:ring-brand-gold/70"
                   style={{ boxShadow: `0 10px 24px -12px ${primaryColor(card)}` }}
                 >
                   <CardArt card={card} sizes="120px" className="rounded-xl" />
                   {foil && <FoilShine />}
-                  <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-gold font-display text-[11px] font-bold text-ink shadow">
+                  <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-md bg-brand-gold font-display text-[11px] font-bold text-ink shadow">
                     {i + 1}
                   </span>
-                  {foil && <span className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 text-[10px] text-foil">✦</span>}
+                  {foil && <span className="absolute right-1 top-1 rounded-md bg-black/60 px-1.5 text-[10px] text-foil">✦</span>}
                 </div>
                 <p className="mt-1 truncate text-[11px] text-white/65" title={displayName(card)}>{displayName(card)}</p>
                 <p className="font-display text-sm font-semibold text-brand-gold">{formatEur(price)}</p>

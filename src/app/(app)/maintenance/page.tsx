@@ -167,7 +167,6 @@ export default function MaintenancePage() {
       <p className="mb-6 mt-1 text-sm text-white/50">Keep the card data, links and prices in step with the game. Each button does one thing.</p>
 
       <section className="relative mb-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-panel p-4 sm:p-5">
-        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-gold via-brand-cyan to-brand-gold" />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1 basis-64">
             <h2 className="font-display text-xl font-semibold text-white">Update everything</h2>
@@ -178,17 +177,17 @@ export default function MaintenancePage() {
           <button
             onClick={runAll}
             disabled={busy !== null}
-            className="rounded-full bg-brand-gold px-6 py-2.5 font-display text-sm font-semibold uppercase tracking-wide text-ink shadow-[0_0_24px_-4px_rgb(var(--accent)/0.8)] transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-50"
+            className="rounded-md bg-brand-gold px-6 py-2.5 font-display text-sm font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-50"
           >
             {busy === "all" ? "Updating…" : "Update all"}
           </button>
         </div>
         {all && (
           <div className="mt-4">
-            <div className="h-3 overflow-hidden rounded-full bg-white/10">
+            <div className="h-3 overflow-hidden rounded-sm bg-white/10">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  all.failed ? "bg-brand-red" : "bg-gradient-to-r from-brand-gold to-brand-cyan"
+                className={`h-full rounded-md transition-all duration-500 ${
+                  all.failed ? "bg-brand-red" : "bg-brand-gold"
                 } ${busy === "all" ? "animate-pulse" : ""}`}
                 style={{ width: `${Math.round(((all.done ? ORDER.length : all.step + (busy === "all" ? 0.5 : 0)) / ORDER.length) * 100)}%` }}
               />
@@ -227,7 +226,6 @@ export default function MaintenancePage() {
           const result = results[job.id];
           return (
             <section key={job.id} className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-4 sm:p-5">
-              <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-brand-gold to-brand-cyan" />
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0 flex-1 basis-64">
                   <h2 className="font-display text-lg font-semibold text-white">{job.title}</h2>
@@ -240,7 +238,7 @@ export default function MaintenancePage() {
                 <button
                   onClick={() => run(job)}
                   disabled={busy !== null}
-                  className="rounded-full bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink shadow-[0_0_18px_-4px_rgb(var(--accent)/0.7)] transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-50"
+                  className="rounded-md bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-50"
                 >
                   {busy === job.id ? "Working…" : job.button}
                 </button>

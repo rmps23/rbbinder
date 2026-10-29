@@ -60,13 +60,13 @@ export function CardSheet({
           <p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wide text-white/40">
             Copies in this slot
           </p>
-          <div className="flex items-center gap-1 self-start rounded-full bg-white/5 p-1 ring-1 ring-inset ring-white/10">
+          <div className="flex items-center gap-1 self-start rounded-md bg-white/5 p-1 ring-1 ring-inset ring-white/10">
             <button
               type="button"
               onClick={() => onQty(qty - 1)}
               disabled={qty <= 1}
               aria-label="One less copy"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-xl text-white/70 active:bg-white/10 disabled:opacity-25"
+              className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-white/70 active:bg-white/10 disabled:opacity-25"
             >
               −
             </button>
@@ -75,7 +75,7 @@ export function CardSheet({
               type="button"
               onClick={() => onQty(qty + 1)}
               aria-label="One more copy"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-xl text-white/70 active:bg-white/10"
+              className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-white/70 active:bg-white/10"
             >
               +
             </button>
@@ -87,14 +87,14 @@ export function CardSheet({
         <button
           type="button"
           onClick={onMove}
-          className="h-12 rounded-full border-[1.5px] border-brand-gold font-display text-sm font-semibold uppercase tracking-wide text-brand-gold active:bg-brand-gold/10"
+          className="h-12 rounded-md border-[1.5px] border-brand-gold font-display text-sm font-semibold uppercase tracking-wide text-brand-gold active:bg-brand-gold/10"
         >
           Move
         </button>
         <button
           type="button"
           onClick={onRemove}
-          className="h-12 rounded-full border border-brand-red/40 bg-brand-red/10 font-display text-sm font-semibold uppercase tracking-wide text-brand-red active:bg-brand-red/20"
+          className="h-12 rounded-md border border-brand-red/40 bg-brand-red/10 font-display text-sm font-semibold uppercase tracking-wide text-brand-red active:bg-brand-red/20"
         >
           Remove
         </button>

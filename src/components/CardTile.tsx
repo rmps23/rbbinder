@@ -41,7 +41,6 @@ export function CardTile({
       className="group flex animate-card-in flex-col overflow-hidden rounded-xl border-2 bg-panel transition duration-200 hover:-translate-y-1"
       style={{
         borderColor: owned ? ring : "rgba(255,255,255,0.08)",
-        boxShadow: owned ? `0 10px 26px -14px ${ring}` : undefined,
       }}
     >
       <div className="relative aspect-[744/1039] w-full bg-[#0a0c10]">

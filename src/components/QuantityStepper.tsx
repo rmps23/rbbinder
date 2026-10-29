@@ -22,12 +22,12 @@ export function QuantityStepper({
   return (
     <div
       onClick={(e) => e.preventDefault()}
-      className={`flex items-center gap-0.5 rounded-full bg-white/5 p-0.5 ring-1 ring-inset ring-white/10 transition focus-within:ring-2 ${ACCENT_RING[accent]}`}
+      className={`flex items-center gap-0.5 rounded-md bg-white/5 p-0.5 ring-1 ring-inset ring-white/10 transition focus-within:ring-2 ${ACCENT_RING[accent]}`}
     >
       <button
         type="button"
         onClick={() => onChange(Math.max(0, value - 1))}
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90"
         aria-label="Decrease"
       >
         <span className="text-sm leading-none">−</span>
@@ -42,7 +42,7 @@ export function QuantityStepper({
       <button
         type="button"
         onClick={() => onChange(value + 1)}
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-white/50 transition hover:bg-white/10 hover:text-white active:scale-90"
         aria-label="Increase"
       >
         <span className="text-sm leading-none">+</span>

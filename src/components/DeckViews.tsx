@@ -8,16 +8,17 @@ import type { DeckEntry, DeckZone, RiftCard } from "@/lib/types";
 
 export type Row = { entry: DeckEntry; card: RiftCard };
 
-// Glows and highlights around cards use the site accent rather than the card's
-// domain colour (some of those are gold/brown and clash with the palette) - the
-// domain is shown by its dots instead.
+// Shadows around cards stay neutral (no coloured glows) - the domain is shown
+// by its dots instead.
 export function primaryColor(_card?: RiftCard): string {
-  return "rgb(var(--accent))";
+  return "rgba(0,0,0,0.55)";
 }
 
 export function CardArt({ card, sizes, className = "" }: { card: RiftCard; sizes: string; className?: string }) {
   return (
-    <div className={`relative aspect-[744/1039] overflow-hidden bg-[#0a0c10] ${className}`}>
+    <div
+      className={`relative aspect-[744/1039] overflow-hidden bg-[#0a0c10] ring-1 ring-white/15 shadow-[0_8px_18px_-8px_rgba(0,0,0,0.8)] ${className}`}
+    >
       {card.image.url ? (
         <Image src={card.image.url} alt={card.image.alt} fill sizes={sizes} className="object-cover" />
       ) : (
@@ -45,7 +46,7 @@ export function DomainDots({ card }: { card: RiftCard }) {
 function Pip({ children, tone = "gold" }: { children: React.ReactNode; tone?: "gold" | "cyan" }) {
   return (
     <span
-      className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold ${
+      className={`inline-flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[11px] font-bold ${
         tone === "gold" ? "bg-brand-gold text-ink" : "bg-brand-cyan text-ink"
       }`}
     >
@@ -71,7 +72,7 @@ function RowButton({
       type="button"
       title={title}
       onClick={onClick}
-      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none transition active:scale-95 ${
+      className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold leading-none transition active:scale-95 ${
         tone === "gold"
           ? "border-brand-gold/50 bg-brand-gold/10 text-brand-gold hover:bg-brand-gold hover:text-ink"
           : "border-white/15 bg-white/[0.04] text-white/65 hover:border-white/35 hover:bg-white/10 hover:text-white"
@@ -111,7 +112,7 @@ export function ListView({
             <h3 className="mb-2 flex items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
               {zone.label}
               <span
-                className={`rounded-full px-2 py-0.5 text-[11px] tracking-normal ${
+                className={`rounded-md px-2 py-0.5 text-[11px] tracking-normal ${
                   done ? "bg-emerald-400/15 text-emerald-300" : "bg-white/5 text-white/50"
                 }`}
               >
@@ -133,7 +134,6 @@ export function ListView({
                       key={`${entry.zone}:${entry.cardId}`}
                       className="group relative flex animate-card-in items-center gap-2 overflow-hidden rounded-xl border border-white/[0.07] bg-panel2 p-1.5 transition hover:border-white/20"
                     >
-                      <span className="absolute inset-y-0 left-0 w-1" style={{ background: color }} />
                       <CardArt card={card} sizes="48px" className="ml-1 w-11 shrink-0 rounded-md" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px] font-semibold text-white">{displayName(card)}</span>
@@ -229,7 +229,7 @@ export function ArtView({
                   </button>
                   <span
                     key={row.entry.qty}
-                    className="absolute -right-1 -top-1 flex h-6 min-w-6 animate-pop items-center justify-center rounded-full bg-brand-gold px-1 text-xs font-bold text-ink shadow-lg"
+                    className="absolute -right-1 -top-1 flex h-6 min-w-6 animate-pop items-center justify-center rounded-md bg-brand-gold px-1 text-xs font-bold text-ink shadow-lg"
                   >
                     ×{row.entry.qty}
                   </span>
@@ -237,7 +237,7 @@ export function ArtView({
                     type="button"
                     aria-label="Remove one"
                     onClick={() => onAdjust(row, -1)}
-                    className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-sm opacity-0 transition hover:bg-brand-red group-hover:opacity-100"
+                    className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-sm opacity-0 transition hover:bg-brand-red group-hover:opacity-100"
                   >
                     −
                   </button>
@@ -288,10 +288,10 @@ export function StatsView({ rows }: { rows: Row[] }) {
             <div key={i} className="flex flex-1 flex-col items-center justify-end gap-1">
               <span className="text-[11px] text-white/50">{n || ""}</span>
               <div
-                className="w-full rounded-t-md bg-gradient-to-t from-brand-gold/60 to-brand-gold transition-all duration-500"
+                className="w-full rounded-t-md bg-white/70 transition-all duration-500"
                 style={{ height: `${(n / peak) * 100}%`, minHeight: n ? 4 : 0 }}
               />
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold">
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/10 text-[10px] font-bold">
                 {i === 7 ? "7+" : i}
               </span>
             </div>
@@ -308,9 +308,9 @@ export function StatsView({ rows }: { rows: Row[] }) {
             {[...domains].sort((a, b) => b[1] - a[1]).map(([id, n]) => (
               <div key={id} className="flex items-center gap-2 text-xs">
                 <span className="w-16 capitalize text-white/60">{id}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                <div className="h-2 flex-1 overflow-hidden rounded-sm bg-white/10">
                   <div
-                    className="h-full rounded-full transition-all duration-500"
+                    className="h-full rounded-md transition-all duration-500"
                     style={{ width: `${(n / Math.max(1, total)) * 100}%`, background: domainColor(id) }}
                   />
                 </div>
@@ -325,7 +325,7 @@ export function StatsView({ rows }: { rows: Row[] }) {
         <h3 className="mb-3 font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Card types</h3>
         <div className="flex flex-wrap gap-2">
           {[...types].sort((a, b) => b[1] - a[1]).map(([t, n]) => (
-            <span key={t} className="rounded-full bg-white/5 px-3 py-1 text-xs capitalize text-white/70">
+            <span key={t} className="rounded-md bg-white/5 px-3 py-1 text-xs capitalize text-white/70">
               {t} <b className="text-brand-gold">{n}</b>
             </span>
           ))}
@@ -368,8 +368,8 @@ export function BulkView({
           </p>
           <span className="font-display text-xl text-white/60">{pct}%</span>
         </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-gradient-to-r from-brand-cyan to-emerald-300 transition-all duration-700" style={{ width: `${pct}%` }} />
+        <div className="mt-2 h-2 overflow-hidden rounded-sm bg-white/10">
+          <div className="h-full rounded-md bg-brand-gold transition-all duration-700" style={{ width: `${pct}%` }} />
         </div>
         <p className="mt-1 text-[11px] uppercase tracking-wide text-white/40">cards you already have in bulk</p>
         {compare.missing.length > 0 && (
@@ -396,7 +396,7 @@ export function BulkView({
               <div key={r.key} className="animate-card-in">
                 <div className="relative rounded-lg ring-2 ring-brand-cyan/40" title={displayName(r.card)}>
                   <CardArt card={r.card} sizes="140px" className="rounded-lg" />
-                  <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-cyan px-1.5 text-xs font-bold text-ink shadow-lg">
+                  <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-md bg-brand-cyan px-1.5 text-xs font-bold text-ink shadow-lg">
                     {r.qty}
                     {r.qty < r.needed ? `/${r.needed}` : ""}
                   </span>
@@ -418,7 +418,7 @@ export function BulkView({
               <div key={r.key} className="animate-card-in">
                 <div className="relative rounded-lg ring-2 ring-brand-red/40" title={displayName(r.card)}>
                   <CardArt card={r.card} sizes="140px" className="rounded-lg opacity-80" />
-                  <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-red px-1.5 text-xs font-bold text-white shadow-lg">
+                  <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-md bg-brand-red px-1.5 text-xs font-bold text-white shadow-lg">
                     ×{r.qty}
                   </span>
                 </div>
@@ -451,7 +451,7 @@ export function RulesPanel({
       <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5">
         <span className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Deck rules</span>
         <span
-          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+          className={`rounded-md px-2.5 py-0.5 text-[11px] font-semibold ${
             legal ? "bg-emerald-400/15 text-emerald-300" : "bg-brand-gold/15 text-brand-goldSoft"
           }`}
         >

@@ -113,11 +113,11 @@ export function CardBrowser({
             {groups.map((group) => (
               <div key={group.setId}>
                 <div className="mb-3 flex items-center gap-3">
-                  <span className="inline-block h-5 w-1 rounded-sm bg-gradient-to-b from-brand-gold to-brand-cyan" />
+                  <span className="inline-block h-5 w-1 rounded-sm bg-white/25" />
                   <h3 className="font-display text-base font-semibold uppercase tracking-[0.12em] text-white">
                     {group.setName}
                   </h3>
-                  <span className="h-px flex-1 bg-gradient-to-r from-white/15 to-transparent" />
+                  <span className="h-px flex-1 bg-white/10" />
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9">
                   {group.cards.map((card) => (
@@ -138,7 +138,7 @@ export function CardBrowser({
             <div className="mt-6 flex justify-center">
               <button
                 onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
-                className="rounded-full border border-white/15 bg-white/5 px-6 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:bg-white/10 active:scale-95"
+                className="rounded-md border border-white/15 bg-white/5 px-6 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:bg-white/10 active:scale-95"
               >
                 Show more ({filtered.length - visibleCount} left)
               </button>

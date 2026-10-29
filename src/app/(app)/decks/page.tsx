@@ -80,23 +80,23 @@ export default function DecksPage() {
         />
         <button
           type="submit"
-          className="rounded-full bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft"
+          className="rounded-md bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink hover:bg-brand-goldSoft"
         >
           + New deck
         </button>
         <button
           type="button"
           onClick={() => setImporting(true)}
-          className="rounded-full border-[1.5px] border-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold hover:bg-brand-gold/10"
+          className="rounded-md border-[1.5px] border-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold hover:bg-brand-gold/10"
         >
           Import
         </button>
         <button
           type="button"
           onClick={() => setAdvising(true)}
-          className="rounded-full bg-gradient-to-r from-brand-gold to-brand-cyan px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink shadow-[0_0_20px_-4px_rgb(var(--accent)/0.8)] transition hover:brightness-110 active:scale-95"
+          className="rounded-md bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:brightness-110 active:scale-95"
         >
-          ✨ Deck from my bulk
+          Deck from my bulk
         </button>
       </form>
 
@@ -117,10 +117,9 @@ export default function DecksPage() {
                 className="group relative animate-card-in overflow-hidden rounded-2xl border border-white/[0.07] bg-panel transition duration-200 hover:-translate-y-1 hover:border-white/25"
                 style={{ boxShadow: `0 14px 36px -22px ${color}` }}
               >
-                <span className="absolute inset-x-0 top-0 z-10 h-1" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
                 <Link href={`/decks/${d.id}`} className="flex items-center gap-4 p-4">
                   {legendCard ? (
-                    <CardArt card={legendCard} sizes="80px" className="w-16 shrink-0 rounded-lg shadow-lg transition group-hover:scale-105 group-hover:-rotate-2" />
+                    <CardArt card={legendCard} sizes="80px" className="w-16 shrink-0 rounded-lg shadow-lg transition group-hover:scale-105" />
                   ) : (
                     <div className="flex aspect-[744/1039] w-16 shrink-0 items-center justify-center rounded-lg border border-dashed border-white/15 text-xl text-white/25">+</div>
                   )}
@@ -129,7 +128,7 @@ export default function DecksPage() {
                     <span className="block truncate text-xs text-white/45">
                       {legendCard ? displayName(legendCard) : "No legend yet"}
                     </span>
-                    <span className="mt-2 inline-block rounded-full bg-white/5 px-2.5 py-0.5 text-[11px] text-white/60">
+                    <span className="mt-2 inline-block rounded-md bg-white/5 px-2.5 py-0.5 text-[11px] text-white/60">
                       {count}/40 cards
                     </span>
                   </span>

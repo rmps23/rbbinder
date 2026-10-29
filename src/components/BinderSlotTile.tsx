@@ -162,7 +162,7 @@ export function BinderSlotTile({
       {dropZone === "after" && <span className="pointer-events-none absolute inset-y-0 right-0 w-1.5 bg-brand-gold" />}
 
       <span
-        className={`absolute flex items-center justify-center rounded-full bg-ink/80 font-display font-bold text-brand-gold ring-1 ring-white/10 ${
+        className={`absolute flex items-center justify-center rounded-md bg-ink/80 font-display font-bold text-brand-gold ring-1 ring-white/10 ${
           compact ? "left-1 top-1 h-5 w-5 text-xs" : "left-1.5 top-1.5 h-7 w-7 text-base"
         }`}
       >
@@ -178,7 +178,7 @@ export function BinderSlotTile({
           }}
           title="Remove card from this slot"
           aria-label="Remove card from this slot"
-          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-brand-red/90 text-white opacity-0 shadow transition hover:bg-brand-red group-hover:opacity-100"
+          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-md bg-brand-red/90 text-white opacity-0 shadow transition hover:bg-brand-red group-hover:opacity-100"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
             <path

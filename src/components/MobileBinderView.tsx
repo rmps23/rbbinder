@@ -73,7 +73,7 @@ export function MobileBinderView({
   };
 
   const navButton =
-    "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-[1.5px] border-brand-gold text-xl text-brand-gold transition active:bg-brand-gold/15 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/25";
+    "flex h-12 w-12 shrink-0 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-xl text-brand-gold transition active:bg-brand-gold/15 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/25";
 
   return (
     <div>
@@ -138,7 +138,7 @@ export function MobileBinderView({
             type="button"
             onClick={onOpenMenu}
             aria-label="Binder menu"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/70 transition active:bg-white/10"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-white/15 text-white/70 transition active:bg-white/10"
           >
             <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
               <circle cx="5" cy="12" r="1.8" />

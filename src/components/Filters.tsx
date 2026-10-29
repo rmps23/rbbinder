@@ -40,10 +40,10 @@ function Orb({
       aria-label={label}
       aria-pressed={on}
       onClick={onClick}
-      className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition duration-150 hover:-translate-y-0.5 active:scale-90 ${
+      className={`flex h-9 w-9 items-center justify-center rounded-md border-2 transition duration-150 hover:-translate-y-0.5 active:scale-90 ${
         on ? "scale-110" : "border-transparent opacity-60 hover:opacity-100"
       }`}
-      style={on ? { borderColor: color, boxShadow: `0 0 16px -2px ${color}`, background: `${color}33` } : undefined}
+      style={on ? { borderColor: color, background: `${color}26` } : undefined}
     >
       {children}
     </button>
@@ -54,7 +54,7 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
   return (
     <div className="flex flex-col gap-1">
       <span className="font-display text-[9px] font-semibold uppercase tracking-[0.22em] text-white/30">{label}</span>
-      <div className="flex items-center gap-0.5 rounded-full bg-white/[0.04] p-0.5">{children}</div>
+      <div className="flex items-center gap-0.5 rounded-md bg-white/[0.04] p-0.5">{children}</div>
     </div>
   );
 }
@@ -82,16 +82,16 @@ export function Filters({
     (state.typeId ? 1 : 0) + (state.rarityId ? 1 : 0) + (state.domainId ? 1 : 0) + (state.altArt !== "all" ? 1 : 0);
 
   const tab = (on: boolean) =>
-    `shrink-0 whitespace-nowrap rounded-full px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider transition active:scale-95 ${
+    `shrink-0 whitespace-nowrap rounded-md px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider transition active:scale-95 ${
       on
-        ? "bg-brand-gold text-ink shadow-[0_0_18px_-4px_rgb(var(--accent)/0.9)]"
+        ? "bg-brand-gold text-ink"
         : "text-white/55 hover:bg-white/[0.07] hover:text-white"
     }`;
 
   return (
     <div className="mb-5 flex flex-col gap-3">
       {/* sets as tabs */}
-      <div className="flex gap-1 overflow-x-auto rounded-full border border-white/[0.07] bg-panel/80 p-1 backdrop-blur">
+      <div className="flex gap-1 overflow-x-auto rounded-md border border-white/[0.07] bg-panel/80 p-1 backdrop-blur">
         <button type="button" className={tab(!state.setId)} onClick={() => set("setId", "")}>
           All sets
         </button>
@@ -121,14 +121,14 @@ export function Filters({
               placeholder="Search by name or code…"
               value={state.search}
               onChange={(e) => set("search", e.target.value)}
-              className="h-11 w-full rounded-full border border-white/10 bg-ink pl-10 pr-10 text-sm text-white outline-none transition focus:border-brand-gold focus:shadow-[0_0_0_3px_rgb(var(--accent)/0.15)]"
+              className="h-11 w-full rounded-md border border-white/10 bg-ink pl-10 pr-10 text-sm text-white outline-none transition focus:border-brand-gold focus:"
             />
             {state.search && (
               <button
                 type="button"
                 aria-label="Clear search"
                 onClick={() => set("search", "")}
-                className="absolute right-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-white/40 hover:bg-white/10 hover:text-white"
+                className="absolute right-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-white/40 hover:bg-white/10 hover:text-white"
               >
                 ✕
               </button>
@@ -138,12 +138,12 @@ export function Filters({
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className={`flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-semibold transition active:scale-95 md:hidden ${
+            className={`flex h-11 items-center gap-2 rounded-md border px-4 text-xs font-semibold transition active:scale-95 md:hidden ${
               active ? "border-brand-gold/50 text-brand-gold" : "border-white/10 text-white/60"
             }`}
           >
             Filters
-            {active > 0 && <span className="rounded-full bg-brand-gold px-1.5 text-[10px] text-ink">{active}</span>}
+            {active > 0 && <span className="rounded-md bg-brand-gold px-1.5 text-[10px] text-ink">{active}</span>}
           </button>
 
           <div className={`${open ? "flex" : "hidden"} w-full flex-wrap items-end gap-x-4 gap-y-3 md:flex md:w-auto`}>
@@ -180,7 +180,7 @@ export function Filters({
                   key={id}
                   type="button"
                   onClick={() => set("altArt", id)}
-                  className={`h-9 rounded-full px-3 text-[11px] font-semibold transition active:scale-95 ${
+                  className={`h-9 rounded-md px-3 text-[11px] font-semibold transition active:scale-95 ${
                     state.altArt === id ? "bg-brand-cyan text-ink" : "text-white/55 hover:text-white"
                   }`}
                 >
@@ -194,7 +194,7 @@ export function Filters({
                 role="switch"
                 aria-checked={state.onlyOwned}
                 onClick={() => set("onlyOwned", !state.onlyOwned)}
-                className="flex h-11 items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.03] px-4 text-xs font-semibold text-white/70 transition hover:border-white/25 active:scale-95"
+                className="flex h-11 items-center gap-2.5 rounded-md border border-white/10 bg-white/[0.03] px-4 text-xs font-semibold text-white/70 transition hover:border-white/25 active:scale-95"
               >
                 <span className={`relative h-5 w-9 rounded-full transition-colors ${state.onlyOwned ? "bg-brand-gold" : "bg-white/15"}`}>
                   <span
@@ -234,7 +234,7 @@ function Pill({ children, onClear }: { children: React.ReactNode; onClear: () =>
     <button
       type="button"
       onClick={onClear}
-      className="flex items-center gap-1.5 rounded-full bg-brand-gold/15 px-3 py-1 text-xs font-semibold text-brand-gold transition hover:bg-brand-gold/25 active:scale-95"
+      className="flex items-center gap-1.5 rounded-md bg-brand-gold/15 px-3 py-1 text-xs font-semibold text-brand-gold transition hover:bg-brand-gold/25 active:scale-95"
     >
       {children} <span className="text-[10px]">✕</span>
     </button>

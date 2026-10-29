@@ -41,7 +41,7 @@ export function DeckTextModal({
     URL.revokeObjectURL(url);
   }
 
-  const button = "rounded-full px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide";
+  const button = "rounded-md px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide";
 
   return (
     <BottomSheet title={mode === "import" ? "Import deck" : "Export deck"} onClose={onClose}>

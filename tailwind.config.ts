@@ -65,6 +65,16 @@ const config: Config = {
         "card-in": "card-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both",
         shimmer: "shimmer 3s linear infinite",
       },
+      // Crisp corners: the default scale made everything look like a pill.
+      borderRadius: {
+        sm: "2px",
+        DEFAULT: "3px",
+        md: "4px",
+        lg: "5px",
+        xl: "6px",
+        "2xl": "8px",
+        "3xl": "10px",
+      },
       fontFamily: {
         sans: ["var(--font-public-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         display: ["var(--font-oswald)", "ui-sans-serif", "system-ui", "sans-serif"],

@@ -105,7 +105,7 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
 
   const chosen = options?.find((o) => o.legendId === legendId);
   const chip = (on: boolean) =>
-    `rounded-full px-3.5 py-1.5 text-xs font-semibold transition active:scale-95 ${
+    `rounded-md px-3.5 py-1.5 text-xs font-semibold transition active:scale-95 ${
       on ? "bg-brand-gold text-ink" : "bg-white/[0.05] text-white/60 hover:bg-white/10 hover:text-white"
     }`;
 
@@ -118,15 +118,14 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
         className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-3xl border border-white/10 bg-panel p-5 shadow-2xl animate-card-in sm:p-6"
       >
-        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-gold via-brand-cyan to-brand-gold" />
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-display text-2xl font-semibold uppercase tracking-wide text-white">✨ Deck from my bulk</h2>
+            <h2 className="font-display text-2xl font-semibold uppercase tracking-wide text-white">Deck from my bulk</h2>
             <p className="mt-1 text-sm text-white/50">
               A free AI (Google Gemini) builds a Nexus Night-ready deck using only the cards in your bulk - checked against the deck rules.
             </p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white">
+          <button onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-white/50 hover:bg-white/10 hover:text-white">
             ✕
           </button>
         </div>
@@ -142,14 +141,14 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search a legend or champion (e.g. Evelynn)…"
-                  className="min-w-[200px] flex-1 rounded-full border border-white/10 bg-ink px-4 py-2 text-sm text-white outline-none focus:border-brand-gold"
+                  className="min-w-[200px] flex-1 rounded-md border border-white/10 bg-ink px-4 py-2 text-sm text-white outline-none focus:border-brand-gold"
                 />
                 <button
                   type="button"
                   role="switch"
                   aria-checked={onlyBuildable}
                   onClick={() => setOnlyBuildable((v) => !v)}
-                  className={`rounded-full border px-3 py-2 text-xs font-semibold transition active:scale-95 ${
+                  className={`rounded-md border px-3 py-2 text-xs font-semibold transition active:scale-95 ${
                     onlyBuildable ? "border-brand-gold bg-brand-gold/15 text-brand-gold" : "border-white/10 text-white/55"
                   }`}
                 >
@@ -163,7 +162,7 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
                     type="button"
                     title={d.label}
                     onClick={() => setDomain(domain === d.id ? "" : d.id)}
-                    className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
+                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
                       domain === d.id ? "text-ink" : "bg-white/[0.05] text-white/55 hover:bg-white/10"
                     }`}
                     style={domain === d.id ? { background: domainColor(d.id) } : undefined}
@@ -195,10 +194,10 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
                         <div className="relative">
                           {card && <CardArt card={card} sizes="120px" className={`rounded-lg ${o.viable ? "" : "opacity-70"}`} />}
                           {o.owned && (
-                            <span className="absolute left-1 top-1 rounded-full bg-black/70 px-1.5 text-[9px] font-semibold text-white/85">owned</span>
+                            <span className="absolute left-1 top-1 rounded-md bg-black/70 px-1.5 text-[9px] font-semibold text-white/85">owned</span>
                           )}
                           {o.viable && (
-                            <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-gold text-[11px] font-bold text-ink">✓</span>
+                            <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-md bg-brand-gold text-[11px] font-bold text-ink">✓</span>
                           )}
                         </div>
                         <p className="mt-1 truncate text-[11px] font-semibold text-white/85" title={o.name}>{o.name}</p>
@@ -251,13 +250,13 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
             <button
               onClick={generate}
               disabled={busy || !legendId}
-              className="h-12 rounded-full bg-brand-gold font-display text-sm font-semibold uppercase tracking-wide text-ink shadow-[0_0_24px_-4px_rgb(var(--accent)/0.8)] transition hover:bg-brand-goldSoft active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
+              className="h-12 rounded-md bg-brand-gold font-display text-sm font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
             >
               {busy ? WAIT[tick % WAIT.length] : "Build my deck"}
             </button>
             {busy && (
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full w-1/3 animate-shimmer rounded-full bg-gradient-to-r from-transparent via-brand-gold to-transparent" style={{ backgroundSize: "200% 100%", width: "100%" }} />
+              <div className="h-1.5 overflow-hidden rounded-sm bg-white/10">
+                <div className="h-full w-1/3 animate-shimmer rounded-md bg-white/40" style={{ backgroundSize: "200% 100%", width: "100%" }} />
               </div>
             )}
           </div>
@@ -269,8 +268,8 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
           <div className="animate-card-in">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <h3 className="font-display text-xl font-semibold text-white">{rec.deckName}</h3>
-              {rec.archetype && <span className="rounded-full bg-brand-gold/15 px-2.5 py-0.5 text-xs font-semibold text-brand-gold">{rec.archetype}</span>}
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${rec.legal ? "bg-emerald-400/15 text-emerald-300" : "bg-brand-red/15 text-brand-red"}`}>
+              {rec.archetype && <span className="rounded-md bg-brand-gold/15 px-2.5 py-0.5 text-xs font-semibold text-brand-gold">{rec.archetype}</span>}
+              <span className={`rounded-md px-2.5 py-0.5 text-xs font-semibold ${rec.legal ? "bg-emerald-400/15 text-emerald-300" : "bg-brand-red/15 text-brand-red"}`}>
                 {rec.legal ? "✓ Legal deck" : "Needs fixing"}
               </span>
             </div>
@@ -313,7 +312,7 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
                           <div className="relative">
                             <CardArt card={card} sizes="100px" className="rounded-lg" />
                             {e.qty > 1 && (
-                              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-gold px-1 text-[11px] font-bold text-ink">
+                              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-md bg-brand-gold px-1 text-[11px] font-bold text-ink">
                                 {e.qty}
                               </span>
                             )}
@@ -331,13 +330,13 @@ export function DeckAdvisorModal({ onClose }: { onClose: () => void }) {
               <button
                 onClick={save}
                 disabled={saving}
-                className="flex-1 rounded-full bg-brand-gold py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:opacity-60"
+                className="flex-1 rounded-md bg-brand-gold py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:opacity-60"
               >
                 {saving ? "Saving…" : "Save & open in deck builder"}
               </button>
               <button
                 onClick={() => setRec(null)}
-                className="rounded-full border border-white/15 px-5 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-white/70 transition hover:bg-white/5 active:scale-95"
+                className="rounded-md border border-white/15 px-5 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-white/70 transition hover:bg-white/5 active:scale-95"
               >
                 Try again
               </button>

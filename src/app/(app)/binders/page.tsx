@@ -68,7 +68,7 @@ export default function BindersPage() {
         </div>
         <button
           onClick={() => setCreating((v) => !v)}
-          className="rounded-full bg-brand-gold px-6 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-ink shadow-[0_0_18px_-4px_rgb(var(--accent)/0.7)] transition hover:bg-brand-goldSoft active:scale-95"
+          className="rounded-md bg-brand-gold px-6 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95"
         >
           {creating ? "Close" : "+ New binder"}
         </button>
@@ -79,7 +79,6 @@ export default function BindersPage() {
           onSubmit={create}
           className="relative mb-8 animate-card-in overflow-hidden rounded-2xl border border-white/[0.08] bg-panel p-4 sm:p-5"
         >
-          <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-brand-gold to-brand-cyan" />
           <div className="grid gap-5 md:grid-cols-[1fr_auto]">
             <div className="flex flex-col gap-4">
               <label className="flex flex-col gap-1.5">
@@ -89,7 +88,7 @@ export default function BindersPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Main collection"
-                  className="rounded-xl border border-white/10 bg-ink px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-brand-gold focus:shadow-[0_0_0_3px_rgb(var(--accent)/0.15)]"
+                  className="rounded-xl border border-white/10 bg-ink px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-brand-gold focus:"
                 />
               </label>
               <div>
@@ -121,7 +120,7 @@ export default function BindersPage() {
                       type="button"
                       onClick={() => setSetId(s.id)}
                       title={s.name}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
+                      className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
                         setId === s.id ? "border-brand-gold bg-brand-gold text-ink" : "border-white/10 bg-white/[0.03] text-white/60 hover:border-white/30"
                       }`}
                     >
@@ -137,7 +136,7 @@ export default function BindersPage() {
                 <button
                   type="submit"
                   disabled={!name.trim()}
-                  className="rounded-full bg-brand-gold px-6 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:opacity-40"
+                  className="rounded-md bg-brand-gold px-6 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:opacity-40"
                 >
                   Create binder
                 </button>
@@ -158,8 +157,7 @@ export default function BindersPage() {
 
       {binders.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/15 py-16 text-center">
-          <p className="text-4xl">📖</p>
-          <p className="mt-3 text-white/50">No binders yet - create your first one!</p>
+                    <p className="mt-3 text-white/50">No binders yet - create your first one!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">

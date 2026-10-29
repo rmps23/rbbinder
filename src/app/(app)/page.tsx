@@ -18,8 +18,6 @@ import type { CardsSyncResult, Deck } from "@/lib/types";
 function Stat({ label, value, sub, accent, href }: { label: string; value: string | number; sub?: string; accent: string; href?: string }) {
   const body = (
     <div className="relative h-full animate-card-in overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-4 transition duration-200 hover:-translate-y-1 hover:border-white/20 sm:p-5">
-      <span className="absolute inset-x-0 top-0 h-0.5" style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }} />
-      <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-20 blur-2xl" style={{ background: accent }} />
       <p className="relative font-display text-2xl font-bold text-white sm:text-3xl">{value}</p>
       <p className="relative mt-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</p>
       {sub && <p className="relative mt-0.5 text-[11px] text-white/30">{sub}</p>}
@@ -37,9 +35,9 @@ function Stat({ label, value, sub, accent, href }: { label: string; value: strin
 function SectionTitle({ children, href, link }: { children: React.ReactNode; href?: string; link?: string }) {
   return (
     <div className="mb-3 flex items-center gap-3">
-      <span className="inline-block h-5 w-1 rounded-sm bg-gradient-to-b from-brand-gold to-brand-cyan" />
+      <span className="inline-block h-5 w-1 rounded-sm bg-white/25" />
       <h2 className="font-display text-lg font-semibold uppercase tracking-[0.12em] text-white">{children}</h2>
-      <span className="h-px flex-1 bg-gradient-to-r from-white/15 to-transparent" />
+      <span className="h-px flex-1 bg-white/10" />
       {href && (
         <Link href={href} className="text-xs font-semibold text-brand-gold hover:underline">
           {link ?? "See all"} →
@@ -150,9 +148,6 @@ export default function DashboardPage() {
     <div>
       {/* hero */}
       <div className="relative mb-6 overflow-hidden rounded-3xl border border-white/[0.08] bg-panel p-5 sm:p-7">
-        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-gold via-brand-cyan to-brand-gold" />
-        <span className="pointer-events-none absolute -left-10 -top-16 h-56 w-56 rounded-full bg-brand-gold/15 blur-3xl" />
-        <span className="pointer-events-none absolute -bottom-20 right-0 h-56 w-56 rounded-full bg-brand-cyan/10 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-5">
           <div>
             <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-white sm:text-4xl">Dashboard</h1>
@@ -173,19 +168,19 @@ export default function DashboardPage() {
               <PriceModeSwitch />
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/binders" className="rounded-full border-[1.5px] border-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold transition hover:bg-brand-gold/10 active:scale-95">
+              <Link href="/binders" className="rounded-md border-[1.5px] border-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold transition hover:bg-brand-gold/10 active:scale-95">
                 + New binder
               </Link>
-              <Link href="/bulk" className="rounded-full border border-white/15 px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-white/70 transition hover:bg-white/5 active:scale-95">
+              <Link href="/bulk" className="rounded-md border border-white/15 px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-white/70 transition hover:bg-white/5 active:scale-95">
                 Scan to bulk
               </Link>
-              <Link href="/decks" className="rounded-full border border-white/15 px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-white/70 transition hover:bg-white/5 active:scale-95">
+              <Link href="/decks" className="rounded-md border border-white/15 px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-white/70 transition hover:bg-white/5 active:scale-95">
                 Build a deck
               </Link>
               <button
                 onClick={syncCards}
                 disabled={syncing}
-                className="rounded-full bg-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-ink shadow-[0_0_18px_-4px_rgb(var(--accent)/0.7)] transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-60"
+                className="rounded-md bg-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-60"
               >
                 {syncing ? "Syncing..." : "Sync cards"}
               </button>
@@ -258,9 +253,9 @@ export default function DashboardPage() {
                       <b className="text-white">{s.have}</b> / {s.total} · {Math.round(pct * 100)}%
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-2 overflow-hidden rounded-sm bg-white/10">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-brand-gold to-brand-cyan transition-all duration-700"
+                      className="h-full rounded-md bg-brand-gold transition-all duration-700"
                       style={{ width: `${pct * 100}%` }}
                     />
                   </div>
@@ -285,7 +280,7 @@ export default function DashboardPage() {
                     style={{ boxShadow: `0 10px 26px -14px ${primaryColor(card)}` }}
                   >
                     <CardArt card={card} sizes="160px" className="rounded-xl" />
-                    <span className="absolute -left-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-brand-gold font-display text-xs font-bold text-ink shadow-lg">
+                    <span className="absolute -left-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-brand-gold font-display text-xs font-bold text-ink shadow-lg">
                       {i + 1}
                     </span>
                   </div>
@@ -338,9 +333,8 @@ export default function DashboardPage() {
                   className="group relative flex animate-card-in items-center gap-4 overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-4 transition hover:-translate-y-1 hover:border-white/25"
                   style={{ boxShadow: `0 14px 36px -22px ${color}` }}
                 >
-                  <span className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
                   {lc ? (
-                    <CardArt card={lc} sizes="64px" className="w-14 shrink-0 rounded-lg transition group-hover:-rotate-2 group-hover:scale-105" />
+                    <CardArt card={lc} sizes="64px" className="w-14 shrink-0 rounded-lg transition group-hover:scale-105" />
                   ) : (
                     <div className="aspect-[744/1039] w-14 shrink-0 rounded-lg border border-dashed border-white/15" />
                   )}
