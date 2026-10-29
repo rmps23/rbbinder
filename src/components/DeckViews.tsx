@@ -90,6 +90,8 @@ export function ListView({
   rowsByZone,
   countOf,
   canChampion,
+  versionsOf,
+  onPickPrinting,
   onAdjust,
   onMove,
 }: {
@@ -97,6 +99,8 @@ export function ListView({
   rowsByZone: Map<DeckZone, Row[]>;
   countOf: (z: DeckZone) => number;
   canChampion: (card: RiftCard) => boolean;
+  versionsOf: (card: RiftCard) => number;
+  onPickPrinting: (row: Row) => void;
   onAdjust: (row: Row, delta: number) => void;
   onMove: (row: Row, to: DeckZone) => void;
 }) {
@@ -134,7 +138,19 @@ export function ListView({
                       key={`${entry.zone}:${entry.cardId}`}
                       className="group relative flex animate-card-in items-center gap-2 overflow-hidden rounded-xl border border-white/[0.07] bg-panel2 p-1.5 transition hover:border-white/20"
                     >
-                      <CardArt card={card} sizes="48px" className="ml-1 w-11 shrink-0 rounded-md" />
+                      <button
+                        type="button"
+                        onClick={() => onPickPrinting(row)}
+                        title={versionsOf(card) > 1 ? "Choose the version (regular, alt art, …)" : card.publicCode}
+                        className="relative ml-1 w-11 shrink-0"
+                      >
+                        <CardArt card={card} sizes="48px" className="rounded-md" />
+                        {versionsOf(card) > 1 && (
+                          <span className="absolute inset-x-0 bottom-0 rounded-b-md bg-black/75 text-center text-[8px] font-semibold leading-3 text-white/85">
+                            {versionsOf(card)} versions
+                          </span>
+                        )}
+                      </button>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px] font-semibold text-white">{displayName(card)}</span>
                         <span className="flex items-center gap-1.5 text-[11px] text-white/40">
@@ -274,6 +290,23 @@ export function StatsView({ rows }: { rows: Row[] }) {
   const peak = Math.max(1, ...curve);
   const total = playable.reduce((n, r) => n + r.entry.qty, 0);
 
+  // Power (coloured cost) the deck asks for per domain, against the runes that pay for it.
+  const power = new Map<string, { pips: number; cards: number; runes: number }>();
+  const bump = (d: string) => power.get(d) ?? power.set(d, { pips: 0, cards: 0, runes: 0 }).get(d)!;
+  for (const { entry, card } of playable) {
+    if (!card.power) continue;
+    for (const d of card.domains) {
+      if (d.id === "colorless") continue;
+      const p = bump(d.id);
+      p.pips += card.power * entry.qty;
+      p.cards += entry.qty;
+    }
+  }
+  for (const { entry, card } of rows) {
+    if (entry.zone !== "rune") continue;
+    for (const d of card.domains) bump(d.id).runes += entry.qty;
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <section className="rounded-xl border border-white/[0.07] bg-panel2 p-4">
@@ -322,6 +355,35 @@ export function StatsView({ rows }: { rows: Row[] }) {
       </section>
 
       <section className="rounded-xl border border-white/[0.07] bg-panel2 p-4">
+        <h3 className="mb-1 font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Power &amp; runes</h3>
+        <p className="mb-3 text-[11px] text-white/35">Coloured power your cards cost, by domain, and the runes in the deck that produce it.</p>
+        {power.size === 0 ? (
+          <p className="text-xs text-white/30">No cards with a power cost yet.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {[...power].sort((a, b) => b[1].pips - a[1].pips).map(([id, p]) => {
+              const short = p.pips > 0 && p.runes === 0;
+              return (
+                <div key={id} className="flex items-center gap-3 text-xs">
+                  <span className="flex w-16 items-center gap-1.5 capitalize text-white/70">
+                    <span className="h-2 w-2 rounded-full" style={{ background: domainColor(id) }} />
+                    {id}
+                  </span>
+                  <span className="flex-1 text-white/55">
+                    {p.cards} card{p.cards === 1 ? "" : "s"} · {p.pips} power
+                  </span>
+                  <span className={short ? "font-semibold text-brand-red" : "text-white/80"}>
+                    {p.runes} rune{p.runes === 1 ? "" : "s"}
+                    {short ? " - none!" : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-white/[0.07] bg-panel2 p-4">
         <h3 className="mb-3 font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Card types</h3>
         <div className="flex flex-wrap gap-2">
           {[...types].sort((a, b) => b[1] - a[1]).map(([t, n]) => (
@@ -351,11 +413,17 @@ export function BulkView({
   hasCards,
   includeRunes,
   onIncludeRunes,
+  includeSideboard,
+  onIncludeSideboard,
+  onWants,
 }: {
   compare: CompareData;
   hasCards: boolean;
   includeRunes: boolean;
   onIncludeRunes: (v: boolean) => void;
+  includeSideboard: boolean;
+  onIncludeSideboard: (v: boolean) => void;
+  onWants: () => void;
 }) {
   const pct = compare.totalNeeded ? Math.round((compare.totalHave / compare.totalNeeded) * 100) : 0;
   return (
@@ -371,7 +439,7 @@ export function BulkView({
         <div className="mt-2 h-2 overflow-hidden rounded-sm bg-white/10">
           <div className="h-full rounded-md bg-brand-gold transition-all duration-700" style={{ width: `${pct}%` }} />
         </div>
-        <p className="mt-1 text-[11px] uppercase tracking-wide text-white/40">cards you already have in bulk</p>
+        <p className="mt-1 text-[11px] uppercase tracking-wide text-white/40">cards you own (bulk + binders, regular versions)</p>
         {compare.missing.length > 0 && (
           <p className="mt-3 text-sm text-white/60">
             To complete it <span className="font-display text-lg font-semibold text-brand-gold">≈ {formatEur(compare.missingCost)}</span>
@@ -384,12 +452,25 @@ export function BulkView({
           <input type="checkbox" checked={includeRunes} onChange={(e) => onIncludeRunes(e.target.checked)} />
           Include runes
         </label>
+        <label className="mt-1 flex items-center gap-2 text-xs text-white/50">
+          <input type="checkbox" checked={includeSideboard} onChange={(e) => onIncludeSideboard(e.target.checked)} />
+          Include sideboard
+        </label>
+        {compare.missing.length > 0 && (
+          <button
+            type="button"
+            onClick={onWants}
+            className="mt-3 w-full rounded-md border border-white/15 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/5"
+          >
+            Export missing cards for Cardmarket
+          </button>
+        )}
       </div>
 
       <section>
-        <h3 className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-brand-cyan">From your bulk</h3>
+        <h3 className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-brand-cyan">In your collection</h3>
         {compare.have.length === 0 ? (
-          <p className="text-xs text-white/30">Nothing from the deck is in your bulk.</p>
+          <p className="text-xs text-white/30">Nothing from the deck is in your collection.</p>
         ) : (
           <div className="grid grid-cols-3 gap-2.5">
             {compare.have.map((r) => (

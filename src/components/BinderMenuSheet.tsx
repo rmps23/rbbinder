@@ -14,6 +14,7 @@ export function BinderMenuSheet({
   sets,
   setId,
   onSet,
+  onMissing,
   page,
   totalPages,
   onGoTo,
@@ -29,6 +30,7 @@ export function BinderMenuSheet({
   sets: SetInfo[];
   setId: string | null;
   onSet: (setId: string | null) => void;
+  onMissing: () => void;
   page: number;
   totalPages: number;
   onGoTo: (page: number) => void;
@@ -130,6 +132,17 @@ export function BinderMenuSheet({
           </button>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          onClose();
+          onMissing();
+        }}
+        className={`${row} mt-2`}
+      >
+        Missing cards (Cardmarket)
+      </button>
 
       <p className={label}>Pages</p>
       <div className="grid grid-cols-2 gap-2">

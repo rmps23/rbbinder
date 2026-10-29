@@ -16,7 +16,9 @@ import { CardSheet } from "@/components/CardSheet";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { typicalFinish } from "@/lib/cardFinish";
 import { formatEur } from "@/lib/format";
-import { setProgress } from "@/lib/setCollection";
+import { baseCardsOf, setProgress } from "@/lib/setCollection";
+import { cardmarketWants } from "@/lib/wants";
+import { WantsModal } from "@/components/WantsModal";
 import { FilterState } from "@/components/Filters";
 import { BINDER_LAYOUTS } from "@/lib/constants";
 import type { Binder, BinderLayout, RiftCard } from "@/lib/types";
@@ -105,7 +107,7 @@ export default function BinderDetailPage() {
   const params = useParams<{ id: string }>();
   const binderId = params.id;
   const router = useRouter();
-  const { cards, sets, loading: cardsLoading, prices, priceOf } = useAppData();
+  const { cards, sets, bulk, loading: cardsLoading, prices, priceOf } = useAppData();
   const {
     slots,
     loading: slotsLoading,
@@ -217,6 +219,15 @@ export default function BinderDetailPage() {
     () => (binder?.setId ? setProgress(cards, binder.setId, binderStats.cardIds) : null),
     [binder?.setId, cards, binderStats.cardIds]
   );
+  // Cards still missing to complete the set (regular versions, one of each).
+  const [wantsOpen, setWantsOpen] = useState(false);
+  const [skipBulk, setSkipBulk] = useState(true);
+  const missingForSet = useMemo(() => {
+    if (!binder?.setId) return [];
+    return baseCardsOf(cards, binder.setId).filter((c) => !binderStats.cardIds.has(c.id));
+  }, [binder?.setId, cards, binderStats.cardIds]);
+  const inBulk = (id: string) => (bulk[id]?.normal ?? 0) + (bulk[id]?.foil ?? 0) > 0;
+
   const setName = binder?.setId ? (sets.find((s) => s.id === binder.setId)?.name ?? binder.setId) : null;
 
   const layout = BINDER_LAYOUTS.find((l) => l.id === binder?.layout) ?? BINDER_LAYOUTS[1];
@@ -645,6 +656,13 @@ export default function BinderDetailPage() {
                 </option>
               ))}
             </select>
+            <button
+              onClick={() => setWantsOpen(true)}
+              title="Cards missing to complete this binder's set - as a Cardmarket wants list"
+              className="rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-white/75 hover:bg-white/5"
+            >
+              Missing cards
+            </button>
             <LayoutSwitcher value={binder.layout} onChange={changeLayout} />
             <button
               onClick={deleteBinder}
@@ -793,6 +811,29 @@ export default function BinderDetailPage() {
         </div>
       )}
 
+      {wantsOpen && (
+        <WantsModal
+          title={binder.setId ? `Missing from ${setName}` : "Missing cards"}
+          fileName={`${binder.name} - missing`}
+          intro={
+            binder.setId
+              ? `${missingForSet.length} regular card${missingForSet.length === 1 ? "" : "s"} of ${setName} aren't in this binder (no alt arts, overnumbered or foil needed).`
+              : "Choose the set this binder collects first (next to the layout buttons, or in the binder menu on a phone)."
+          }
+          text={cardmarketWants(
+            missingForSet.filter((c) => !(skipBulk && inBulk(c.id))).map((card) => ({ card, qty: 1 }))
+          )}
+          onClose={() => setWantsOpen(false)}
+        >
+          {binder.setId && (
+            <label className="mb-2 flex items-center gap-2 text-xs text-white/60">
+              <input type="checkbox" checked={skipBulk} onChange={(e) => setSkipBulk(e.target.checked)} />
+              Leave out cards I already have in my bulk ({missingForSet.filter((c) => inBulk(c.id)).length})
+            </label>
+          )}
+        </WantsModal>
+      )}
+
       {menuOpen && (
         <BinderMenuSheet
           layout={binder.layout}
@@ -800,6 +841,7 @@ export default function BinderDetailPage() {
           sets={sets}
           setId={binder.setId ?? null}
           onSet={changeSet}
+          onMissing={() => setWantsOpen(true)}
           page={currentMobilePage + 1}
           totalPages={totalPages}
           onGoTo={(n) => setMobilePage(n - 1)}

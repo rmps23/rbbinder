@@ -67,7 +67,7 @@ let cache: { at: number; data: PricesResponse } | null = null;
 let inflight: Promise<PricesResponse> | null = null;
 
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (RBBinder price fetch)" }, cache: "no-store" });
+  const res = await fetch(url, { headers: { "user-agent": "RBBinder/1.0 (personal Riftbound collection app)" }, cache: "no-store" });
   if (!res.ok) throw new Error(`GET ${url} -> ${res.status}`);
   return res.json() as Promise<T>;
 }

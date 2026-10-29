@@ -10,6 +10,12 @@ const nextConfig = {
         hostname: "cmsassets.rgpub.io",
         pathname: "/**",
       },
+      {
+        // runes Riot's gallery doesn't list come from TCGplayer (see extraCards.ts)
+        protocol: "https",
+        hostname: "tcgplayer-cdn.tcgplayer.com",
+        pathname: "/product/**",
+      },
     ],
   },
 };

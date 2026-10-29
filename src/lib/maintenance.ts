@@ -9,7 +9,7 @@ import { fetchRiftboundCatalog } from "./riftboundCatalog";
 import { resetPriceCache } from "./tcgPrices";
 import type { RiftCard } from "./types";
 
-const HEADERS = { "user-agent": "Mozilla/5.0 (RBBinder maintenance)" };
+const HEADERS = { "user-agent": "RBBinder/1.0 (personal Riftbound collection app)" };
 const TCGCSV = "https://tcgcsv.com/tcgplayer/89"; // 89 = Riftbound
 const CARDMARKET = "https://downloads.s3.cardmarket.com/productCatalog";
 

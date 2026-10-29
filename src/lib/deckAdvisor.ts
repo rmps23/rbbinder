@@ -6,7 +6,7 @@ import { buildDeckIndex, cardKey, displayName } from "./deck";
 import { belongsInPool, checkDeck, isChampionUnit, isSignature, LIMITS } from "./deckRules";
 import { getMetaDecks, type MetaDeck } from "./metaDecks";
 import { getBulk, getCardsAndSets, listBinders } from "./repo";
-import { isBaseCard } from "./setCollection";
+import { isRegularPrinting } from "./setCollection";
 import type { DeckEntry, RiftCard } from "./types";
 
 export type Style = "any" | "aggro" | "midrange" | "control";
@@ -75,7 +75,7 @@ async function loadOwned() {
   const best = new Map<string, number>();
   for (const c of cards) {
     const q = copies.get(c.id) ?? 0;
-    if (q <= 0 || !isBaseCard(c)) continue;
+    if (q <= 0 || !isRegularPrinting(c)) continue;
     const k = cardKey(c);
     owned.set(k, (owned.get(k) ?? 0) + q);
     if (q > (best.get(k) ?? 0)) {

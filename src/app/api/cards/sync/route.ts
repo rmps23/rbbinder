@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchRiftboundCatalog } from "@/lib/riftboundCatalog";
+import { missingRunes } from "@/lib/extraCards";
 import { getExistingCardIds, upsertCardsAndSets } from "@/lib/repo";
 import type { CardsSyncResult } from "@/lib/types";
 
@@ -9,7 +10,11 @@ export const maxDuration = 60;
 
 export async function POST() {
   try {
-    const { cards, sets } = await fetchRiftboundCatalog();
+    const catalog = await fetchRiftboundCatalog();
+    // Rune printings Riot's gallery doesn't list (best effort - never blocks the sync).
+    const extra = await missingRunes(catalog.cards, catalog.sets).catch(() => ({ cards: [], sets: [] }));
+    const cards = [...catalog.cards, ...extra.cards];
+    const sets = [...catalog.sets.map((s) => ({ ...s, cardCount: s.cardCount + extra.cards.filter((c) => c.set.id === s.id).length })), ...extra.sets];
     const existingIds = await getExistingCardIds();
     await upsertCardsAndSets(cards, sets);
 

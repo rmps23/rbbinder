@@ -1,4 +1,4 @@
-import { isAlternateArt } from "./cardUtils";
+import { printingKind, type PrintingKind } from "./setCollection";
 import type { Deck, DeckEntry, DeckZone, RiftCard } from "./types";
 
 export const ZONES: { id: DeckZone; label: string; heading: string; target: number | null; max: number | null }[] = [
@@ -42,9 +42,12 @@ export type DeckIndex = {
   lookup: Map<string, string>;
 };
 
+// The plain, regular printing comes first: it's what imports and new deck
+// entries use (promos like the K/DA Evelynn, alt arts, overnumbered and
+// signature versions only when picked on purpose).
+const KIND_RANK: Record<PrintingKind, number> = { regular: 0, promo: 2, alt: 3, showcase: 4, overnumbered: 5, signature: 6 };
 function printingRank(c: RiftCard): number {
-  // Prefer the plain, regular printing as the one shown/used for imports.
-  return (c.publicCode.includes("*") ? 4 : 0) + (isAlternateArt(c) ? 2 : 0) + (c.set.id === "OGS" ? 1 : 0);
+  return KIND_RANK[printingKind(c)] * 10 + (c.set.id === "OGS" ? 1 : 0);
 }
 
 export function buildDeckIndex(cards: RiftCard[]): DeckIndex {

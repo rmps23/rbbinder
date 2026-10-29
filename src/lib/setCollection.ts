@@ -24,3 +24,33 @@ export function setProgress(cards: RiftCard[], setId: string, owned: Set<string>
   const got = base.filter((c) => have.has(c.id)).length;
   return { have: got, total: base.length, pct: base.length ? got / base.length : 0 };
 }
+
+export type PrintingKind = "regular" | "alt" | "overnumbered" | "signature" | "showcase" | "promo";
+
+// What kind of printing a card is, for the version picker and for choosing the
+// plain version by default.
+const RUNE_CODE = /^[A-Z0-9]+-R\d+([a-z]*)$/;
+
+export function printingKind(card: RiftCard): PrintingKind {
+  if (card.publicCode.includes("*")) return "signature";
+  const rune = card.publicCode.match(RUNE_CODE); // e.g. SFD-R01, SFD-R01a
+  if (rune) return rune[1] ? "alt" : "regular";
+  if (/-\d+[a-zA-Z]+\//.test(card.publicCode)) return "alt";
+  const m = card.publicCode.match(BASE_CODE);
+  if (!m) return "promo"; // SP…, OGS starter codes, etc.
+  if (Number(m[1]) > Number(m[2])) return "overnumbered";
+  if (card.rarity?.id === "showcase") return "showcase";
+  return "regular";
+}
+
+// A copy you'd actually play: the regular printing (numbered card or plain rune).
+export const isRegularPrinting = (card: RiftCard) => printingKind(card) === "regular";
+
+export const PRINTING_LABEL: Record<PrintingKind, string> = {
+  regular: "Regular",
+  alt: "Alternate art",
+  overnumbered: "Overnumbered",
+  signature: "Signature",
+  showcase: "Showcase",
+  promo: "Promo",
+};

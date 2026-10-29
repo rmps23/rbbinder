@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppData } from "./AppDataProvider";
 import { DeckTextModal } from "./DeckTextModal";
+import { WantsModal } from "./WantsModal";
+import { useCollection } from "@/lib/useCollection";
+import { cardmarketWants } from "@/lib/wants";
+import { PRINTING_LABEL, printingKind } from "@/lib/setCollection";
 import { ArtView, BulkView, CardArt, DomainDots, ListView, Pip, RulesPanel, StatsView, primaryColor, type CompareData, type Row } from "./DeckViews";
 import { DOMAIN_OPTIONS } from "@/lib/constants";
 import { availableFinishes } from "@/lib/cardFinish";
@@ -22,7 +26,7 @@ const VIEWS: { id: View; label: string }[] = [
   { id: "list", label: "List" },
   { id: "art", label: "Full art" },
   { id: "stats", label: "Stats" },
-  { id: "bulk", label: "Bulk" },
+  { id: "bulk", label: "Owned" },
 ];
 
 const chip = (on: boolean) =>
@@ -63,6 +67,9 @@ export function DeckBuilder({ id }: { id: string }) {
   const [view, setView] = useState<View>("list");
   const [modal, setModal] = useState<null | "import" | "export">(null);
   const [includeRunes, setIncludeRunes] = useState(false);
+  const [includeSideboard, setIncludeSideboard] = useState(false);
+  const [wantsOpen, setWantsOpen] = useState(false);
+  const [printingRow, setPrintingRow] = useState<Row | null>(null);
 
   const [poolZone, setPoolZone] = useState<DeckZone>("legend");
   const [search, setSearch] = useState("");
@@ -196,6 +203,20 @@ export function DeckBuilder({ id }: { id: string }) {
     [change, entries, cardById, say]
   );
 
+  // Swap a deck entry to another printing of the same card (regular, alt art, …).
+  const setPrinting = useCallback(
+    (row: Row, cardId: string) =>
+      change((prev) => {
+        const { entry } = row;
+        const rest = prev.filter((e) => e !== entry);
+        const same = rest.find((e) => e.zone === entry.zone && e.cardId === cardId);
+        return same
+          ? rest.map((e) => (e === same ? { ...e, qty: e.qty + entry.qty } : e))
+          : [...rest, { ...entry, cardId }];
+      }),
+    [change]
+  );
+
   // ---------- derived ----------
 
   const rowsByZone = useMemo(() => {
@@ -224,16 +245,8 @@ export function DeckBuilder({ id }: { id: string }) {
   const rules = useMemo(() => checkDeck({ entries, cardById }), [entries, cardById]);
   const ruleData = useMemo(() => hasRuleData(cards), [cards]);
 
-  const ownedByKey = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const c of cards) {
-      const b = bulk[c.id];
-      if (!b) continue;
-      const q = (b.normal ?? 0) + (b.foil ?? 0);
-      if (q > 0) m.set(cardKey(c), (m.get(cardKey(c)) ?? 0) + q);
-    }
-    return m;
-  }, [cards, bulk]);
+  // Copies you own: bulk + binders, regular printings only.
+  const { ownedByKey } = useCollection();
 
   const cheapest = useCallback(
     (key: string): number | null => {
@@ -253,7 +266,7 @@ export function DeckBuilder({ id }: { id: string }) {
 
   const compare = useMemo<CompareData>(() => {
     const needed = neededByKey(
-      entries.filter((e) => includeRunes || e.zone !== "rune"),
+      entries.filter((e) => (includeRunes || e.zone !== "rune") && (includeSideboard || e.zone !== "sideboard")),
       cardById
     );
     const have: CompareData["have"] = [];
@@ -278,7 +291,7 @@ export function DeckBuilder({ id }: { id: string }) {
     }
     const byName = (a: { card: RiftCard }, b: { card: RiftCard }) => a.card.name.localeCompare(b.card.name);
     return { have: have.sort(byName), missing: missing.sort(byName), missingCost, missingUnpriced, totalNeeded, totalHave };
-  }, [entries, includeRunes, cardById, ownedByKey, cheapest]);
+  }, [entries, includeRunes, includeSideboard, cardById, ownedByKey, cheapest]);
 
   // ---------- the card pool ----------
 
@@ -433,7 +446,7 @@ export function DeckBuilder({ id }: { id: string }) {
             <div className="flex flex-wrap gap-4 text-xs text-white/55">
               <label className="flex items-center gap-1.5">
                 <input type="checkbox" checked={onlyBulk} onChange={(e) => setOnlyBulk(e.target.checked)} />
-                Only cards I have in bulk
+                Only cards I own
               </label>
               <span className="ml-auto text-white/35">{pool.length} cards</span>
             </div>
@@ -526,6 +539,8 @@ export function DeckBuilder({ id }: { id: string }) {
               rowsByZone={rowsByZone}
               countOf={countOf}
               canChampion={(card) => belongsInPool(card, "champion", legend)}
+              versionsOf={(card) => index.byKey.get(cardKey(card))?.length ?? 1}
+              onPickPrinting={(row) => setPrintingRow(row)}
               onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)}
               onMove={moveOne}
             />
@@ -533,7 +548,15 @@ export function DeckBuilder({ id }: { id: string }) {
           {view === "art" && <ArtView zones={ZONES} rowsByZone={rowsByZone} onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)} />}
           {view === "stats" && <StatsView rows={allRows} />}
           {view === "bulk" && (
-            <BulkView compare={compare} hasCards={entries.length > 0} includeRunes={includeRunes} onIncludeRunes={setIncludeRunes} />
+            <BulkView
+              compare={compare}
+              hasCards={entries.length > 0}
+              includeRunes={includeRunes}
+              onIncludeRunes={setIncludeRunes}
+              includeSideboard={includeSideboard}
+              onIncludeSideboard={setIncludeSideboard}
+              onWants={() => setWantsOpen(true)}
+            />
           )}
           {view !== "bulk" && allRows.length === 0 && (
             <p className="mt-4 text-center text-sm text-white/35">
@@ -548,6 +571,56 @@ export function DeckBuilder({ id }: { id: string }) {
           <p className="animate-card-in rounded-md border border-brand-red/40 bg-ink/95 px-5 py-2.5 text-sm text-white shadow-2xl backdrop-blur">
             ⚠ {notice}
           </p>
+        </div>
+      )}
+
+      {wantsOpen && (
+        <WantsModal
+          title="Cardmarket wants list"
+          fileName={`${name} - wants`}
+          intro="The cards this deck needs that aren't in your bulk or binders, in the regular version."
+          text={cardmarketWants(
+            compare.missing.map((m) => ({ card: index.byKey.get(m.key)?.[0] ?? m.card, qty: m.qty }))
+          )}
+          onClose={() => setWantsOpen(false)}
+        />
+      )}
+
+      {printingRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3" onClick={() => setPrintingRow(null)}>
+          <div
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/10 bg-panel p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-display text-lg font-semibold text-white">{displayName(printingRow.card)} - versions</h3>
+              <button onClick={() => setPrintingRow(null)} aria-label="Close" className="flex h-8 w-8 items-center justify-center rounded-md text-white/50 hover:bg-white/10">
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {(index.byKey.get(cardKey(printingRow.card)) ?? []).map((c) => {
+                const on = c.id === printingRow.entry.cardId;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setPrinting(printingRow, c.id);
+                      setPrintingRow(null);
+                    }}
+                    className={`rounded-lg p-1.5 text-left transition ${on ? "bg-white/[0.08] ring-2 ring-brand-gold" : "hover:bg-white/[0.05]"}`}
+                  >
+                    <CardArt card={c} sizes="160px" className="rounded" />
+                    <p className="mt-1 text-xs font-semibold text-white/85">{PRINTING_LABEL[printingKind(c)]}</p>
+                    <p className="text-[11px] text-white/45">
+                      {c.publicCode} · {c.set.name}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
