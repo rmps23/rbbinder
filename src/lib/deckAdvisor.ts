@@ -7,6 +7,7 @@ import { belongsInPool, checkDeck, isChampionUnit, isSignature, LIMITS } from ".
 import { getMetaDecks, type MetaDeck } from "./metaDecks";
 import { getBulk, getCardsAndSets, listBinders } from "./repo";
 import { isRegularPrinting } from "./setCollection";
+import { championNames, legendChampion } from "./wants";
 import type { DeckEntry, RiftCard } from "./types";
 
 export type Style = "any" | "aggro" | "midrange" | "control";
@@ -88,6 +89,15 @@ async function loadOwned() {
 
 type Owned = Awaited<ReturnType<typeof loadOwned>>;
 
+const champCache = new WeakMap<RiftCard[], Set<string>>();
+// "Kennen, Heart of the Tempest" - the champion tag, not a faction tag like "Yordle".
+function legendLabel(legend: RiftCard, o: Owned) {
+  let champs = champCache.get(o.cards);
+  if (!champs) champCache.set(o.cards, (champs = championNames(o.cards)));
+  const champ = legendChampion(legend, champs);
+  return champ ? `${champ}, ${displayName(legend)}` : displayName(legend);
+}
+
 function poolFor(legend: RiftCard, o: Owned) {
   const { owned, printing } = o;
   const champions: RiftCard[] = [];
@@ -128,7 +138,7 @@ function legendOptionsFrom(o: Owned): LegendOption[] {
       const poolCopies = p.main.reduce((n, m) => n + m.copies, 0);
       return {
         legendId: legend.id,
-        name: legend.tags[0] ? `${legend.tags[0]}, ${displayName(legend)}` : displayName(legend),
+        name: legendLabel(legend, o),
         domains: legend.domains.map((d) => d.label),
         owned: (o.owned.get(cardKey(legend)) ?? 0) > 0,
         champions: p.ownsChampion ? p.champions.length : 0,
@@ -456,7 +466,7 @@ export async function metaOptions(refresh = false) {
         placement: d.placement,
         section: d.section,
         legendId: (o.printing.get(cardKey(legend)) ?? legend).id,
-        legendName: legend.tags[0] ? `${legend.tags[0]}, ${displayName(legend)}` : displayName(legend),
+        legendName: legendLabel(legend, o),
         legendOwned: (o.owned.get(cardKey(legend)) ?? 0) > 0,
         champion: champCard ? displayName(champCard) : null,
         ...cov,

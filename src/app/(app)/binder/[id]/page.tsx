@@ -821,7 +821,8 @@ export default function BinderDetailPage() {
               : "Choose the set this binder collects first (next to the layout buttons, or in the binder menu on a phone)."
           }
           text={cardmarketWants(
-            missingForSet.filter((c) => !(skipBulk && inBulk(c.id))).map((card) => ({ card, qty: 1 }))
+            missingForSet.filter((c) => !(skipBulk && inBulk(c.id))).map((card) => ({ card, qty: 1 })),
+            cards
           )}
           onClose={() => setWantsOpen(false)}
         >

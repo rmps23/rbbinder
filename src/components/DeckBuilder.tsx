@@ -580,7 +580,8 @@ export function DeckBuilder({ id }: { id: string }) {
           fileName={`${name} - wants`}
           intro="The cards this deck needs that aren't in your bulk or binders, in the regular version."
           text={cardmarketWants(
-            compare.missing.map((m) => ({ card: index.byKey.get(m.key)?.[0] ?? m.card, qty: m.qty }))
+            compare.missing.map((m) => ({ card: index.byKey.get(m.key)?.[0] ?? m.card, qty: m.qty })),
+            cards
           )}
           onClose={() => setWantsOpen(false)}
         />
