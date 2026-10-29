@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppData } from "@/components/AppDataProvider";
+import { DeckAdvisorModal } from "@/components/DeckAdvisorModal";
 import { DeckTextModal } from "@/components/DeckTextModal";
 import { CardArt, primaryColor } from "@/components/DeckViews";
 import { buildDeckIndex, displayName, parseDeck } from "@/lib/deck";
@@ -17,6 +18,7 @@ export default function DecksPage() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [importing, setImporting] = useState(false);
+  const [advising, setAdvising] = useState(false);
 
   const cardById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
   const index = useMemo(() => buildDeckIndex(cards), [cards]);
@@ -89,6 +91,13 @@ export default function DecksPage() {
         >
           Import
         </button>
+        <button
+          type="button"
+          onClick={() => setAdvising(true)}
+          className="rounded-full bg-gradient-to-r from-brand-gold to-brand-cyan px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink shadow-[0_0_20px_-4px_rgb(var(--accent)/0.8)] transition hover:brightness-110 active:scale-95"
+        >
+          ✨ Deck from my bulk
+        </button>
       </form>
 
       {error && <p className="mb-4 rounded-lg border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-300">{error}</p>}
@@ -137,6 +146,8 @@ export default function DecksPage() {
           })}
         </div>
       )}
+
+      {advising && <DeckAdvisorModal onClose={() => setAdvising(false)} />}
 
       {importing && (
         <DeckTextModal
