@@ -57,19 +57,52 @@ export function AddCardModal({
     });
   }, [cards, filters]);
 
-  const targetIndex = filtered.length ? Math.min(initialPosition, filtered.length - 1) : -1;
+  // Jump to the card whose collector number matches this binder slot
+  // (slot #12 -> card 012 of the chosen set), preferring the regular
+  // printing over alternate arts. If that number isn't in the list, fall
+  // back to the next number after it, then to the last card.
+  const targetNumber = initialPosition + 1;
+  const targetIndex = useMemo(() => {
+    if (!filtered.length) return -1;
+    let best = -1;
+    for (let i = 0; i < filtered.length; i++) {
+      const c = filtered[i];
+      if (c.collectorNumber === targetNumber) {
+        if (!isAlternateArt(c)) return i;
+        if (best < 0 || filtered[best].collectorNumber !== targetNumber) best = i;
+      } else if (c.collectorNumber > targetNumber) {
+        if (best < 0 || c.collectorNumber < filtered[best].collectorNumber) best = i;
+      }
+    }
+    return best >= 0 ? best : filtered.length - 1;
+  }, [filtered, targetNumber]);
 
-  // Reveal enough cards to include the one nearest this binder slot's
-  // position, then scroll it into view once.
+  // Scroll again whenever the chosen set changes, so picking a set after
+  // opening the popup still jumps to the right card.
+  useEffect(() => {
+    scrolledRef.current = false;
+  }, [filters.setId]);
+
+  // Reveal enough cards to include the target, then scroll it into view once.
   useEffect(() => {
     if (scrolledRef.current || targetIndex < 0) return;
     if (targetIndex >= visibleCount) {
       setVisibleCount(Math.min(filtered.length, targetIndex + PAGE_SIZE));
       return;
     }
-    if (targetRef.current) {
-      targetRef.current.scrollIntoView({ block: "center" });
-      scrolledRef.current = true;
+    const el = targetRef.current;
+    if (!el) return;
+    scrolledRef.current = true;
+    // On phones the card grid is its own scroll box inside the scrolling
+    // popup; scroll the grid itself so the target lands in its middle
+    // (scrollIntoView there tends to move the whole popup instead).
+    const grid = el.parentElement;
+    if (grid && grid.scrollHeight > grid.clientHeight) {
+      const gridRect = grid.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      grid.scrollTop += elRect.top - gridRect.top - (grid.clientHeight - elRect.height) / 2;
+    } else {
+      el.scrollIntoView({ block: "center" });
     }
   }, [targetIndex, visibleCount, filtered.length]);
 
@@ -134,7 +167,9 @@ export function AddCardModal({
                     key={card.id}
                     ref={i === targetIndex ? targetRef : undefined}
                     onClick={() => addToQueue(card)}
-                    className="group flex flex-col overflow-hidden rounded-lg border border-white/10 bg-panel text-left transition hover:border-brand-gold/60"
+                    className={`group flex flex-col overflow-hidden rounded-lg border bg-panel text-left transition hover:border-brand-gold/60 ${
+                      i === targetIndex ? "border-brand-gold/70 ring-1 ring-brand-gold/50" : "border-white/10"
+                    }`}
                   >
                     <div className="relative aspect-[744/1039] w-full bg-[#0a0c10]">
                       {card.image.url ? (
