@@ -69,6 +69,7 @@ export function BinderSlotTile({
       >
         <span className={`leading-none ${compact ? "text-2xl" : "text-3xl"}`}>+</span>
         <span className="text-[10px] font-medium">{moveActive ? "Move here" : "Add card"}</span>
+        <span className="text-[10px] font-semibold tabular-nums">#{position + 1}</span>
       </button>
     );
   }
