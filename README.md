@@ -1,74 +1,38 @@
 # RBBinder
 
-Tracker pessoal da tua coleção de **Riftbound TCG** (inglês). Duas áreas independentes:
+A collection manager for the **Riftbound** trading card game: organise your cards in virtual binders, scan cards with your phone camera, check market prices and build legal decks from the cards you actually own.
 
-- **Binders** — cria quantos binders quiseres (ex: "Coleção principal", "Trade binder"), cada um com o seu próprio layout de página (2×2, 3×3, 3×4 ou 4×4, como um álbum a sério) e a sua própria contagem de cópias por carta.
-- **Bulk** — cartas repetidas / disponíveis para trocas, separado dos binders, com botão para copiar a lista.
+Personal, unofficial project. Card data and images © Riot Games.
 
-Os dados de todas as cartas (nome, set, raridade, domínio, imagem, texto, etc.) vêm diretamente do site oficial `playriftbound.com` (inglês) e ficam guardados na tua base de dados Supabase — não são lidos ao vivo do site em cada visita. Quando a Riot lançar um set novo, usa o botão **"Sincronizar cartas"** no dashboard para atualizar o catálogo sem precisares de mexer em código ou fazer redeploy. As imagens **não são copiadas** — apontam sempre para o CDN oficial da Riot (`cmsassets.rgpub.io`). Dados e imagens são © Riot Games; este é um projeto pessoal não-oficial.
+## Features
 
-O site inteiro fica protegido por password (uma só, definida por ti) porque vai ficar publicado num URL público do Vercel.
+- **Binders** – create as many binders as you like, each with its own page layout (2×2, 3×3, 3×4 or 4×4) and copy count per card. Page-flip view on desktop, one-page-at-a-time swipe view on phones.
+- **Bulk** – a separate pile for duplicates and trade cards, with a one-click copy of the list.
+- **Card scanner** – point the camera at a card and it's recognised from its artwork (frame-voting match), with OCR of the collector code (Tesseract.js) as a fallback.
+- **Deck builder** – follows Riftbound's deck rules (39 cards + champion), checks champion eligibility and shows power/rune stats.
+- **Deck advisor** – rebuilds Riot's official top decks using only the cards you own, or asks Google Gemini for a rules-checked deck built from your bulk.
+- **Prices** – Cardmarket prices with a switchable basis (trend, 7-day average or lowest listing), plus a "wants" export ready for Cardmarket.
+- **Set progress** – a binder can track a full set and show how many regular cards are still missing.
+- **Catalog sync** – card data comes from the official site and is stored in Supabase; a "Sync cards" button pulls in new sets without a redeploy.
 
-## Testar localmente sem Supabase
+## Stack
 
-Se `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` não estiverem definidas, a app guarda tudo (cartas, binders, bulk) automaticamente num ficheiro local `.data/local-db.json` (nunca é enviado para o git). Isto serve só para testares o site — criar binders, sincronizar cartas, definir quantidades — sem precisares de conta Supabase. Basta `npm install && npm run dev` e definir `SITE_PASSWORD`/`SESSION_SECRET` no `.env.local` (passo 2).
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS · Supabase (Postgres) · Tesseract.js · Google Gemini API · Vercel
 
-Antes de fazeres deploy no Vercel tens de configurar o Supabase real (passo 1) — o sistema de ficheiros lá é efémero, por isso o modo local não funciona em produção.
+## How it's built
 
-## 1. Criar o projeto Supabase (guarda a tua coleção e o catálogo de cartas)
+- All data access goes through Next.js API routes (`src/app/api`), so the Supabase service-role key never reaches the browser.
+- The whole site sits behind a single password gate (`src/proxy.ts`) because it's deployed on a public URL.
+- Without Supabase credentials the app falls back to a local JSON file (`.data/local-db.json`), so it can be run and tested with no database.
 
-1. Cria uma conta grátis em [supabase.com](https://supabase.com) e um novo projeto.
-2. Vai a **SQL Editor** e corre o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) — cria as tabelas `cards`, `sets`, `binders`, `binder_cards` e `bulk`.
-3. Vai a **Project Settings → API** e guarda:
-   - `Project URL` → vai para `SUPABASE_URL`
-   - `service_role` key (não a `anon`!) → vai para `SUPABASE_SERVICE_ROLE_KEY`
-
-A `service_role` key nunca é exposta ao browser — só é usada nas rotas de API do servidor.
-
-## 2. Configurar variáveis de ambiente
-
-Copia `.env.example` para `.env.local` e preenche:
+## Running locally
 
 ```bash
-cp .env.example .env.local
-```
-
-| Variável | O que é |
-|---|---|
-| `SUPABASE_URL` | URL do teu projeto Supabase |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key do Supabase |
-| `SITE_PASSWORD` | Password que vais usar para entrar no site |
-| `SESSION_SECRET` | Qualquer string longa e aleatória (usada para assinar o cookie de sessão) |
-
-## 3. Correr localmente
-
-```bash
+cp .env.example .env.local   # set SITE_PASSWORD and SESSION_SECRET
 npm install
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) — vai pedir a password definida em `SITE_PASSWORD`. No dashboard, clica em **"Sincronizar cartas"** para carregar o catálogo pela primeira vez, depois cria o teu primeiro binder.
+Open http://localhost:3000, log in with `SITE_PASSWORD` and click **Sync cards** to load the catalog.
 
-## 4. Deploy no Vercel
-
-1. Sobe este projeto para um repositório no GitHub.
-2. Em [vercel.com](https://vercel.com), importa o repositório (o Next.js é detetado automaticamente).
-3. Em **Settings → Environment Variables**, adiciona as mesmas 4 variáveis do `.env.local`.
-4. Deploy.
-
-Não precisas de nenhuma configuração extra — não há ficheiros a persistir no servidor, tudo o que é permanente vive no Supabase (catálogo de cartas incluído).
-
-## Atualizar a lista de cartas (novos sets)
-
-No dashboard, clica em **"Sincronizar cartas"**. Isto vai buscar os dados atualizados diretamente ao site oficial, guardá-los na tabela `cards`/`sets` do Supabase, e mostrar quantas cartas/sets novos foram adicionados. Funciona tanto localmente como já em produção — não precisas de correr scripts nem fazer redeploy.
-
-## Estrutura
-
-- `src/lib/riftboundCatalog.ts` — vai buscar os dados oficiais das cartas ao `playriftbound.com` (nome, set, raridade, domínio, imagem, texto, etc).
-- `src/app/api/cards/sync` — endpoint chamado pelo botão "Sincronizar cartas"; atualiza as tabelas `cards`/`sets` no Supabase.
-- `src/app/api/cards` — devolve o catálogo de cartas guardado no Supabase.
-- `src/app/api/binders` — CRUD dos binders (criar, listar, renomear, mudar layout, apagar).
-- `src/app/api/binders/[id]/cards` — quantidades de cada carta dentro de um binder específico.
-- `src/app/api/bulk` — quantidades da pilha de bulk (separada dos binders).
-- `src/app/(app)/` — páginas protegidas (Dashboard, `/binder/[id]`, Bulk), partilham o mesmo layout com o provider de dados.
-- `src/app/login` + `src/proxy.ts` — gate de password simples para todo o site.
+To use Supabase instead of the local file, create a project, run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor, and add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to `.env.local`. The same four variables are all that's needed to deploy on Vercel.
