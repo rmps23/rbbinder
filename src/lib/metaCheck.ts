@@ -9,6 +9,14 @@ import { isRegularPrinting } from "./setCollection";
 import { championNames, legendChampion } from "./wants";
 import type { DeckEntry, RiftCard } from "./types";
 
+export type LegendInfo = {
+  key: string;
+  name: string;
+  imageId: string; // the printing to show: the one you own, else any
+  domains: string[];
+  owned: boolean;
+};
+
 export type MetaOption = {
   id: string;
   event: string;
@@ -116,6 +124,18 @@ export async function metaOptions(refresh = false) {
     ];
   });
   // closest to complete first, then newest
+  // Every legend in the game, not only the ones in the latest events.
+  const seen = new Set<string>();
+  const legends: LegendInfo[] = [];
+  for (const c of o.cards) {
+    if (!c.types.includes("legend")) continue;
+    const key = cardKey(c);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const card = o.printing.get(key) ?? c;
+    legends.push({ key, name: legendLabel(card, champs), imageId: card.id, domains: c.domains.map((d) => d.id), owned: (o.owned.get(key) ?? 0) > 0 });
+  }
+  legends.sort((a, b) => Number(b.owned) - Number(a.owned) || a.name.localeCompare(b.name));
   decks.sort((a, b) => a.missing.reduce((n, m) => n + m.qty, 0) - b.missing.reduce((n, m) => n + m.qty, 0) || b.date.localeCompare(a.date));
-  return { fetchedAt: cache.fetchedAt, events: cache.events, decks };
+  return { fetchedAt: cache.fetchedAt, events: cache.events, decks, legends };
 }

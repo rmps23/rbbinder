@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAppData } from "./AppDataProvider";
 import { CardArt } from "./DeckViews";
-import type { MetaOption } from "@/lib/metaCheck";
+import { domainColor } from "@/lib/style";
+import type { LegendInfo, MetaOption } from "@/lib/metaCheck";
 
-type Meta = { fetchedAt: string; events: { title: string; date: string; url: string }[]; decks: MetaOption[] };
+type Meta = { fetchedAt: string; events: { title: string; date: string; url: string }[]; decks: MetaOption[]; legends: LegendInfo[] };
 
 const label = "font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40";
 const shortDate = (iso: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
@@ -20,6 +21,8 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [legendKey, setLegendKey] = useState("");
+  const [query, setQuery] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
 
   async function load(refresh = false) {
@@ -47,21 +50,26 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // One entry per legend that shows up in the meta lists, legends you own first.
+  // Every legend in the game, with how many meta lists use it.
   const legends = useMemo(() => {
-    const byKey = new Map<string, { key: string; name: string; imageId: string; owned: boolean; decks: number; best: number }>();
-    for (const d of meta?.decks ?? []) {
-      const cur = byKey.get(d.legendKey);
-      const m = missingCount(d);
-      if (cur) {
-        cur.decks++;
-        cur.best = Math.min(cur.best, m);
-      } else byKey.set(d.legendKey, { key: d.legendKey, name: d.legendName, imageId: d.legendId, owned: d.legendOwned, decks: 1, best: m });
-    }
-    return [...byKey.values()].sort((a, b) => Number(b.owned) - Number(a.owned) || a.name.localeCompare(b.name));
+    const count = new Map<string, number>();
+    for (const d of meta?.decks ?? []) count.set(d.legendKey, (count.get(d.legendKey) ?? 0) + 1);
+    return (meta?.legends ?? []).map((l) => ({ ...l, decks: count.get(l.key) ?? 0 }));
   }, [meta]);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = legends.filter((l) => !q || l.name.toLowerCase().includes(q));
+    // with meta lists first, then the ones you own, then the rest
+    return list.sort((x, y) => Number(y.decks > 0) - Number(x.decks > 0) || Number(y.owned) - Number(x.owned) || x.name.localeCompare(y.name));
+  }, [legends, query]);
+
   const chosen = legends.find((l) => l.key === legendKey) ?? null;
+  const pick = (key: string) => {
+    setLegendKey(key);
+    setOpen(null);
+    setPickerOpen(false);
+  };
   const decks = useMemo(() => (meta?.decks ?? []).filter((d) => d.legendKey === legendKey), [meta, legendKey]);
 
   return (
@@ -110,39 +118,78 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
 
         {meta && (
           <>
-            <label className="mb-4 flex flex-col gap-1.5">
+            <div className="relative mb-4">
               <span className={label}>Legend</span>
-              <select
-                value={legendKey}
-                onChange={(e) => {
-                  setLegendKey(e.target.value);
-                  setOpen(null);
-                }}
-                className="rounded-md border border-white/10 bg-ink px-3 py-2 text-sm text-white outline-none focus:border-brand-gold"
-              >
-                <option value="">Choose a legend…</option>
-                <optgroup label="Legends you own">
-                  {legends
-                    .filter((l) => l.owned)
-                    .map((l) => (
-                      <option key={l.key} value={l.key}>
-                        {l.name} ({l.decks} {l.decks === 1 ? "deck" : "decks"})
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="Legends you don't own yet">
-                  {legends
-                    .filter((l) => !l.owned)
-                    .map((l) => (
-                      <option key={l.key} value={l.key}>
-                        {l.name} ({l.decks} {l.decks === 1 ? "deck" : "decks"})
-                      </option>
-                    ))}
-                </optgroup>
-              </select>
-            </label>
+              <div className="mt-1.5 flex items-center gap-2 rounded-md border border-white/10 bg-ink px-3 py-2 focus-within:border-brand-gold">
+                {chosen && !pickerOpen && cardById.get(chosen.imageId) && <CardArt card={cardById.get(chosen.imageId)!} sizes="28px" className="w-5 shrink-0 rounded-sm" />}
+                <input
+                  value={pickerOpen ? query : chosen?.name ?? ""}
+                  onFocus={() => {
+                    setQuery("");
+                    setPickerOpen(true);
+                  }}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && filtered[0]) pick(filtered[0].key);
+                    if (e.key === "Escape" && pickerOpen) {
+                      e.stopPropagation();
+                      setPickerOpen(false);
+                    }
+                  }}
+                  placeholder="Search a legend or champion (e.g. Evelynn)…"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                />
+                <button
+                  type="button"
+                  aria-label="Show legends"
+                  onClick={() => {
+                    setQuery("");
+                    setPickerOpen(!pickerOpen);
+                  }}
+                  className="text-white/40 hover:text-white"
+                >
+                  {pickerOpen ? "▴" : "▾"}
+                </button>
+              </div>
 
-            {!chosen && <p className="py-4 text-center text-sm text-white/35">{legends.length} legends have decks in the latest events.</p>}
+              {pickerOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
+                  <ul className="absolute left-0 right-0 z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-white/10 bg-panel2 p-1 shadow-2xl">
+                    {filtered.length === 0 && <li className="px-3 py-3 text-sm text-white/40">No legend found.</li>}
+                    {filtered.map((l) => {
+                      const card = cardById.get(l.imageId);
+                      return (
+                        <li key={l.key}>
+                          <button
+                            type="button"
+                            onClick={() => pick(l.key)}
+                            className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition hover:bg-white/[0.07] ${l.key === legendKey ? "bg-white/[0.08]" : ""}`}
+                          >
+                            {card && <CardArt card={card} sizes="40px" className={`w-8 shrink-0 rounded ${l.owned ? "" : "opacity-60"}`} />}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold text-white">{l.name}</span>
+                              <span className="flex items-center gap-1 text-[11px] text-white/45">
+                                {l.domains.map((dm) => (
+                                  <span key={dm} className="h-1.5 w-1.5 rounded-full" style={{ background: domainColor(dm) }} />
+                                ))}
+                                {l.owned ? "owned" : "not owned"}
+                              </span>
+                            </span>
+                            <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold ${l.decks ? "bg-brand-gold/15 text-brand-gold" : "bg-white/[0.05] text-white/35"}`}>
+                              {l.decks ? `${l.decks} ${l.decks === 1 ? "deck" : "decks"}` : "no meta decks"}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
+            </div>
+
+            {!chosen && <p className="py-4 text-center text-sm text-white/35">{legends.filter((l) => l.decks > 0).length} of {legends.length} legends have decks in the latest events.</p>}
+            {chosen && decks.length === 0 && <p className="py-4 text-center text-sm text-white/35">No meta decks for {chosen.name} in the latest events.</p>}
 
             {chosen && (
               <ul className="flex flex-col gap-2">
