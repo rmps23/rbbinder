@@ -19,6 +19,10 @@ export const isChampionUnit = (c: RiftCard) =>
 export const isSignature = (c: RiftCard) => hasSuper(c, "signature");
 export const isToken = (c: RiftCard) => hasSuper(c, "token");
 
+// Cards like Spiderling say "Your deck can have any number of cards named X",
+// which overrides the 3-copy limit (103.3.b).
+export const hasUnlimitedCopies = (c: RiftCard) => /deck can have any number of cards named/i.test(c.abilityText ?? "");
+
 // Do we know card supertypes (cards synced before they were stored don't)?
 export const hasRuleData = (cards: RiftCard[]) => cards.some((c) => c.superTypes && c.superTypes.length > 0);
 
@@ -107,7 +111,7 @@ export function whyNot(card: RiftCard, zone: DeckZone, ctx: Ctx): string | null 
     return null;
   }
   if (zone === "sideboard" && s.zoneCount.sideboard >= LIMITS.sideboard) return "The sideboard is full (10).";
-  if ((s.copies.get(cardKey(card)) ?? 0) >= LIMITS.copies) return `Max ${LIMITS.copies} copies of ${name} (main deck and sideboard together).`;
+  if (!hasUnlimitedCopies(card) && (s.copies.get(cardKey(card)) ?? 0) >= LIMITS.copies) return `Max ${LIMITS.copies} copies of ${name} (main deck and sideboard together).`;
   if (isSignature(card) && s.signatures >= LIMITS.signatures) return "A deck can have 3 signature cards in total.";
   return null;
 }
@@ -135,12 +139,17 @@ export function checkDeck(ctx: Ctx): { checks: Check[]; problems: string[]; lega
   add("runes", "Exactly 12 runes", s.zoneCount.rune === LIMITS.runes, `${s.zoneCount.rune}/${LIMITS.runes}`);
   add("bf", "3 battlefields", s.zoneCount.battlefield === LIMITS.battlefields, `${s.zoneCount.battlefield}/${LIMITS.battlefields}`);
 
-  const overCopies = [...s.copies].filter(([, q]) => q > LIMITS.copies);
+  const cardOfKey = (key: string) => entries.map((e) => cardById.get(e.cardId)).find((c) => c && cardKey(c) === key);
+  const overCopies = [...s.copies].filter(([key, q]) => {
+    if (q <= LIMITS.copies) return false;
+    const card = cardOfKey(key);
+    return !(card && hasUnlimitedCopies(card));
+  });
   for (const [key, q] of overCopies) {
-    const card = entries.map((e) => cardById.get(e.cardId)).find((c) => c && cardKey(c) === key);
+    const card = cardOfKey(key);
     if (card) problems.push(`${displayName(card)}: ${q} copies (max 3)`);
   }
-  add("copies", "Max 3 copies per card name", overCopies.length === 0, overCopies.length ? `${overCopies.length} over` : "ok");
+  add("copies", "Max 3 copies per card name (unless the card says otherwise)", overCopies.length === 0, overCopies.length ? `${overCopies.length} over` : "ok");
 
   const dupBf = [...s.battlefieldNames].filter(([, q]) => q > 1);
   if (dupBf.length) problems.push("Battlefields must all have different names");
