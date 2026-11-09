@@ -131,6 +131,9 @@ export default function DecksPage() {
                     <span className="mt-2 inline-block rounded-md bg-white/5 px-2.5 py-0.5 text-[11px] text-white/60">
                       {count}/40 cards
                     </span>
+                    <span className="mt-1 block text-[11px] text-white/35">
+                      Created {new Date(d.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
                   </span>
                 </Link>
                 <button

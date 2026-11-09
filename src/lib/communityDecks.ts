@@ -77,6 +77,8 @@ async function readDeck(d: Listed, index: ReturnType<typeof buildDeckIndex>): Pr
     player: d.author,
     placement: `Community · ${d.likes} like${d.likes === 1 ? "" : "s"} · ${d.name}`,
     section: "community",
+    likes: d.likes,
+    title: d.name,
     entries,
     unknown,
   };
@@ -104,7 +106,9 @@ export async function refreshCommunityDecks(cards: RiftCard[]): Promise<Communit
 
 export async function getCommunityDecks(cards: RiftCard[], refresh = false): Promise<CommunityCache> {
   const saved = await getAppData<CommunityCache>("communityDecks");
-  if (!refresh && saved && Date.now() - new Date(saved.value.fetchedAt).getTime() < MAX_AGE_MS) return saved.value;
+  // A cache saved before likes/titles were stored is refreshed once.
+  const current = saved?.value.decks.every((d) => d.likes !== undefined) ?? false;
+  if (!refresh && saved && current && Date.now() - new Date(saved.value.fetchedAt).getTime() < MAX_AGE_MS) return saved.value;
   try {
     return await refreshCommunityDecks(cards);
   } catch (err) {

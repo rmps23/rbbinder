@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAppData } from "./AppDataProvider";
 import { CardArt } from "./DeckViews";
@@ -24,6 +25,8 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
+  const [saving, setSaving] = useState<{ id: string; name: string; busy: boolean; error: string | null } | null>(null);
+  const [saved, setSaved] = useState<Record<string, string>>({}); // meta deck id -> my deck id
 
   async function load(refresh = false) {
     setLoading(true);
@@ -70,7 +73,27 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
     setOpen(null);
     setPickerOpen(false);
   };
-  const decks = useMemo(() => (meta?.decks ?? []).filter((d) => d.legendKey === legendKey), [meta, legendKey]);
+  // Riot's event lists first, then the community decks, the most liked on top.
+  const decks = useMemo(
+    () =>
+      (meta?.decks ?? [])
+        .filter((d) => d.legendKey === legendKey)
+        .sort((a, b) => Number(a.section === "community") - Number(b.section === "community") || (b.likes ?? 0) - (a.likes ?? 0) || b.date.localeCompare(a.date)),
+    [meta, legendKey]
+  );
+
+  async function save() {
+    if (!saving) return;
+    const deck = meta?.decks.find((d) => d.id === saving.id);
+    const name = saving.name.trim();
+    if (!deck || !name) return;
+    setSaving({ ...saving, busy: true, error: null });
+    const res = await fetch("/api/decks", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, entries: deck.entries }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return setSaving({ ...saving, busy: false, error: data.error ?? "Couldn't save the deck" });
+    setSaved((s) => ({ ...s, [deck.id]: data.id }));
+    setSaving(null);
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 p-3 animate-fade-in" onClick={onClose}>
@@ -220,7 +243,7 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                             <a href={d.url} target="_blank" rel="noreferrer" className="underline decoration-white/20 hover:text-white">
                               {eventName(d.event)} {shortDate(d.date)}
                             </a>{" "}
-                            · {d.placement}
+                            · {d.section === "community" ? `♥ ${d.likes ?? 0} · ${d.title ?? ""}` : d.placement}
                           </p>
                           <div className="mt-1.5 flex items-center gap-2">
                             <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-white/10">
@@ -240,6 +263,45 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                             className="shrink-0 rounded-md bg-white/[0.07] px-2.5 py-1.5 text-[11px] font-semibold text-white/80 transition hover:bg-white/[0.12]"
                           >
                             {missing} missing {isOpen ? "▴" : "▾"}
+                          </button>
+                        )}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {saved[d.id] ? (
+                          <Link href={`/decks/${saved[d.id]}`} className="text-[11px] font-semibold text-emerald-300 hover:underline">
+                            ✓ Added to your decks - open it
+                          </Link>
+                        ) : saving?.id === d.id ? (
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              save();
+                            }}
+                            className="flex w-full flex-wrap items-center gap-2"
+                          >
+                            <input
+                              autoFocus
+                              value={saving.name}
+                              onChange={(e) => setSaving({ ...saving, name: e.target.value })}
+                              maxLength={80}
+                              placeholder="Deck name"
+                              className="min-w-[200px] flex-1 rounded-md border border-white/10 bg-ink px-3 py-1.5 text-sm text-white outline-none focus:border-brand-gold"
+                            />
+                            <button type="submit" disabled={saving.busy || !saving.name.trim()} className="rounded-md bg-brand-gold px-3 py-1.5 text-[11px] font-semibold text-ink hover:bg-brand-goldSoft disabled:opacity-50">
+                              {saving.busy ? "Saving…" : "Save deck"}
+                            </button>
+                            <button type="button" onClick={() => setSaving(null)} className="rounded-md px-2 py-1.5 text-[11px] text-white/50 hover:text-white">
+                              Cancel
+                            </button>
+                            {saving.error && <span className="w-full text-[11px] text-brand-red">⚠ {saving.error}</span>}
+                          </form>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSaving({ id: d.id, name: `${d.champion ?? d.legendName} - ${d.title ?? d.player}`.slice(0, 80), busy: false, error: null })}
+                            className="rounded-md border border-white/15 px-2.5 py-1 text-[11px] font-semibold text-white/70 transition hover:bg-white/5"
+                          >
+                            + Add to my decks
                           </button>
                         )}
                       </div>

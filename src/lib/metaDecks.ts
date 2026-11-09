@@ -21,6 +21,8 @@ export type MetaDeck = {
   player: string;
   placement: string; // "Top 8" or "Best Renata Glasc list (#1/14)"
   section: "top8" | "best" | "community";
+  likes?: number; // community decks only
+  title?: string; // community decks only: the name its author gave it
   entries: DeckEntry[];
   unknown: string[];
 };

@@ -26,6 +26,9 @@ export type MetaOption = {
   player: string;
   placement: string;
   section: "top8" | "best" | "community";
+  likes: number | null; // community decks only
+  title: string | null;
+  entries: DeckEntry[]; // the full list, to save it as one of your decks
   legendId: string; // a printing of the legend, to show its art
   legendKey: string; // groups every printing of the same legend
   legendName: string;
@@ -117,6 +120,9 @@ export async function metaOptions(refresh = false) {
         player: d.player,
         placement: d.placement,
         section: d.section,
+        likes: d.likes ?? null,
+        title: d.title ?? null,
+        entries: d.entries,
         legendId: (o.printing.get(key) ?? legend).id,
         legendKey: key,
         legendName: legendLabel(legend, champs),
