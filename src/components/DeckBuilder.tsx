@@ -15,6 +15,8 @@ import { buildDeckIndex, cardKey, displayName, exportDeck, neededByKey, parseDec
 import { belongsInPool, checkDeck, hasRuleData, LIMITS, whyNot } from "@/lib/deckRules";
 import { domainColor } from "@/lib/style";
 import { matchesSearch, searchInfo } from "@/lib/cardSearch";
+import { sortCards, type SortDir, type SortKey } from "@/lib/cardSort";
+import SortMenu from "./SortMenu";
 import type { Deck, DeckEntry, DeckZone, RiftCard } from "@/lib/types";
 
 const STEP = 48;
@@ -80,6 +82,8 @@ export function DeckBuilder({ id }: { id: string }) {
   const [onlyBulk, setOnlyBulk] = useState(false);
   const [visible, setVisible] = useState(STEP);
   const { bind: preview, node: previewNode } = useCardPreview();
+  const [sortBy, setSortBy] = useState<SortKey>("energy");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [keywords, setKeywords] = useState<string[]>([]);
   const [kwOpen, setKwOpen] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -337,10 +341,13 @@ export function DeckBuilder({ id }: { id: string }) {
       if (onlyBulk && !ownedByKey.has(key)) continue;
       out.push(rep);
     }
-    return out.sort((a, b) => (a.energy ?? 0) - (b.energy ?? 0) || a.name.localeCompare(b.name));
-  }, [index, zoneCards, searchIndex, search, keywords, domainId, setId, onlyBulk, ownedByKey]);
+    return sortCards(out, sortBy, sortDir, {
+      owned: (c) => ownedByKey.get(cardKey(c)) ?? 0,
+      setOrder: (c) => sets.findIndex((s) => s.id === c.set.id),
+    });
+  }, [index, zoneCards, searchIndex, search, keywords, domainId, setId, onlyBulk, ownedByKey, sortBy, sortDir, sets]);
 
-  useEffect(() => setVisible(STEP), [poolZone, search, domainId, setId, onlyBulk, keywords]);
+  useEffect(() => setVisible(STEP), [poolZone, search, domainId, setId, onlyBulk, keywords, sortBy, sortDir]);
 
   const inZone = useMemo(() => {
     const m = new Map<string, number>();
@@ -455,6 +462,14 @@ export function DeckBuilder({ id }: { id: string }) {
                   </option>
                 ))}
               </select>
+              <SortMenu
+                sortBy={sortBy}
+                dir={sortDir}
+                onChange={(by, dir) => {
+                  setSortBy(by);
+                  setSortDir(dir);
+                }}
+              />
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {DOMAIN_OPTIONS.map((d) => (
