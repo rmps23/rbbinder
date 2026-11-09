@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { metaOptions } from "@/lib/deckAdvisor";
+import { metaOptions } from "@/lib/metaCheck";
 
 // Reading Riot's articles the first time takes a few seconds.
 export const maxDuration = 60;

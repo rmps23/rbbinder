@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppData } from "@/components/AppDataProvider";
-import { DeckAdvisorModal } from "@/components/DeckAdvisorModal";
+import { MetaDecksModal } from "@/components/MetaDecksModal";
 import { DeckTextModal } from "@/components/DeckTextModal";
 import { CardArt, primaryColor } from "@/components/DeckViews";
 import { buildDeckIndex, displayName, parseDeck } from "@/lib/deck";
@@ -18,7 +18,7 @@ export default function DecksPage() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [importing, setImporting] = useState(false);
-  const [advising, setAdvising] = useState(false);
+  const [metaOpen, setMetaOpen] = useState(false);
 
   const cardById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
   const index = useMemo(() => buildDeckIndex(cards), [cards]);
@@ -93,10 +93,10 @@ export default function DecksPage() {
         </button>
         <button
           type="button"
-          onClick={() => setAdvising(true)}
+          onClick={() => setMetaOpen(true)}
           className="rounded-md bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:brightness-110 active:scale-95"
         >
-          Deck from my cards
+          Meta decks
         </button>
       </form>
 
@@ -146,7 +146,7 @@ export default function DecksPage() {
         </div>
       )}
 
-      {advising && <DeckAdvisorModal onClose={() => setAdvising(false)} />}
+      {metaOpen && <MetaDecksModal onClose={() => setMetaOpen(false)} />}
 
       {importing && (
         <DeckTextModal

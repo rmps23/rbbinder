@@ -10,14 +10,14 @@ Personal, unofficial project. Card data and images © Riot Games.
 - **Bulk** – a separate pile for duplicates and trade cards, with a one-click copy of the list.
 - **Card scanner** – point the camera at a card and it's recognised from its artwork (frame-voting match), with OCR of the collector code (Tesseract.js) as a fallback.
 - **Deck builder** – follows Riftbound's deck rules (39 cards + champion), checks champion eligibility and shows power/rune stats.
-- **Deck advisor** – rebuilds Riot's official top decks using only the cards you own, or asks Google Gemini for a rules-checked deck built from your bulk.
+- **Meta decks** – pick a legend and see, for each recent list from Riot's official Top Decks, how many cards you still need (bulk + binders).
 - **Prices** – Cardmarket prices with a switchable basis (trend, 7-day average or lowest listing), plus a "wants" export ready for Cardmarket.
 - **Set progress** – a binder can track a full set and show how many regular cards are still missing.
 - **Catalog sync** – card data comes from the official site and is stored in Supabase; a "Sync cards" button pulls in new sets without a redeploy.
 
 ## Stack
 
-Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS · Supabase (Postgres) · Tesseract.js · Google Gemini API · Vercel
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS · Supabase (Postgres) · Tesseract.js · Vercel
 
 ## How it's built
 
