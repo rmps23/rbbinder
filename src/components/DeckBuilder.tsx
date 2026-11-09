@@ -8,7 +8,7 @@ import { WantsModal } from "./WantsModal";
 import { useCollection } from "@/lib/useCollection";
 import { cardmarketWants } from "@/lib/wants";
 import { PRINTING_LABEL, printingKind } from "@/lib/setCollection";
-import { ArtView, BulkView, CardArt, DomainDots, ListView, Pip, RulesPanel, StatsView, primaryColor, type CompareData, type Row } from "./DeckViews";
+import { ArtView, BulkView, CardArt, DomainDots, ListView, OwnedBadge, Pip, RulesPanel, StatsView, primaryColor, type CompareData, type Row } from "./DeckViews";
 import { DOMAIN_OPTIONS } from "@/lib/constants";
 import { availableFinishes } from "@/lib/cardFinish";
 import { buildDeckIndex, cardKey, displayName, exportDeck, neededByKey, parseDeck, ZONES } from "@/lib/deck";
@@ -247,6 +247,10 @@ export function DeckBuilder({ id }: { id: string }) {
 
   // Copies you own: bulk + binders, regular printings only.
   const { ownedByKey } = useCollection();
+  const ownedOf = useCallback((card: RiftCard) => ownedByKey.get(cardKey(card)) ?? 0, [ownedByKey]);
+  // Copies of each card the whole deck uses (all zones), to colour the badges.
+  const deckNeeds = useMemo(() => neededByKey(entries, cardById), [entries, cardById]);
+  const neededOf = useCallback((card: RiftCard) => deckNeeds.get(cardKey(card))?.needed ?? 0, [deckNeeds]);
 
   const cheapest = useCallback(
     (key: string): number | null => {
@@ -463,12 +467,13 @@ export function DeckBuilder({ id }: { id: string }) {
                     type="button"
                     onClick={() => addFromPool(card)}
                     aria-label={`Add ${displayName(card)}`}
-                    className={`block w-full rounded-xl text-left ring-2 transition duration-200 hover:-translate-y-1.5 hover:scale-[1.03] active:scale-95 ${
+                    className={`relative block w-full rounded-xl text-left ring-2 transition duration-200 hover:-translate-y-1.5 hover:scale-[1.03] active:scale-95 ${
                       flash === card.id ? "ring-brand-gold" : qty > 0 ? "ring-brand-gold/60" : "ring-transparent hover:ring-white/30"
                     }`}
                     style={{ boxShadow: `0 8px 22px -10px ${color}` }}
                   >
                     <CardArt card={card} sizes="(max-width: 640px) 30vw, 14vw" className={`rounded-xl transition ${qty > 0 ? "" : "opacity-95"}`} />
+                    <OwnedBadge owned={owned} className="absolute bottom-1.5 left-1.5" />
                   </button>
                   {qty > 0 && (
                     <>
@@ -487,7 +492,6 @@ export function DeckBuilder({ id }: { id: string }) {
                   )}
                   <div className="mt-1 flex items-center gap-1.5 px-0.5">
                     <p className="min-w-0 flex-1 truncate text-[11px] font-medium text-white/70">{displayName(card)}</p>
-                    {owned > 0 && <span className="shrink-0 rounded bg-brand-cyan/15 px-1 text-[10px] font-bold text-brand-cyan" title="Copies in your bulk">{owned}</span>}
                   </div>
                   <div className="flex items-center gap-1.5 px-0.5">
                     {card.energy !== null && <Pip>{card.energy}</Pip>}
@@ -540,12 +544,14 @@ export function DeckBuilder({ id }: { id: string }) {
               countOf={countOf}
               canChampion={(card) => belongsInPool(card, "champion", legend)}
               versionsOf={(card) => index.byKey.get(cardKey(card))?.length ?? 1}
+              ownedOf={ownedOf}
+              neededOf={neededOf}
               onPickPrinting={(row) => setPrintingRow(row)}
               onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)}
               onMove={moveOne}
             />
           )}
-          {view === "art" && <ArtView zones={ZONES} rowsByZone={rowsByZone} onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)} />}
+          {view === "art" && <ArtView zones={ZONES} rowsByZone={rowsByZone} ownedOf={ownedOf} neededOf={neededOf} onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)} />}
           {view === "stats" && <StatsView rows={allRows} />}
           {view === "bulk" && (
             <BulkView

@@ -56,6 +56,48 @@ function Pip({ children, tone = "gold" }: { children: React.ReactNode; tone?: "g
 }
 export { Pip };
 
+// "How many do I own?" badge. Without `need` (the card pool) it's cyan when you
+// own it and dim when you don't; with `need` (a card in the deck) it's green when
+// you have enough copies, amber when you have some, red when you have none.
+export function OwnedBadge({ owned, need, className = "" }: { owned: number; need?: number; className?: string }) {
+  const tone =
+    need === undefined
+      ? owned > 0
+        ? "text-brand-cyan"
+        : "text-white/35"
+      : owned >= need
+        ? "text-emerald-300"
+        : owned > 0
+          ? "text-amber-300"
+          : "text-red-300";
+  const dot =
+    need === undefined
+      ? owned > 0
+        ? "bg-brand-cyan"
+        : "bg-white/25"
+      : owned >= need
+        ? "bg-emerald-400"
+        : owned > 0
+          ? "bg-amber-400"
+          : "bg-red-400";
+  const title =
+    need === undefined
+      ? `You own ${owned}`
+      : owned >= need
+        ? `You own ${owned} - enough for this deck (${need})`
+        : `You own ${owned} of the ${need} this deck needs`;
+  return (
+    <span
+      title={title}
+      className={`pointer-events-none inline-flex h-5 items-center gap-1 rounded-md bg-black/80 px-1.5 text-[11px] font-bold leading-none tabular-nums shadow ring-1 ring-white/10 backdrop-blur ${tone} ${className}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+      {owned}
+      {need !== undefined && owned < need && <span className="font-medium text-white/45">/{need}</span>}
+    </span>
+  );
+}
+
 function RowButton({
   children,
   onClick,
@@ -91,6 +133,8 @@ export function ListView({
   countOf,
   canChampion,
   versionsOf,
+  ownedOf,
+  neededOf,
   onPickPrinting,
   onAdjust,
   onMove,
@@ -100,6 +144,8 @@ export function ListView({
   countOf: (z: DeckZone) => number;
   canChampion: (card: RiftCard) => boolean;
   versionsOf: (card: RiftCard) => number;
+  ownedOf: (card: RiftCard) => number;
+  neededOf: (card: RiftCard) => number;
   onPickPrinting: (row: Row) => void;
   onAdjust: (row: Row, delta: number) => void;
   onMove: (row: Row, to: DeckZone) => void;
@@ -156,6 +202,7 @@ export function ListView({
                         <span className="flex items-center gap-1.5 text-[11px] text-white/40">
                           {card.energy !== null && <Pip>{card.energy}</Pip>}
                           <DomainDots card={card} />
+                          <OwnedBadge owned={ownedOf(card)} need={neededOf(card)} className="ml-auto" />
                         </span>
                         <span className="mt-1.5 flex gap-1.5">
                           {entry.zone === "main" && card.types.includes("unit") && canChampion(card) && (
@@ -218,10 +265,14 @@ export function ListView({
 export function ArtView({
   zones,
   rowsByZone,
+  ownedOf,
+  neededOf,
   onAdjust,
 }: {
   zones: { id: DeckZone; label: string }[];
   rowsByZone: Map<DeckZone, Row[]>;
+  ownedOf: (card: RiftCard) => number;
+  neededOf: (card: RiftCard) => number;
   onAdjust: (row: Row, delta: number) => void;
 }) {
   return (
@@ -243,6 +294,7 @@ export function ArtView({
                   >
                     <CardArt card={row.card} sizes="120px" className="rounded-lg" />
                   </button>
+                  <OwnedBadge owned={ownedOf(row.card)} need={neededOf(row.card)} className="absolute bottom-1 left-1" />
                   <span
                     key={row.entry.qty}
                     className="absolute -right-1 -top-1 flex h-6 min-w-6 animate-pop items-center justify-center rounded-md bg-brand-gold px-1 text-xs font-bold text-ink shadow-lg"
