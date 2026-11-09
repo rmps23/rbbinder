@@ -8,7 +8,7 @@ import { WantsModal } from "./WantsModal";
 import { useCollection } from "@/lib/useCollection";
 import { cardmarketWants } from "@/lib/wants";
 import { PRINTING_LABEL, printingKind } from "@/lib/setCollection";
-import { ArtView, BulkView, CardArt, DomainDots, ListView, OwnedBadge, Pip, RulesPanel, StatsView, primaryColor, type CompareData, type Row } from "./DeckViews";
+import { ArtView, BulkView, CardArt, DomainDots, ListView, OwnedBadge, Pip, RulesPanel, StatsView, primaryColor, useCardPreview, type CompareData, type Row } from "./DeckViews";
 import { DOMAIN_OPTIONS } from "@/lib/constants";
 import { availableFinishes } from "@/lib/cardFinish";
 import { buildDeckIndex, cardKey, displayName, exportDeck, neededByKey, parseDeck, ZONES } from "@/lib/deck";
@@ -79,6 +79,7 @@ export function DeckBuilder({ id }: { id: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [onlyBulk, setOnlyBulk] = useState(false);
   const [visible, setVisible] = useState(STEP);
+  const { bind: preview, node: previewNode } = useCardPreview();
   const [keywords, setKeywords] = useState<string[]>([]);
   const [kwOpen, setKwOpen] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -529,6 +530,7 @@ export function DeckBuilder({ id }: { id: string }) {
                   <button
                     type="button"
                     onClick={() => addFromPool(card)}
+                    {...preview(card)}
                     aria-label={`Add ${displayName(card)}`}
                     className={`relative block w-full rounded-xl text-left ring-2 transition duration-200 hover:-translate-y-1.5 hover:scale-[1.03] active:scale-95 ${
                       flash === card.id ? "ring-brand-gold" : qty > 0 ? "ring-brand-gold/60" : "ring-transparent hover:ring-white/30"
@@ -609,12 +611,13 @@ export function DeckBuilder({ id }: { id: string }) {
               versionsOf={(card) => index.byKey.get(cardKey(card))?.length ?? 1}
               ownedOf={ownedOf}
               neededOf={neededOf}
+              preview={preview}
               onPickPrinting={(row) => setPrintingRow(row)}
               onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)}
               onMove={moveOne}
             />
           )}
-          {view === "art" && <ArtView zones={ZONES} rowsByZone={rowsByZone} ownedOf={ownedOf} neededOf={neededOf} onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)} />}
+          {view === "art" && <ArtView zones={ZONES} rowsByZone={rowsByZone} ownedOf={ownedOf} neededOf={neededOf} preview={preview} onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)} />}
           {view === "stats" && <StatsView rows={allRows} />}
           {view === "bulk" && (
             <BulkView
@@ -642,6 +645,8 @@ export function DeckBuilder({ id }: { id: string }) {
           </p>
         </div>
       )}
+
+      {previewNode}
 
       {wantsOpen && (
         <WantsModal

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useCallback, useRef, useSyncExternalStore, type PointerEvent } from "react";
 import { displayName } from "@/lib/deck";
 import { formatEur } from "@/lib/format";
 import { domainColor } from "@/lib/style";
@@ -26,6 +27,88 @@ export function CardArt({ card, sizes, className = "" }: { card: RiftCard; sizes
       )}
     </div>
   );
+}
+
+// ---------- hover preview ----------
+
+// Hovering a card (mouse only) shows it big next to the pointer, so its text can
+// be read. `bind(card)` gives the handlers to spread on whatever shows the card;
+// `node` is the floating preview, rendered once by the owner.
+const PREVIEW_W = 300;
+const PREVIEW_H = Math.round((PREVIEW_W * 1039) / 744);
+const GAP = 22;
+
+export type PreviewBind = (card: RiftCard) => {
+  onPointerEnter: (e: PointerEvent) => void;
+  onPointerMove: (e: PointerEvent) => void;
+  onPointerLeave: () => void;
+};
+
+type PreviewState = { card: RiftCard; x: number; y: number } | null;
+
+// A tiny store so moving the mouse only re-renders the floating preview, never
+// the whole deck builder.
+function createPreviewStore() {
+  let state: PreviewState = null;
+  const listeners = new Set<() => void>();
+  const set = (s: PreviewState) => {
+    state = s;
+    listeners.forEach((l) => l());
+  };
+  return {
+    get: () => state,
+    set,
+    subscribe: (l: () => void) => {
+      listeners.add(l);
+      return () => {
+        listeners.delete(l);
+      };
+    },
+  };
+}
+type PreviewStore = ReturnType<typeof createPreviewStore>;
+
+function PreviewLayer({ store }: { store: PreviewStore }) {
+  const state = useSyncExternalStore(store.subscribe, store.get, () => null);
+  if (!state) return null;
+  const { card, x, y } = state;
+  // right of the pointer, or left when there's no room; kept inside the window
+  const left = x + GAP + PREVIEW_W > window.innerWidth - 8 ? x - GAP - PREVIEW_W : x + GAP;
+  const top = Math.max(8, Math.min(y - PREVIEW_H / 3, window.innerHeight - PREVIEW_H - 8));
+  return (
+    <div
+      className="pointer-events-none fixed z-[60] overflow-hidden rounded-2xl shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)] ring-1 ring-white/20"
+      style={{ left, top, width: PREVIEW_W, height: PREVIEW_H }}
+      aria-hidden
+    >
+      {card.image.url ? (
+        <Image src={card.image.url} alt="" fill sizes={`${PREVIEW_W}px`} className="bg-[#0a0c10] object-cover" priority />
+      ) : (
+        <span className="flex h-full items-center justify-center bg-panel p-4 text-center text-sm text-white/60">{displayName(card)}</span>
+      )}
+    </div>
+  );
+}
+
+export function useCardPreview() {
+  const store = useRef<PreviewStore | null>(null);
+  if (!store.current) store.current = createPreviewStore();
+  const st = store.current;
+
+  const bind = useCallback<PreviewBind>(
+    (card) => ({
+      onPointerEnter: (e) => {
+        if (e.pointerType === "mouse") st.set({ card, x: e.clientX, y: e.clientY });
+      },
+      onPointerMove: (e) => {
+        if (e.pointerType === "mouse") st.set({ card, x: e.clientX, y: e.clientY });
+      },
+      onPointerLeave: () => st.set(null),
+    }),
+    [st]
+  );
+
+  return { bind, node: <PreviewLayer store={st} /> };
 }
 
 export function DomainDots({ card }: { card: RiftCard }) {
@@ -135,6 +218,7 @@ export function ListView({
   versionsOf,
   ownedOf,
   neededOf,
+  preview,
   onPickPrinting,
   onAdjust,
   onMove,
@@ -146,6 +230,7 @@ export function ListView({
   versionsOf: (card: RiftCard) => number;
   ownedOf: (card: RiftCard) => number;
   neededOf: (card: RiftCard) => number;
+  preview: PreviewBind;
   onPickPrinting: (row: Row) => void;
   onAdjust: (row: Row, delta: number) => void;
   onMove: (row: Row, to: DeckZone) => void;
@@ -182,6 +267,7 @@ export function ListView({
                   return (
                     <li
                       key={`${entry.zone}:${entry.cardId}`}
+                      {...preview(card)}
                       className="group relative flex animate-card-in items-center gap-2 overflow-hidden rounded-xl border border-white/[0.07] bg-panel2 p-1.5 transition hover:border-white/20"
                     >
                       <button
@@ -267,12 +353,14 @@ export function ArtView({
   rowsByZone,
   ownedOf,
   neededOf,
+  preview,
   onAdjust,
 }: {
   zones: { id: DeckZone; label: string }[];
   rowsByZone: Map<DeckZone, Row[]>;
   ownedOf: (card: RiftCard) => number;
   neededOf: (card: RiftCard) => number;
+  preview: PreviewBind;
   onAdjust: (row: Row, delta: number) => void;
 }) {
   return (
@@ -289,6 +377,7 @@ export function ArtView({
                   <button
                     type="button"
                     onClick={() => onAdjust(row, 1)}
+                    {...preview(row.card)}
                     className="block w-full rounded-lg ring-2 ring-transparent transition hover:-translate-y-1 hover:ring-brand-gold/70"
                     style={{ boxShadow: `0 6px 18px -8px ${primaryColor(row.card)}` }}
                   >
