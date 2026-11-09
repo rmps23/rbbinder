@@ -3,6 +3,7 @@
 // binders - so the site can say how many cards are missing for every list.
 
 import { cardKey, displayName } from "./deck";
+import { getCommunityDecks } from "./communityDecks";
 import { getMetaDecks, type MetaDeck } from "./metaDecks";
 import { getBulk, getCardsAndSets, listBinders } from "./repo";
 import { isRegularPrinting } from "./setCollection";
@@ -24,7 +25,7 @@ export type MetaOption = {
   url: string;
   player: string;
   placement: string;
-  section: "top8" | "best";
+  section: "top8" | "best" | "community";
   legendId: string; // a printing of the legend, to show its art
   legendKey: string; // groups every printing of the same legend
   legendName: string;
@@ -96,9 +97,11 @@ function coverage(meta: MetaDeck, o: Owned, cardById: Map<string, RiftCard>) {
 export async function metaOptions(refresh = false) {
   const o = await loadOwned();
   const cache = await getMetaDecks(o.cards, refresh);
+  // Community lists fill the gaps: they may fail without hiding Riot's lists.
+  const community = await getCommunityDecks(o.cards, refresh).catch(() => ({ decks: [] as MetaDeck[] }));
   const cardById = new Map(o.cards.map((c) => [c.id, c]));
   const champs = championNames(o.cards);
-  const decks: MetaOption[] = cache.decks.flatMap((d) => {
+  const decks: MetaOption[] = [...cache.decks, ...community.decks].flatMap((d) => {
     const legendEntry = d.entries.find((e) => e.zone === "legend");
     const legend = legendEntry && cardById.get(legendEntry.cardId);
     if (!legend) return [];

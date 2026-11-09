@@ -20,7 +20,7 @@ export type MetaDeck = {
   url: string;
   player: string;
   placement: string; // "Top 8" or "Best Renata Glasc list (#1/14)"
-  section: "top8" | "best";
+  section: "top8" | "best" | "community";
   entries: DeckEntry[];
   unknown: string[];
 };

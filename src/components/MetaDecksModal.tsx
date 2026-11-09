@@ -102,6 +102,15 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                 {eventName(e.title)} ({shortDate(e.date)}){i < meta.events.length - 1 ? ", " : ""}
               </a>
             )) ?? "…"}
+            {meta && (
+              <>
+                {" "}
+                + popular community decks from{" "}
+                <a href="https://piltoverarchive.com/decks" target="_blank" rel="noreferrer" className="underline decoration-white/20 hover:text-white">
+                  Piltover Archive
+                </a>
+              </>
+            )}
           </span>
           <button
             type="button"
@@ -118,7 +127,7 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
 
         {meta && (
           <>
-            <div className="relative mb-4">
+            <div className="mb-4">
               <span className={label}>Legend</span>
               <div className="mt-1.5 flex items-center gap-2 rounded-md border border-white/10 bg-ink px-3 py-2 focus-within:border-brand-gold">
                 {chosen && !pickerOpen && cardById.get(chosen.imageId) && <CardArt card={cardById.get(chosen.imageId)!} sizes="28px" className="w-5 shrink-0 rounded-sm" />}
@@ -155,7 +164,7 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
               {pickerOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
-                  <ul className="absolute left-0 right-0 z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-white/10 bg-panel2 p-1 shadow-2xl">
+                  <ul className="relative z-20 mt-1.5 max-h-[min(24rem,45dvh)] overflow-y-auto rounded-lg border border-white/10 bg-panel2 p-1 shadow-2xl">
                     {filtered.length === 0 && <li className="px-3 py-3 text-sm text-white/40">No legend found.</li>}
                     {filtered.map((l) => {
                       const card = cardById.get(l.imageId);
@@ -166,7 +175,7 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                             onClick={() => pick(l.key)}
                             className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition hover:bg-white/[0.07] ${l.key === legendKey ? "bg-white/[0.08]" : ""}`}
                           >
-                            {card && <CardArt card={card} sizes="40px" className={`w-8 shrink-0 rounded ${l.owned ? "" : "opacity-60"}`} />}
+                            {card && <CardArt card={card} sizes="48px" className={`w-10 shrink-0 rounded ${l.owned ? "" : "opacity-60"}`} />}
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-semibold text-white">{l.name}</span>
                               <span className="flex items-center gap-1 text-[11px] text-white/45">
