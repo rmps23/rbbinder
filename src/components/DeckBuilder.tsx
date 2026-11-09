@@ -14,6 +14,7 @@ import { availableFinishes } from "@/lib/cardFinish";
 import { buildDeckIndex, cardKey, displayName, exportDeck, neededByKey, parseDeck, ZONES } from "@/lib/deck";
 import { belongsInPool, checkDeck, hasRuleData, LIMITS, whyNot } from "@/lib/deckRules";
 import { domainColor } from "@/lib/style";
+import { matchesSearch, searchInfo } from "@/lib/cardSearch";
 import type { Deck, DeckEntry, DeckZone, RiftCard } from "@/lib/types";
 
 const STEP = 48;
@@ -78,6 +79,8 @@ export function DeckBuilder({ id }: { id: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [onlyBulk, setOnlyBulk] = useState(false);
   const [visible, setVisible] = useState(STEP);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [kwOpen, setKwOpen] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
 
   const dirty = useRef(false);
@@ -299,22 +302,44 @@ export function DeckBuilder({ id }: { id: string }) {
 
   // ---------- the card pool ----------
 
-  const pool = useMemo(() => {
-    const q = search.trim().toLowerCase();
+  // Searchable text + keywords of every card name, built once per catalog.
+  const searchIndex = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof searchInfo>>();
+    for (const [key, list] of index.byKey) m.set(key, searchInfo(list));
+    return m;
+  }, [index]);
+
+  // Cards that can go in this zone at all, before search and filters.
+  const zoneCards = useMemo(() => {
     const out: RiftCard[] = [];
-    for (const list of index.byKey.values()) {
-      const rep = list[0];
-      if (!belongsInPool(rep, poolZone, legend)) continue;
-      if (q && !displayName(rep).toLowerCase().includes(q) && !list.some((c) => c.publicCode.toLowerCase().includes(q))) continue;
+    for (const list of index.byKey.values()) if (belongsInPool(list[0], poolZone, legend)) out.push(list[0]);
+    return out;
+  }, [index, poolZone, legend]);
+
+  // Keyword chips: the keywords that exist on this zone's cards, most common first.
+  const keywordOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of zoneCards) for (const k of searchIndex.get(cardKey(c))?.keywords ?? []) counts.set(k, (counts.get(k) ?? 0) + 1);
+    return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [zoneCards, searchIndex]);
+
+  const pool = useMemo(() => {
+    const q = search.trim();
+    const out: RiftCard[] = [];
+    for (const rep of zoneCards) {
+      const key = cardKey(rep);
+      const info = searchIndex.get(key);
+      if (q && info && !matchesSearch(info, q)) continue;
+      if (keywords.length && !keywords.every((k) => info?.keywords.has(k))) continue;
       if (domainId && !rep.domains.some((d) => d.id === domainId)) continue;
-      if (setId && !list.some((c) => c.set.id === setId)) continue;
-      if (onlyBulk && !ownedByKey.has(cardKey(rep))) continue;
+      if (setId && !(index.byKey.get(key) ?? []).some((c) => c.set.id === setId)) continue;
+      if (onlyBulk && !ownedByKey.has(key)) continue;
       out.push(rep);
     }
     return out.sort((a, b) => (a.energy ?? 0) - (b.energy ?? 0) || a.name.localeCompare(b.name));
-  }, [index, poolZone, search, domainId, setId, legend, onlyBulk, ownedByKey]);
+  }, [index, zoneCards, searchIndex, search, keywords, domainId, setId, onlyBulk, ownedByKey]);
 
-  useEffect(() => setVisible(STEP), [poolZone, search, domainId, setId, onlyBulk]);
+  useEffect(() => setVisible(STEP), [poolZone, search, domainId, setId, onlyBulk, keywords]);
 
   const inZone = useMemo(() => {
     const m = new Map<string, number>();
@@ -414,7 +439,7 @@ export function DeckBuilder({ id }: { id: string }) {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={`Search ${tgt(poolZone).label.toLowerCase()} cards…`}
+                placeholder={`Search ${tgt(poolZone).label.toLowerCase()} cards: name, text, tag, type…`}
                 className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink px-3 py-2 text-sm text-white outline-none focus:border-brand-gold"
               />
               <select
@@ -447,6 +472,44 @@ export function DeckBuilder({ id }: { id: string }) {
                 </button>
               ))}
             </div>
+            {keywordOptions.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setKwOpen((o) => !o)}
+                  aria-expanded={kwOpen}
+                  className="flex items-center gap-1.5 self-start text-[11px] font-semibold uppercase tracking-wider text-white/45 transition hover:text-white/80"
+                >
+                  <span className={`inline-block transition ${kwOpen ? "rotate-90" : ""}`}>▸</span>
+                  Keywords
+                  {keywords.length > 0 && <span className="rounded bg-brand-gold px-1.5 text-[10px] text-ink">{keywords.length}</span>}
+                </button>
+                {(kwOpen || keywords.length > 0) && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(kwOpen ? keywordOptions : keywordOptions.filter(([k]) => keywords.includes(k))).map(([k, n]) => {
+                      const on = keywords.includes(k);
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setKeywords((cur) => (on ? cur.filter((x) => x !== k) : [...cur, k]))}
+                          className={`rounded-md px-2 py-1 text-[11px] font-semibold transition active:scale-95 ${
+                            on ? "bg-brand-gold text-ink" : "bg-white/5 text-white/60 hover:bg-white/10"
+                          }`}
+                        >
+                          {k} <span className={on ? "text-ink/60" : "text-white/30"}>{n}</span>
+                        </button>
+                      );
+                    })}
+                    {keywords.length > 0 && (
+                      <button type="button" onClick={() => setKeywords([])} className="px-1 text-[11px] text-white/40 underline hover:text-white/70">
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap gap-4 text-xs text-white/55">
               <label className="flex items-center gap-1.5">
                 <input type="checkbox" checked={onlyBulk} onChange={(e) => setOnlyBulk(e.target.checked)} />
