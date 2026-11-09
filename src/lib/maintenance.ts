@@ -11,6 +11,11 @@ import type { RiftCard } from "./types";
 
 const HEADERS = { "user-agent": "RBBinder/1.0 (personal Riftbound collection app)" };
 const TCGCSV = "https://tcgcsv.com/tcgplayer/89"; // 89 = Riftbound
+// Riot's gallery has wrong domains for many cards of a new set (checked against
+// TCGplayer, RiftDecks and the LoL wiki for Radiance) and fixes them over the
+// following weeks. Older sets are the other way round: there TCGplayer is the one
+// with mistakes (Elder Dragon, Smoke and Mirrors...), so Riot wins.
+const RECENT_DAYS = 120;
 const CARDMARKET = "https://downloads.s3.cardmarket.com/productCatalog";
 
 async function getJson<T>(url: string): Promise<T> {
@@ -21,7 +26,7 @@ async function getJson<T>(url: string): Promise<T> {
 
 // ---------- TCGplayer (through TCGCSV), matched by printed collector number ----------
 
-type TcgInfo = { released: boolean; finishes: Set<"normal" | "foil">; usd: number | null; domain: string | null };
+type TcgInfo = { released: boolean; recent: boolean; finishes: Set<"normal" | "foil">; usd: number | null; domain: string | null };
 
 async function loadTcg(cards: Pick<RiftCard, "id" | "publicCode" | "set">[]): Promise<Map<string, TcgInfo>> {
   const byCode = new Map(cards.map((c) => [c.publicCode, c.id]));
@@ -40,6 +45,7 @@ async function loadTcg(cards: Pick<RiftCard, "id" | "publicCode" | "set">[]): Pr
         }>(`${TCGCSV}/${g.groupId}/prices`),
       ]);
       const released = new Date(g.publishedOn) <= new Date();
+      const recent = Date.now() - new Date(g.publishedOn).getTime() < RECENT_DAYS * 864e5;
       const rows = new Map<number, typeof prices.results>();
       for (const r of prices.results) rows.set(r.productId, [...(rows.get(r.productId) ?? []), r]);
 
@@ -55,7 +61,7 @@ async function loadTcg(cards: Pick<RiftCard, "id" | "publicCode" | "set">[]): Pr
           const v = r.marketPrice ?? r.midPrice ?? r.lowPrice;
           if (v !== null && v !== undefined) usd = Math.max(usd ?? 0, v);
         }
-        out.set(id, { released, finishes, usd, domain: ext.Domain && ext.Domain !== "None" ? ext.Domain : null });
+        out.set(id, { released, recent, finishes, usd, domain: ext.Domain && ext.Domain !== "None" ? ext.Domain : null });
       }
     })
   );
@@ -90,7 +96,7 @@ export async function updateFinishes() {
   return `Checked ${checked} cards: ${data.foilOnly.length} foil-only, ${data.normalOnly.length} normal-only and ${data.both.length} in both finishes that differ from the default rules.`;
 }
 
-// ---------- domains of unreleased sets ----------
+// ---------- domains where Riot's data is wrong (mostly new sets) ----------
 
 export async function updateDomainFixes() {
   // Riot's own data (not the corrected copy the app serves).
@@ -99,12 +105,12 @@ export async function updateDomainFixes() {
   const fixes: Record<string, string[]> = {};
   for (const card of cards) {
     const info = tcg.get(card.id);
-    if (!info || info.released || !info.domain) continue;
+    if (!info || !info.recent || !info.domain) continue;
     const domains = info.domain.split(";").map((d) => d.trim().toLowerCase());
     if (domains.join() !== card.domains.map((d) => d.id).join()) fixes[card.id] = domains;
   }
   await setAppData("domainFixes", fixes);
-  return `${Object.keys(fixes).length} cards from unreleased sets have their domains corrected from TCGplayer.`;
+  return `${Object.keys(fixes).length} cards from new sets (unreleased or released in the last ${RECENT_DAYS} days) have their domains corrected from TCGplayer.`;
 }
 
 // ---------- Cardmarket links ----------

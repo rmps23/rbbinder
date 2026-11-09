@@ -12,7 +12,10 @@ export async function getFinishData(): Promise<FinishData> {
 }
 
 export async function getDomainFixes(): Promise<Record<string, string[]>> {
-  return (await getAppData<Record<string, string[]>>("domainFixes"))?.value ?? (bundledDomains as Record<string, string[]>);
+  // The bundled fixes stay as a base: a saved set that no longer lists a card (e.g.
+  // because its set was released while Riot's data is still wrong) must not drop them.
+  const saved = (await getAppData<Record<string, string[]>>("domainFixes"))?.value;
+  return { ...(bundledDomains as Record<string, string[]>), ...saved };
 }
 
 export async function getCardmarketMap(): Promise<Record<string, number>> {
