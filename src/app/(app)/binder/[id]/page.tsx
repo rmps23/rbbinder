@@ -1,5 +1,6 @@
 "use client";
 
+import { BinderSkeleton } from "@/components/Skeletons";
 import Link from "next/link";
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -13,6 +14,8 @@ import { PageGrid, pageBackground, type PageGridProps, type SlotView } from "@/c
 import { MobileBinderView } from "@/components/MobileBinderView";
 import { BinderMenuSheet } from "@/components/BinderMenuSheet";
 import { CardSheet } from "@/components/CardSheet";
+import { CardDetailModal } from "@/components/CardDetailModal";
+import { Select } from "@/components/Select";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { typicalFinish } from "@/lib/cardFinish";
 import { formatEur } from "@/lib/format";
@@ -35,7 +38,7 @@ type FlipBookComponent = React.ComponentType<any>;
 
 const REF_WIDTH = 420;
 const MIN_WIDTH = 240;
-const MAX_WIDTH = 560;
+const MAX_WIDTH = 900;
 
 const DEFAULT_FILTERS: FilterState = {
   search: "",
@@ -55,7 +58,7 @@ const DEFAULT_FILTERS: FilterState = {
 // visuals therefore live on an inner div.
 const FlipPage = forwardRef<HTMLDivElement, PageGridProps & { side: "left" | "right" }>(({ side, ...props }, ref) => (
   <div ref={ref} className="h-full w-full">
-    <div className="h-full w-full overflow-hidden rounded-xl" style={{ background: pageBackground(side) }}>
+    <div className="h-full w-full overflow-hidden rounded-xl border border-white/10" style={{ background: pageBackground(side) }}>
       <PageGrid {...props} />
     </div>
   </div>
@@ -67,41 +70,16 @@ FlipPage.displayName = "FlipPage";
 const CoverPage = forwardRef<HTMLDivElement>((_, ref) => (
   <div ref={ref} className="h-full w-full">
     <div
-      className="h-full w-full rounded-xl"
+      className="h-full w-full rounded-xl border border-white/10"
       style={{
         background:
           "linear-gradient(270deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 9%, transparent 24%), " +
-          "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%), #141a24",
+          "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%), #1f2838",
       }}
     />
   </div>
 ));
 CoverPage.displayName = "CoverPage";
-
-// A metal ring, like a real ring-binder mechanism straddling the gutter
-// between two pages - an open oval rather than a flat dot, with a
-// light-to-dark gradient stroke to read as cylindrical metal.
-function BinderRing({ id }: { id: string }) {
-  const gradientId = `ring-metal-${id}`;
-  return (
-    <svg
-      width="44"
-      height="26"
-      viewBox="0 0 44 26"
-      className="shrink-0"
-      style={{ filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.6))" }}
-    >
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#f3dfa8" />
-          <stop offset="45%" stopColor="#c9a24a" />
-          <stop offset="100%" stopColor="#7a5c22" />
-        </linearGradient>
-      </defs>
-      <ellipse cx="22" cy="13" rx="18" ry="10" fill="none" stroke={`url(#${gradientId})`} strokeWidth={5} />
-    </svg>
-  );
-}
 
 export default function BinderDetailPage() {
   const params = useParams<{ id: string }>();
@@ -132,6 +110,7 @@ export default function BinderDetailPage() {
   const [mobilePage, setMobilePage] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetPosition, setSheetPosition] = useState<number | null>(null);
+  const [inspectPosition, setInspectPosition] = useState<number | null>(null);
   const [moveFrom, setMoveFrom] = useState<number | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -236,6 +215,29 @@ export default function BinderDetailPage() {
   // 744x1039, gaps/padding ignored) - used to size the flip book so pages
   // don't come out stretched or squashed.
   const pageAspect = (layout.cols * 744) / (layout.rows * 1039);
+  // Fit the open book to the window: as wide as the content area allows, but never taller
+  // than the viewport (minus the toolbar above it), so a page is always fully visible.
+  const [viewH, setViewH] = useState(900);
+  useEffect(() => {
+    const update = () => setViewH(window.innerHeight);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  const bookMaxWidth = Math.round(2 * Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, (viewH - 225) * pageAspect)));
+  // The flip book measures itself once on mount, before the wrapper above has its final width,
+  // and would stay at its minimum page size. Nudge it to re-measure whenever the target size changes.
+  useEffect(() => {
+    let tries = 0;
+    const id = window.setInterval(() => {
+      const parent = document.querySelector<HTMLElement>(".stf__parent");
+      const item = parent?.querySelector<HTMLElement>(".stf__item");
+      const ok = parent && item && Math.abs(item.offsetWidth * 2 - parent.offsetWidth) < 4;
+      if (ok || ++tries > 25) return window.clearInterval(id);
+      if (item) window.dispatchEvent(new Event("resize"));
+    }, 400);
+    return () => window.clearInterval(id);
+  }, [bookMaxWidth, layout.id, isMobile, FlipBook]);
 
   const highestPosition = useMemo(() => {
     const positions = Object.keys(slots).map(Number);
@@ -298,6 +300,7 @@ export default function BinderDetailPage() {
             slots={pageSlots}
             cols={layout.cols}
             onPick={setPickerPosition}
+            onInspect={setInspectPosition}
             {...stableHandlers}
           />
         ),
@@ -404,27 +407,27 @@ export default function BinderDetailPage() {
   }, [!!binder]);
 
   const compactNav = (
-    <div className="flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] py-1 pl-2 pr-1.5 shadow-inner">
+    <div className="flex items-center gap-2 rounded-md border border-line bg-panel2 py-1 pl-2 pr-1.5 ">
       <button
         onClick={goPrev}
         disabled={leftPageIndex === 0}
         aria-label="Previous pages"
-        className="flex h-6 w-6 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+        className="flex h-6 w-6 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-line disabled:text-t3"
       >
         ←
       </button>
-      <span className="min-w-[52px] text-center font-display text-[11px] font-semibold uppercase tracking-wide tabular-nums text-white/60">
+      <span className="min-w-[52px] text-center font-display text-[11px] font-semibold uppercase tracking-wide tabular-nums text-t2">
         {pageLabel}/{totalPages}
       </span>
       <button
         onClick={goNext}
         disabled={rightPageIndex >= bookPageCount - 1}
         aria-label="Next pages"
-        className="flex h-6 w-6 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
+        className="flex h-6 w-6 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-[11px] text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-line disabled:text-t3"
       >
         →
       </button>
-      <span className="mx-0.5 h-4 w-px bg-white/10" />
+      <span className="mx-0.5 h-4 w-px bg-cavity" />
       <button
         onClick={addPage}
         title="Add page"
@@ -438,7 +441,7 @@ export default function BinderDetailPage() {
         disabled={!canRemovePage}
         title="Remove the last page"
         aria-label="Remove the last page"
-        className="flex h-6 w-6 items-center justify-center rounded-md border border-white/10 font-display text-sm font-semibold text-white/60 hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-20"
+        className="flex h-6 w-6 items-center justify-center rounded-md border border-line font-display text-sm font-semibold text-t2 hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-20"
       >
         −
       </button>
@@ -505,13 +508,13 @@ export default function BinderDetailPage() {
   }
 
   if (cardsLoading || binderLoading || slotsLoading) {
-    return <p className="py-10 text-center text-white/40">Loading binder...</p>;
+    return <BinderSkeleton />;
   }
 
   if (notFound || !binder) {
     return (
       <div className="py-10 text-center">
-        <p className="mb-3 text-white/40">Binder not found.</p>
+        <p className="mb-3 text-t3">Binder not found.</p>
         <Link href="/binders" className="text-sm font-medium text-brand-gold hover:underline">
           Back to binders
         </Link>
@@ -535,6 +538,8 @@ export default function BinderDetailPage() {
       className={className}
     />
   );
+  const inspectSlot = inspectPosition !== null ? slots[inspectPosition] : undefined;
+  const inspectCard = inspectSlot ? cardById.get(inspectSlot.cardId) : undefined;
   const sheetSlot = sheetPosition !== null ? slots[sheetPosition] : undefined;
   const sheetCard = sheetSlot ? cardById.get(sheetSlot.cardId) : undefined;
   const movingSlot = moveFrom !== null ? slots[moveFrom] : undefined;
@@ -546,7 +551,7 @@ export default function BinderDetailPage() {
       <div className="mb-3 flex items-center gap-2 md:hidden">
         {renaming ? (
           nameInput(
-            "h-10 min-w-0 flex-1 rounded-lg border border-brand-gold/50 bg-ink px-3 font-display text-lg font-semibold uppercase tracking-wide text-white outline-none",
+            "h-10 min-w-0 flex-1 rounded-lg border border-brand-gold/50 bg-ink px-3 font-display text-lg font-semibold uppercase tracking-wide text-t1 outline-none",
           )
         ) : (
           <button
@@ -555,7 +560,7 @@ export default function BinderDetailPage() {
             aria-label="Rename binder"
             className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
           >
-            <h1 className="truncate font-display text-xl font-semibold uppercase tracking-wide text-white">
+            <h1 className="truncate font-display text-xl font-semibold uppercase tracking-wide text-t1">
               {binder.name}
             </h1>
             <svg
@@ -563,7 +568,7 @@ export default function BinderDetailPage() {
               fill="none"
               stroke="currentColor"
               strokeWidth={2}
-              className="h-4 w-4 shrink-0 text-white/35"
+              className="h-4 w-4 shrink-0 text-t3"
             >
               <path
                 strokeLinecap="round"
@@ -592,7 +597,7 @@ export default function BinderDetailPage() {
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-label="Binder menu"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/15 text-white/70 active:bg-white/10"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line text-t2 active:bg-cavity"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
             <circle cx="5" cy="12" r="1.8" />
@@ -602,136 +607,161 @@ export default function BinderDetailPage() {
         </button>
       </div>
 
-      <div
-        ref={toolbarRef}
-        className="mb-4 hidden overflow-hidden rounded-xl border border-white/[0.06] bg-panel md:block"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
-          {renaming ? (
-            nameInput(
-              "rounded-md border border-brand-gold/50 bg-ink px-2 py-1 font-display text-xl font-semibold uppercase tracking-wide text-white outline-none",
-            )
-          ) : (
-            <div className="flex items-center gap-1.5">
-              <h1
-                onClick={() => setRenaming(true)}
-                title="Click to rename"
-                className="cursor-text font-display text-xl font-semibold uppercase tracking-wide text-white hover:text-brand-gold"
-              >
-                {binder.name}
-              </h1>
-              <button
-                onClick={() => setRenaming(true)}
-                title="Rename binder"
-                aria-label="Rename binder"
-                className="flex h-7 w-7 items-center justify-center rounded-md text-white/35 hover:bg-white/10 hover:text-brand-gold"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setScanning(true)}
-              className="rounded-md border border-brand-gold/40 bg-brand-gold/10 px-3 py-1.5 text-xs font-medium text-brand-gold hover:bg-brand-gold/20"
-            >
-              Scan cards
-            </button>
-            <select
-              value={binder.setId ?? ""}
-              onChange={(e) => changeSet(e.target.value || null)}
-              title="Set this binder collects"
-              className="rounded-md border border-white/10 bg-panel px-2.5 py-1.5 text-xs text-white/80 outline-none focus:border-brand-gold"
-            >
-              <option value="">No set</option>
-              {sets.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.id} · {s.name}
-                </option>
-              ))}
-            </select>
+      <div ref={toolbarRef} className="mb-4 hidden rounded-xl border border-line bg-panel md:block">
+        {/* row 1: identity + actions */}
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-4">
+            {renaming ? (
+              nameInput(
+                "h-11 rounded-lg border border-brand-gold bg-ink px-3 font-display text-xl font-semibold uppercase tracking-wide text-t1 outline-none",
+              )
+            ) : (
+              <div className="flex items-center gap-1">
+                <h1
+                  onClick={() => setRenaming(true)}
+                  title="Click to rename"
+                  className="cursor-text truncate font-display text-2xl font-semibold uppercase tracking-wide text-t1 hover:text-brand-gold"
+                >
+                  {binder.name}
+                </h1>
+                <button
+                  onClick={() => setRenaming(true)}
+                  title="Rename binder"
+                  aria-label="Rename binder"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-t3 transition hover:bg-cavity hover:text-t1"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4" aria-hidden="true">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            )}
+            <p className="num hidden whitespace-nowrap text-sm text-t3 lg:block">
+              <b className="text-t1">{binderStats.totalQty}</b> cards placed
+              {prices && binderStats.value > 0 && (
+                <>
+                  {" "}
+                  · <b className="text-t1">{formatEur(binderStats.value)}</b>
+                </>
+              )}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setWantsOpen(true)}
               title="Cards missing to complete this binder's set - as a Cardmarket wants list"
-              className="rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-white/75 hover:bg-white/5"
+              className="inline-flex h-11 items-center rounded-lg border border-line px-4 text-sm font-semibold text-t2 transition hover:border-line2 hover:bg-panel2 hover:text-t1"
             >
               Missing cards
             </button>
-            <LayoutSwitcher value={binder.layout} onChange={changeLayout} />
             <button
               onClick={deleteBinder}
-              className="rounded-md border border-brand-red/30 bg-brand-red/10 px-3 py-1.5 text-xs font-medium text-brand-red hover:bg-brand-red/20"
+              className="inline-flex h-11 items-center rounded-lg border border-line px-4 text-sm font-semibold text-t2 transition hover:border-bad/50 hover:bg-bad/10 hover:text-bad"
             >
-              Delete binder
+              Delete
+            </button>
+            <button
+              onClick={() => setScanning(true)}
+              className="btn-3d inline-flex h-11 items-center rounded-lg px-5 font-display text-xs font-semibold uppercase tracking-wide"
+            >
+              Scan cards
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-3 px-4 py-2.5">
-          <button
-            onClick={goPrev}
-            disabled={leftPageIndex === 0}
-            aria-label="Previous pages"
-            className="flex h-8 w-8 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
-          >
-            ←
-          </button>
-          <span className="min-w-[130px] text-center font-display text-xs font-semibold uppercase tracking-wide text-white/50">
-            {pageLabel.includes("–") ? "Pages" : "Page"} {pageLabel} of {totalPages}
-          </span>
-          <button
-            onClick={goNext}
-            disabled={rightPageIndex >= bookPageCount - 1}
-            aria-label="Next pages"
-            className="flex h-8 w-8 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/30"
-          >
-            →
-          </button>
-          <span className="mx-1 h-6 w-px bg-white/10" />
-          <button
-            onClick={addPage}
-            title="Add page"
-            aria-label="Add page"
-            className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-gold font-display text-base font-semibold text-ink hover:bg-brand-goldSoft"
-          >
-            +
-          </button>
-          <button
-            onClick={removePage}
-            disabled={!canRemovePage}
-            title="Remove the last page"
-            aria-label="Remove the last page"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-ink font-display text-base font-semibold text-white/60 hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-20"
-          >
-            −
-          </button>
+
+        {/* row 2: pages, set, layout, progress */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={goPrev}
+              disabled={leftPageIndex === 0}
+              aria-label="Previous pages"
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-t1 transition hover:border-line2 hover:bg-panel2 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+            </button>
+            <span className="num min-w-[112px] text-center text-sm text-t2" aria-live="polite">
+              {pageLabel.includes("–") ? "Pages" : "Page"} <b className="text-t1">{pageLabel}</b> / {totalPages}
+            </span>
+            <button
+              onClick={goNext}
+              disabled={rightPageIndex >= bookPageCount - 1}
+              aria-label="Next pages"
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-t1 transition hover:border-line2 hover:bg-panel2 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+            </button>
+            <span className="mx-1 h-6 w-px bg-line" aria-hidden="true" />
+            <button
+              onClick={addPage}
+              title="Add page"
+              aria-label="Add page"
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-brand-gold transition hover:border-brand-gold hover:bg-brand-gold/10"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-4 w-4" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            </button>
+            <button
+              onClick={removePage}
+              disabled={!canRemovePage}
+              title="Remove the last page"
+              aria-label="Remove the last page"
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-t2 transition hover:border-bad/50 hover:text-bad disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-line disabled:hover:text-t2"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-4 w-4" aria-hidden="true"><path d="M5 12h14" /></svg>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="w-56">
+              <Select
+                value={binder.setId ?? ""}
+                onChange={(v) => changeSet(v || null)}
+                title="Set this binder collects"
+                ariaLabel="Set this binder collects"
+                searchPlaceholder="Search sets…"
+                className="h-11 text-sm"
+                options={[{ value: "", label: "No set" }, ...sets.map((s) => ({ value: s.id, label: s.name, hint: s.id }))]}
+              />
+            </div>
+            <LayoutSwitcher value={binder.layout} onChange={changeLayout} />
+          </div>
+
+          {setProg && (
+            <div className="flex min-w-[240px] flex-1 items-center gap-3 lg:ml-auto lg:max-w-md" title="One of each regular card - alternate arts, overnumbered and showcase cards don't count">
+              <div className="h-2 flex-1 overflow-hidden rounded-sm bg-cavity">
+                <div className="h-full rounded-sm bg-brand-gold" style={{ width: `${setProg.pct * 100}%` }} />
+              </div>
+              <span className="num whitespace-nowrap text-sm text-t2">
+                <b className="text-t1">{setProg.have}</b> / {setProg.total} · {Math.round(setProg.pct * 100)}%
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      <p className="mb-3 text-center text-sm text-white/40 md:mb-4">{binderStats.totalQty} cards placed
+      <p className="mb-3 text-center text-sm text-t3 md:hidden">{binderStats.totalQty} cards placed
         {prices && binderStats.value > 0 && (
           <span title="Cardmarket price trend in euros (TCGplayer where unavailable). Cards that exist in both finishes are valued as normal.">
             {" "}
-            · ≈ {formatEur(binderStats.value)}
+            ·  {formatEur(binderStats.value)}
           </span>
         )}
       </p>
       {setProg && (
-        <div className="mx-auto mb-4 max-w-md" title="One of each regular card - alternate arts, overnumbered and showcase cards don't count">
-          <div className="mb-1 flex items-baseline justify-between text-xs text-white/55">
+        <div className="mx-auto mb-4 max-w-md md:hidden" title="One of each regular card - alternate arts, overnumbered and showcase cards don't count">
+          <div className="mb-1 flex items-baseline justify-between text-xs text-t2">
             <span>
               <b className="font-display tracking-widest text-brand-gold">{binder.setId}</b> {setName}
             </span>
             <span>
-              <b className="text-white">{setProg.have}</b> / {setProg.total} · {Math.round(setProg.pct * 100)}%
+              <b className="text-t1">{setProg.have}</b> / {setProg.total} · {Math.round(setProg.pct * 100)}%
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-sm bg-white/10">
+          <div className="h-2 overflow-hidden rounded-sm bg-cavity">
             <div
               className="h-full rounded-md bg-brand-gold transition-all duration-700"
               style={{ width: `${setProg.pct * 100}%` }}
@@ -741,15 +771,15 @@ export default function BinderDetailPage() {
       )}
 
       {isMobile && moveFrom !== null && (
-        <div className="sticky top-[66px] z-10 mb-3 flex items-center justify-between gap-3 rounded-xl border border-brand-cyan/40 bg-ink/95 px-3 py-2.5 backdrop-blur">
-          <p className="text-sm text-white/80">
-            Tap a slot to move <span className="font-semibold text-brand-cyan">{movingCard?.name ?? "the card"}</span>{" "}
+        <div className="sticky top-2 z-10 mb-3 flex items-center justify-between gap-3 rounded-xl border border-ok/40 bg-ink/95 px-3 py-2.5 ">
+          <p className="text-sm text-t1">
+            Tap a slot to move <span className="font-semibold text-ok">{movingCard?.name ?? "the card"}</span>{" "}
             there
           </p>
           <button
             type="button"
             onClick={() => setMoveFrom(null)}
-            className="shrink-0 rounded-md border border-white/20 px-3 py-1.5 text-xs text-white/80 active:bg-white/10"
+            className="shrink-0 rounded-md border border-line px-3 py-1.5 text-xs text-t1 active:bg-cavity"
           >
             Cancel
           </button>
@@ -767,13 +797,20 @@ export default function BinderDetailPage() {
           onOpenMenu={() => setMenuOpen(true)}
         />
       ) : (
-        <div className="relative flex items-center justify-center rounded-2xl border border-white/[0.07] bg-[#101520] p-2 shadow-2xl sm:p-4">
-          <div className="pointer-events-none absolute inset-y-10 left-1/2 -z-10 flex w-0 -translate-x-1/2 flex-col items-center justify-between sm:inset-y-14">
-            {[0, 1, 2, 3].map((i) => (
-              <BinderRing key={i} id={String(i)} />
-            ))}
-          </div>
+        <div className="relative flex items-stretch gap-2 rounded-xl border border-line bg-ink p-2 sm:p-3">
+          <button
+            type="button"
+            onClick={goPrev}
+            disabled={leftPageIndex === 0}
+            aria-label="Previous pages"
+            className="group z-10 flex min-w-14 flex-1 items-center justify-center rounded-lg text-t3 transition hover:bg-cavity/60 hover:text-t1 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-t3"
+          >
+            <span className="flex h-14 w-14 items-center justify-center rounded-full border border-line bg-panel2 transition group-hover:border-line2 group-enabled:group-hover:bg-cavity">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+            </span>
+          </button>
           {FlipBook ? (
+            <div className="min-w-0 flex-[0_1_auto]" style={{ width: bookMaxWidth }}>
             <FlipBook
               key={layout.id}
               ref={bookRef}
@@ -805,8 +842,34 @@ export default function BinderDetailPage() {
             >
               {pageElements}
             </FlipBook>
+            </div>
           ) : (
-            <p className="py-10 text-center text-white/40">Loading binder...</p>
+            <div className="flex flex-1 items-center justify-center"><div className="h-[420px] w-full max-w-[640px] animate-pulse rounded-xl bg-cavity/70" aria-hidden="true" /></div>
+          )}
+          {rightPageIndex >= bookPageCount - 1 ? (
+            <button
+              type="button"
+              onClick={addPage}
+              aria-label="Add a new page"
+              className="group z-10 flex min-w-14 flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line2 text-t2 transition hover:border-brand-gold hover:bg-brand-gold/10 hover:text-brand-gold"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full border border-current">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-7 w-7" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-[0.08em]">New page</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={rightPageIndex >= bookPageCount - 1}
+              aria-label="Next pages"
+              className="group z-10 flex min-w-14 flex-1 items-center justify-center rounded-lg text-t3 transition hover:bg-cavity/60 hover:text-t1 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-t3"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full border border-line bg-panel2 transition group-hover:border-line2 group-enabled:group-hover:bg-cavity">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+              </span>
+            </button>
           )}
         </div>
       )}
@@ -827,7 +890,7 @@ export default function BinderDetailPage() {
           onClose={() => setWantsOpen(false)}
         >
           {binder.setId && (
-            <label className="mb-2 flex items-center gap-2 text-xs text-white/60">
+            <label className="mb-2 flex items-center gap-2 text-xs text-t2">
               <input type="checkbox" checked={skipBulk} onChange={(e) => setSkipBulk(e.target.checked)} />
               Leave out cards I already have in my bulk ({missingForSet.filter((c) => inBulk(c.id)).length})
             </label>
@@ -855,6 +918,19 @@ export default function BinderDetailPage() {
           }}
           onDelete={deleteBinder}
           onClose={() => setMenuOpen(false)}
+        />
+      )}
+
+      {inspectPosition !== null && inspectSlot && inspectCard && (
+        <CardDetailModal
+          card={inspectCard}
+          qty={inspectSlot.qty}
+          onQty={(n) => setQty(inspectPosition, inspectCard.id, n)}
+          onRemove={() => {
+            clearSlot(inspectPosition);
+            setInspectPosition(null);
+          }}
+          onClose={() => setInspectPosition(null)}
         />
       )}
 

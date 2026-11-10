@@ -39,24 +39,25 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <form
         onSubmit={onSubmit}
-        className="relative w-full max-w-sm animate-card-in overflow-hidden rounded-2xl border border-white/10 bg-panel p-6 shadow-xl"
+        className="relative w-full max-w-sm animate-card-in overflow-hidden rounded-2xl border border-line bg-panel p-6 "
       >
         <div className="mb-1 flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg border-[1.5px] border-brand-gold bg-ink font-display text-sm font-bold text-brand-gold">
-            RB
-          </span>
-          <h1 className="font-display text-xl font-semibold uppercase tracking-wide text-white">RBBinder</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
+          <h1 className="font-logo text-xl font-medium uppercase tracking-[0.25em] text-t1">
+            <b className="font-bold text-brand-gold">RB</b>Binder
+          </h1>
         </div>
-        <p className="mb-5 text-sm text-white/50">Riftbound TCG collection</p>
+        <p className="mb-5 text-sm text-t3">Riftbound TCG collection</p>
         <input
           autoFocus
           type="password"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mb-3 w-full rounded-md border border-white/10 bg-ink px-3 py-2 text-white outline-none focus:border-brand-gold"
+          className="mb-3 w-full rounded-md border border-line bg-ink px-3 py-2 text-t1 outline-none focus:border-brand-gold"
         />
-        {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
+        {error && <p className="mb-3 text-sm text-bad">{error}</p>}
         <button
           type="submit"
           disabled={busy || !password}

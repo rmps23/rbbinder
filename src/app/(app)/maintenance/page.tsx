@@ -8,6 +8,7 @@ type Updated = Record<string, string | null>;
 
 type Job = {
   id: string;
+  icon: React.ReactNode;
   title: string;
   what: string;
   when: string;
@@ -16,8 +17,10 @@ type Job = {
   run: () => Promise<string>;
 };
 
+const LAST_KEY = "rbbinder:lastRun";
+
 function ago(iso: string | null | undefined) {
-  if (!iso) return "never run here (using the built-in data)";
+  if (!iso) return "never";
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins} min ago`;
@@ -30,6 +33,28 @@ export default function MaintenancePage() {
   const [updated, setUpdated] = useState<Updated>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, { ok: boolean; text: string }>>({});
+  // When each job last finished OK from this browser (the server only stamps three of them).
+  const [localRuns, setLocalRuns] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    try {
+      setLocalRuns(JSON.parse(localStorage.getItem(LAST_KEY) ?? "{}"));
+    } catch {
+      // no storage
+    }
+  }, []);
+
+  function markRun(id: string) {
+    setLocalRuns((cur) => {
+      const next = { ...cur, [id]: new Date().toISOString() };
+      try {
+        localStorage.setItem(LAST_KEY, JSON.stringify(next));
+      } catch {
+        // not remembered
+      }
+      return next;
+    });
+  }
 
   useEffect(() => {
     fetch("/api/maintenance")
@@ -53,6 +78,7 @@ export default function MaintenancePage() {
   const jobs: Job[] = [
     {
       id: "sync",
+      icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.7-7.9A6 6 0 0 1 18 9a4.5 4.5 0 0 1 .5 9H7ZM12 11v6m0 0-2.5-2.5M12 17l2.5-2.5" /></svg>,
       title: "Sync cards",
       what: "Downloads the official card list from Riot: new cards, new sets, and corrections to existing ones.",
       when: "When a new set is announced or released, or a card looks wrong.",
@@ -70,6 +96,7 @@ export default function MaintenancePage() {
     },
     {
       id: "prices",
+      icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M15 9.5a3.5 3.5 0 0 0-5.7-1M9 14.5a3.5 3.5 0 0 0 5.7 1M7.5 11h6M7.5 13h6" /></svg>,
       title: "Refresh prices",
       what: "Fetches today's prices again (Cardmarket trend, TCGplayer where a card isn't linked). They're also cached for a few hours on their own.",
       when: "When you want the very latest numbers.",
@@ -82,6 +109,7 @@ export default function MaintenancePage() {
     },
     {
       id: "cardmarket-links",
+      icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>,
       title: "Update Cardmarket links",
       what: "Links each of your cards to its Cardmarket product (needed to read Cardmarket prices). Run after cards are added.",
       when: "After “Sync cards” brings in new cards or a new set.",
@@ -95,6 +123,7 @@ export default function MaintenancePage() {
     },
     {
       id: "finishes",
+      icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3ZM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" /></svg>,
       title: "Update foil / normal availability",
       what: "Checks which cards exist as normal, foil or both, using TCGplayer's product list (cards of unreleased sets keep the default rules).",
       when: "After a set is released.",
@@ -109,6 +138,7 @@ export default function MaintenancePage() {
     },
     {
       id: "domains",
+      icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true"><circle cx="12" cy="12" r="9" /><circle cx="8.5" cy="10" r="1.2" /><circle cx="12" cy="7.5" r="1.2" /><circle cx="15.5" cy="10" r="1.2" /><path d="M12 21a2.5 2.5 0 0 1 0-5h1.5a2 2 0 0 0 2-2" /></svg>,
       title: "Fix domains of unreleased sets",
       what: "Riot's data for sets that aren't out yet often has wrong or missing domains. This corrects them from TCGplayer, which the deck rules rely on.",
       when: "While a set is unreleased. Once it's out, run it again - the fixes then drop away.",
@@ -135,6 +165,7 @@ export default function MaintenancePage() {
       setAll({ step: i, failed: null, done: false });
       try {
         const text = await job.run();
+        markRun(job.id);
         setResults((r) => ({ ...r, [job.id]: { ok: true, text } }));
       } catch (err) {
         const text = err instanceof Error ? err.message : "Update failed";
@@ -150,9 +181,13 @@ export default function MaintenancePage() {
 
   async function run(job: Job) {
     setBusy(job.id);
-    setResults((r) => ({ ...r, [job.id]: { ok: true, text: "Working… this can take up to half a minute." } }));
+    setResults((r) => {
+      const { [job.id]: _drop, ...rest } = r;
+      return rest;
+    });
     try {
       const text = await job.run();
+      markRun(job.id);
       setResults((r) => ({ ...r, [job.id]: { ok: true, text } }));
     } catch (err) {
       setResults((r) => ({ ...r, [job.id]: { ok: false, text: err instanceof Error ? err.message : "Update failed" } }));
@@ -161,98 +196,130 @@ export default function MaintenancePage() {
     }
   }
 
-  return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-white">Data &amp; updates</h1>
-      <p className="mb-6 mt-1 text-sm text-white/50">Keep the card data, links and prices in step with the game. Each button does one thing.</p>
+  const spinner = (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" className="h-4 w-4 animate-spin" aria-hidden="true">
+      <path d="M21 12a9 9 0 1 1-6.2-8.55" />
+    </svg>
+  );
+  const lastOf = (job: Job) => (job.stamp ? updated[job.stamp] : null) ?? localRuns[job.id] ?? null;
+  const anyBusy = busy !== null;
+  const stepState = (id: string, i: number) => {
+    const res = results[id];
+    if (res) return res.ok ? "done" : "failed";
+    return all && all.step === i && busy === "all" ? "running" : "waiting";
+  };
 
-      <section className="relative mb-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-panel p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 flex-1 basis-64">
-            <h2 className="font-display text-xl font-semibold text-white">Update everything</h2>
-            <p className="mt-1 text-sm text-white/55">
-              Runs all five updates below in the right order: cards, domains, finishes, Cardmarket links, prices.
-            </p>
+  return (
+    <div className="mx-auto flex max-w-4xl flex-col gap-5">
+      <header>
+        <h1 className="font-display text-2xl font-semibold uppercase tracking-wide text-t1">Data &amp; updates</h1>
+        <p className="mt-1 text-sm text-t3">Keep the card data, links and prices in step with the game.</p>
+      </header>
+
+      {/* update everything */}
+      <section className="rounded-xl border border-line bg-panel p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0 flex-1 basis-72">
+            <h2 className="font-display text-lg font-semibold text-t1">Update everything</h2>
+            <p className="mt-1 text-sm text-t2">Runs the five updates below in the right order. It stops at the first one that fails.</p>
           </div>
           <button
             onClick={runAll}
-            disabled={busy !== null}
-            className="rounded-md bg-brand-gold px-6 py-2.5 font-display text-sm font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-50"
+            disabled={anyBusy}
+            className="btn-3d inline-flex h-12 items-center gap-2 rounded-lg px-8 font-display text-sm font-semibold uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-50"
           >
+            {busy === "all" && spinner}
             {busy === "all" ? "Updating…" : "Update all"}
           </button>
         </div>
-        {all && (
-          <div className="mt-4">
-            <div className="h-3 overflow-hidden rounded-sm bg-white/10">
-              <div
-                className={`h-full rounded-md transition-all duration-500 ${
-                  all.failed ? "bg-brand-red" : "bg-brand-gold"
-                } ${busy === "all" ? "animate-pulse" : ""}`}
-                style={{ width: `${Math.round(((all.done ? ORDER.length : all.step + (busy === "all" ? 0.5 : 0)) / ORDER.length) * 100)}%` }}
-              />
-            </div>
-            <ol className="mt-3 grid gap-1.5 text-xs sm:grid-cols-5">
-              {ORDER.map((id, i) => {
-                const j = jobs.find((x) => x.id === id)!;
-                const res = results[id];
-                const state = res ? (res.ok ? "done" : "failed") : all.step === i && busy === "all" ? "running" : "waiting";
-                return (
-                  <li
-                    key={id}
-                    className={`rounded-lg px-2.5 py-2 ${
-                      state === "done"
-                        ? "bg-emerald-400/10 text-emerald-300"
-                        : state === "failed"
-                          ? "bg-brand-red/10 text-brand-red"
-                          : state === "running"
-                            ? "bg-brand-gold/10 text-brand-gold"
-                            : "bg-white/[0.04] text-white/40"
-                    }`}
-                  >
-                    {state === "done" ? "✓" : state === "failed" ? "⚠" : state === "running" ? "…" : `${i + 1}.`} {j.title}
-                  </li>
-                );
-              })}
-            </ol>
-            {all.done && <p className="mt-3 text-sm text-emerald-300">✓ Everything is up to date.</p>}
-            {all.failed && <p className="mt-3 text-sm text-brand-red">Stopped at “{all.failed}” - see the message below, fix it and run again.</p>}
-          </div>
+
+        {/* progress timeline */}
+        <ol className="mt-6 flex items-start" aria-label="Update steps">
+          {ORDER.map((id, i) => {
+            const j = jobs.find((x) => x.id === id)!;
+            const state = stepState(id, i);
+            const tone =
+              state === "done" ? "border-ok bg-ok text-on-accent" : state === "failed" ? "border-bad bg-bad text-on-accent" : state === "running" ? "border-brand-gold text-brand-gold" : "border-line2 text-t3";
+            return (
+              <li key={id} className="relative flex flex-1 flex-col items-center text-center">
+                {i > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className={`absolute right-1/2 top-4 h-0.5 w-full -translate-y-1/2 ${stepState(ORDER[i - 1], i - 1) === "done" ? "bg-ok" : "bg-cavity"}`}
+                  />
+                )}
+                <span className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-panel text-xs font-bold ${tone} ${state === "done" || state === "failed" ? "" : ""}`} aria-hidden="true">
+                  {state === "done" ? "✓" : state === "failed" ? "!" : state === "running" ? spinner : i + 1}
+                </span>
+                <span className={`mt-2 px-1 text-[11px] font-semibold leading-tight ${state === "waiting" ? "text-t3" : "text-t1"}`}>
+                  {j.button}
+                  <span className="sr-only"> - {state}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        {all?.done && <p role="status" className="mt-4 text-sm font-semibold text-ok">✓ Everything is up to date.</p>}
+        {all?.failed && (
+          <p role="alert" className="mt-4 text-sm font-semibold text-bad">
+            ✕ Stopped at “{all.failed}” - see its message below, fix it and run again.
+          </p>
         )}
       </section>
 
-      <div className="flex flex-col gap-3">
-        {jobs.map((job) => {
-          const result = results[job.id];
-          return (
-            <section key={job.id} className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0 flex-1 basis-64">
-                  <h2 className="font-display text-lg font-semibold text-white">{job.title}</h2>
-                  <p className="mt-1 text-sm text-white/55">{job.what}</p>
-                  <p className="mt-1 text-xs text-white/35">
-                    <b className="text-white/50">When:</b> {job.when}
-                    {job.stamp && <> · Last run: {ago(updated[job.stamp])}</>}
-                  </p>
+      {/* single updates */}
+      <section className="overflow-hidden rounded-xl border border-line bg-panel">
+        <h2 className="border-b border-line px-4 py-3 font-display text-sm font-semibold uppercase tracking-[0.08em] text-t1 sm:px-5">Updates one by one</h2>
+        <ul className="divide-y divide-line">
+          {jobs.map((job) => {
+            const result = results[job.id];
+            const working = busy === job.id;
+            const last = lastOf(job);
+            return (
+              <li key={job.id} className="px-4 py-4 sm:px-5">
+                <div className="grid items-center gap-x-4 gap-y-3 sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]">
+                  <span className="hidden h-11 w-11 items-center justify-center rounded-xl border border-line bg-ink text-brand-gold sm:flex">{job.icon}</span>
+                  <div className="min-w-0">
+                    <h3 className="font-display text-base font-semibold leading-tight text-t1">{job.title}</h3>
+                    <p className="mt-1 text-sm leading-snug text-t2">{job.what}</p>
+                    <p className="mt-1.5 text-xs text-t3">
+                      <b className="font-semibold text-t2">When:</b> {job.when}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex h-8 w-fit shrink-0 items-center gap-2 rounded-lg border px-3 text-xs font-semibold ${
+                      last ? "border-ok/40 bg-ok/10 text-ok" : "border-line bg-ink text-t3"
+                    }`}
+                    title={last ? `Last run ${new Date(last).toLocaleString()}` : "Never run here: the built-in data is in use"}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${last ? "bg-ok" : "bg-t3"}`} aria-hidden="true" />
+                    <span className="num">{last ? ago(last) : "Never run"}</span>
+                  </span>
+                  <button
+                    onClick={() => run(job)}
+                    disabled={anyBusy}
+                    className="inline-flex h-11 min-w-[9.5rem] items-center justify-center gap-2 rounded-lg border border-line bg-ink px-4 font-display text-xs font-semibold uppercase tracking-wide text-t1 transition hover:border-brand-gold hover:text-brand-gold disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line disabled:hover:text-t1"
+                  >
+                    {working && spinner}
+                    {working ? "Working…" : job.button}
+                  </button>
                 </div>
-                <button
-                  onClick={() => run(job)}
-                  disabled={busy !== null}
-                  className="rounded-md bg-brand-gold px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-50"
-                >
-                  {busy === job.id ? "Working…" : job.button}
-                </button>
-              </div>
-              {result && (
-                <p className={`mt-3 rounded-lg px-3 py-2 text-sm ${result.ok ? "bg-white/[0.04] text-white/70" : "bg-brand-red/10 text-brand-red"}`}>
-                  {result.ok ? "✓ " : "⚠ "}
-                  {result.text}
-                </p>
-              )}
-            </section>
-          );
-        })}
-      </div>
+                {working && (
+                  <p role="status" className="mt-3 rounded-lg bg-cavity px-3 py-2 text-sm text-t2">
+                    Working… this can take up to half a minute.
+                  </p>
+                )}
+                {result && !working && (
+                  <p role={result.ok ? "status" : "alert"} className={`mt-3 rounded-lg px-3 py-2 text-sm ${result.ok ? "bg-ok/10 text-ok" : "bg-bad/10 text-bad"}`}>
+                    {result.ok ? "✓ " : "✕ "}
+                    {result.text}
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
     </div>
   );
 }

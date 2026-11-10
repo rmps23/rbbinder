@@ -73,12 +73,12 @@ export function MobileBinderView({
   };
 
   const navButton =
-    "flex h-12 w-12 shrink-0 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-xl text-brand-gold transition active:bg-brand-gold/15 disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/25";
+    "flex h-12 w-12 shrink-0 items-center justify-center rounded-md border-[1.5px] border-brand-gold text-xl text-brand-gold transition active:bg-brand-gold/15 disabled:cursor-not-allowed disabled:border-line disabled:text-t3";
 
   return (
     <div>
       <div
-        className="rounded-2xl border border-white/[0.07] bg-[#101520] p-2 shadow-2xl"
+        className="rounded-2xl border border-line bg-panel p-2 "
         style={{ touchAction: "pan-y" }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -106,7 +106,7 @@ export function MobileBinderView({
       <div className="h-24" />
 
       <div
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-ink/95 backdrop-blur"
+        className="fixed inset-x-0 bottom-14 z-20 border-t border-line bg-ink/95 "
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-2.5">
@@ -123,13 +123,13 @@ export function MobileBinderView({
             type="button"
             onClick={onOpenMenu}
             aria-label="Go to page, layout and more"
-            className="flex min-w-[88px] flex-col items-center rounded-lg px-2 py-0.5 active:bg-white/5"
+            className="flex min-w-[88px] flex-col items-center rounded-lg px-2 py-0.5 active:bg-panel2"
           >
-            <span className="font-display text-lg font-semibold tabular-nums text-white">
+            <span className="font-display text-lg font-semibold tabular-nums text-t1">
               {page + 1}
-              <span className="text-white/40"> / {totalPages}</span>
+              <span className="text-t3"> / {totalPages}</span>
             </span>
-            <span className="text-[10px] uppercase tracking-wide text-white/40">Page</span>
+            <span className="text-[10px] uppercase tracking-wide text-t3">Page</span>
           </button>
           <button type="button" onClick={() => go(1)} disabled={!canNext} aria-label="Next page" className={navButton}>
             →
@@ -138,7 +138,7 @@ export function MobileBinderView({
             type="button"
             onClick={onOpenMenu}
             aria-label="Binder menu"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-white/15 text-white/70 transition active:bg-white/10"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-line text-t2 transition active:bg-cavity"
           >
             <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
               <circle cx="5" cy="12" r="1.8" />

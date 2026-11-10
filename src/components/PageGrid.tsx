@@ -21,11 +21,13 @@ export type PageGridProps = {
   onRemove: (position: number) => void;
   onDropCard: (from: number, to: number) => void;
   onInsertAt: (from: number, insertPosition: number) => void;
+  // Desktop: click a filled slot to open the large card view.
+  onInspect?: (position: number) => void;
   touch?: TouchMode;
   compact?: boolean;
 };
 
-export function PageGrid({ slots, cols, onPick, onRemove, onDropCard, onInsertAt, touch, compact }: PageGridProps) {
+export function PageGrid({ slots, cols, onPick, onRemove, onDropCard, onInsertAt, onInspect, touch, compact }: PageGridProps) {
   const spacing = compact ? (cols >= 4 ? "gap-1.5 p-2" : "gap-2 p-2") : "gap-3 p-3";
   return (
     <div className={`grid ${GRID_COLS_CLASS[cols]} h-full ${spacing}`}>
@@ -40,6 +42,7 @@ export function PageGrid({ slots, cols, onPick, onRemove, onDropCard, onInsertAt
           onDropCard={onDropCard}
           onInsertAt={onInsertAt}
           onOpen={touch ? () => touch.onTap(position) : undefined}
+          onInspect={onInspect ? () => onInspect(position) : undefined}
           selected={touch?.selected === position}
           moveActive={touch?.moveActive ?? false}
           compact={compact}
@@ -56,6 +59,6 @@ export function pageBackground(side: "left" | "right"): string {
     `linear-gradient(${side === "left" ? 270 : 90}deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 9%, transparent 24%), ` +
     "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.05), transparent 60%), " +
     "linear-gradient(180deg, rgba(255,255,255,0.035) 0%, transparent 30%, rgba(0,0,0,0.16) 100%), " +
-    "#1a212c"
+    "#2a3446"
   );
 }

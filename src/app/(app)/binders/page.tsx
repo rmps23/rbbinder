@@ -1,9 +1,12 @@
 "use client";
 
+import { SlideGroup } from "@/components/SlideGroup";
+import { BindersSkeleton } from "@/components/Skeletons";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppData } from "@/components/AppDataProvider";
-import { BinderCard, PocketGrid, COVERS } from "@/components/BinderCard";
+import { BinderCard } from "@/components/BinderCard";
+import { Select } from "@/components/Select";
 import { BINDER_LAYOUTS } from "@/lib/constants";
 import { formatEur } from "@/lib/format";
 import { binderProgress } from "@/lib/binderProgress";
@@ -52,7 +55,7 @@ export default function BindersPage() {
     reload();
   }
 
-  if (appLoading || loading) return <p className="py-10 text-center text-white/40">Loading binders...</p>;
+  if (appLoading || loading) return <BindersSkeleton />;
 
   const copies = binders.reduce((n, b) => n + b.totalQty, 0);
 
@@ -60,104 +63,85 @@ export default function BindersPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-white">Binders</h1>
-          <p className="mt-1 text-sm text-white/50">
+          <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-t1">Binders</h1>
+          <p className="mt-1 text-sm text-t3">
             {binders.length} binder{binders.length === 1 ? "" : "s"} · {copies} cards placed
-            {values ? ` · ≈ ${formatEur(values.total)}` : ""}
+            {values ? ` · ${formatEur(values.total)}` : ""}
           </p>
         </div>
         <button
           onClick={() => setCreating((v) => !v)}
-          className="rounded-md bg-brand-gold px-6 py-2.5 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95"
+          className="btn-3d min-h-11 rounded-lg px-6 font-display text-xs font-semibold uppercase tracking-wide"
         >
           {creating ? "Close" : "+ New binder"}
         </button>
       </div>
 
       {creating && (
-        <form
-          onSubmit={create}
-          className="relative mb-8 animate-card-in overflow-hidden rounded-2xl border border-white/[0.08] bg-panel p-4 sm:p-5"
-        >
-          <div className="grid gap-5 md:grid-cols-[1fr_auto]">
-            <div className="flex flex-col gap-4">
-              <label className="flex flex-col gap-1.5">
-                <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Name</span>
-                <input
-                  autoFocus
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Main collection"
-                  className="rounded-xl border border-white/10 bg-ink px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-brand-gold focus:"
-                />
-              </label>
-              <div>
-                <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Pockets per page</span>
-                <div className="mt-1.5 grid grid-cols-4 gap-2">
-                  {BINDER_LAYOUTS.map((l) => (
-                    <button
-                      key={l.id}
-                      type="button"
-                      onClick={() => setLayout(l.id)}
-                      className={`flex flex-col items-center gap-2 rounded-xl border p-2.5 transition active:scale-95 ${
-                        layout === l.id ? "border-brand-gold bg-brand-gold/10" : "border-white/10 bg-white/[0.03] hover:border-white/30"
-                      }`}
-                    >
-                      <span className="w-10">
-                        <PocketGrid layout={l.id} fill={layout === l.id ? 1 : 0} glow="rgb(var(--accent))" />
-                      </span>
-                      <span className="text-[11px] font-semibold text-white/70">{l.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Collecting a set?</span>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {[{ id: "", name: "No set" }, ...sets].map((s) => (
-                    <button
-                      key={s.id || "none"}
-                      type="button"
-                      onClick={() => setSetId(s.id)}
-                      title={s.name}
-                      className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
-                        setId === s.id ? "border-brand-gold bg-brand-gold text-ink" : "border-white/10 bg-white/[0.03] text-white/60 hover:border-white/30"
-                      }`}
-                    >
-                      {s.id ? `${s.id} · ${s.name}` : s.name}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1.5 text-[11px] text-white/35">
-                  Progress then counts one of each regular card of the set - alternate arts, overnumbered and showcase cards don&apos;t count.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={!name.trim()}
-                  className="rounded-md bg-brand-gold px-6 py-2 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:opacity-40"
-                >
-                  Create binder
-                </button>
-                {error && <span className="text-sm text-red-300">{error}</span>}
-              </div>
+        <form onSubmit={create} className="mb-6 animate-card-in rounded-xl border border-line bg-panel p-4">
+          <div className="flex flex-wrap items-end gap-4">
+            <label className="flex min-w-[220px] flex-[2] flex-col gap-1.5">
+              <span className="label">Name</span>
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Main collection"
+                className="h-12 rounded-lg border border-line bg-ink px-3.5 text-sm text-t1 outline-none transition placeholder:text-t3 focus:border-brand-gold"
+              />
+            </label>
+
+            <div role="radiogroup" aria-label="Pockets per page" className="flex flex-col gap-1.5">
+              <span className="label">Pockets per page</span>
+              <SlideGroup className="flex h-12 items-stretch rounded-lg border border-line bg-ink p-1">
+                {BINDER_LAYOUTS.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    role="radio"
+                    data-active={layout === l.id}
+                    aria-checked={layout === l.id}
+                    onClick={() => setLayout(l.id)}
+                    className={`rounded-md px-4 text-sm font-semibold transition ${
+                      layout === l.id ? "text-on-accent" : "text-t2 hover:text-t1"
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </SlideGroup>
             </div>
-            <div className="hidden w-40 items-center justify-center md:flex">
-              <div
-                className="flex aspect-[4/5] w-full items-center justify-center rounded-r-xl rounded-l-sm border border-white/10 p-3 text-center font-display text-sm font-bold uppercase text-white [text-shadow:0_2px_0_rgba(0,0,0,0.5)]"
-                style={{ background: `linear-gradient(145deg, ${COVERS[name.length % COVERS.length].from}, ${COVERS[name.length % COVERS.length].to})` }}
-              >
-                {name.trim() || "Your binder"}
-              </div>
+
+            <div className="flex min-w-[200px] flex-1 flex-col gap-1.5">
+              <span className="label">Collecting a set?</span>
+              <Select
+                value={setId}
+                onChange={setSetId}
+                ariaLabel="Set this binder collects"
+                searchPlaceholder="Search sets…"
+                className="h-12 text-sm"
+                options={[{ value: "", label: "No set" }, ...sets.map((s) => ({ value: s.id, label: s.name, hint: s.id }))]}
+              />
             </div>
+
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              className="btn-3d h-12 rounded-lg px-6 font-display text-xs font-semibold uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Create
+            </button>
           </div>
+          {setId && (
+            <p className="mt-3 text-xs text-t3">Progress counts one of each regular card. Alt arts, overnumbered and showcase cards don&apos;t count.</p>
+          )}
+          {error && <p role="alert" className="mt-3 text-sm text-bad">✕ {error}</p>}
         </form>
       )}
 
       {binders.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/15 py-16 text-center">
-                    <p className="mt-3 text-white/50">No binders yet - create your first one!</p>
+        <div className="rounded-2xl border border-dashed border-line py-16 text-center">
+                    <p className="mt-3 text-t3">No binders yet - create your first one!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">

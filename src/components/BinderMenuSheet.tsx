@@ -6,7 +6,7 @@ import { BINDER_LAYOUTS } from "@/lib/constants";
 import type { BinderLayout, SetInfo } from "@/lib/types";
 
 const row =
-  "flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] font-display text-sm font-semibold uppercase tracking-wide text-white/80 transition active:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30";
+  "flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-panel2 font-display text-sm font-semibold uppercase tracking-wide text-t1 transition active:bg-cavity disabled:cursor-not-allowed disabled:opacity-30";
 
 export function BinderMenuSheet({
   layout,
@@ -50,7 +50,7 @@ export function BinderMenuSheet({
     onClose();
   }
 
-  const label = "mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wide text-white/40 first:mt-0";
+  const label = "mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wide text-t3 first:mt-0";
 
   return (
     <BottomSheet title="Binder" onClose={onClose}>
@@ -62,7 +62,7 @@ export function BinderMenuSheet({
             onGoTo(1);
             onClose();
           }}
-          className="h-12 shrink-0 rounded-xl border border-white/10 px-4 text-sm text-white/70 active:bg-white/10"
+          className="h-12 shrink-0 rounded-xl border border-line px-4 text-sm text-t2 active:bg-cavity"
         >
           First
         </button>
@@ -75,7 +75,7 @@ export function BinderMenuSheet({
           onChange={(e) => setTarget(e.target.value)}
           onFocus={(e) => e.target.select()}
           aria-label="Page number"
-          className="h-12 min-w-0 flex-1 rounded-xl border border-white/10 bg-ink px-3 text-center text-lg tabular-nums text-white outline-none focus:border-brand-gold"
+          className="h-12 min-w-0 flex-1 rounded-xl border border-line bg-ink px-3 text-center text-lg tabular-nums text-t1 outline-none focus:border-brand-gold"
         />
         <button
           type="submit"
@@ -89,7 +89,7 @@ export function BinderMenuSheet({
             onGoTo(totalPages);
             onClose();
           }}
-          className="h-12 shrink-0 rounded-xl border border-white/10 px-4 text-sm text-white/70 active:bg-white/10"
+          className="h-12 shrink-0 rounded-xl border border-line px-4 text-sm text-t2 active:bg-cavity"
         >
           Last
         </button>
@@ -106,7 +106,7 @@ export function BinderMenuSheet({
               onClose();
             }}
             className={`h-12 rounded-xl font-display text-sm font-semibold uppercase tracking-wide transition ${
-              layout === l.id ? "bg-brand-gold text-ink" : "border border-white/10 text-white/70 active:bg-white/10"
+              layout === l.id ? "bg-brand-gold text-ink" : "border border-line text-t2 active:bg-cavity"
             }`}
           >
             {l.label}
@@ -125,7 +125,7 @@ export function BinderMenuSheet({
               onClose();
             }}
             className={`h-10 rounded-xl px-3 text-xs font-semibold transition ${
-              (setId ?? "") === s.id ? "bg-brand-gold text-ink" : "border border-white/10 text-white/70 active:bg-white/10"
+              (setId ?? "") === s.id ? "bg-brand-gold text-ink" : "border border-line text-t2 active:bg-cavity"
             }`}
           >
             {s.id || s.name}

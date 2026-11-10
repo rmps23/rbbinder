@@ -36,7 +36,7 @@ export function PocketGrid({ layout, fill, glow }: { layout: Binder["layout"]; f
           style={
             i < lit
               ? { background: glow, borderColor: glow, transitionDelay: `${i * 25}ms` }
-              : { background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }
+              : { background: "rgb(var(--cavity))", borderColor: "rgb(var(--line))" }
           }
         />
       ))}
@@ -62,84 +62,44 @@ export function BinderCard({
   const perPage = l.cols * l.rows;
   const fill = binder.totalQty / Math.max(1, perPage * binder.pageCount);
 
+  const words = binder.name.replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).filter(Boolean);
+  const mark = (binder.setId ?? (words.length > 1 ? words.map((w) => w[0]).join("") : (words[0] ?? "").slice(0, 3))).slice(0, 3).toUpperCase();
+  const pct = Math.round(Math.min(1, completion) * 100);
+
   return (
-    <div className="group relative [perspective:900px]">
+    <div className="group relative h-full">
       <Link
         href={`/binder/${binder.id}`}
-        className="relative flex aspect-[5/6] animate-card-in overflow-hidden rounded-r-2xl rounded-l-md border border-white/10 transition duration-300 [transform-style:preserve-3d] hover:-translate-y-2 sm:aspect-[4/5]"
-        style={{
-          background: `linear-gradient(145deg, ${cover.from}, ${cover.to})`,
-          boxShadow: "0 12px 30px -18px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06)",
-        }}
+        className="relative flex h-full animate-card-in flex-col justify-between gap-5 rounded-xl border border-line bg-panel p-5 transition hover:border-line2 hover:bg-panel2"
       >
-        {/* spine with the rings */}
-        <span className="relative flex w-9 shrink-0 flex-col items-center justify-evenly bg-black/35 py-4 shadow-[inset_-6px_0_10px_-6px_rgba(0,0,0,0.6)]">
-          {[0, 1, 2, 3].map((i) => (
-            <span
-              key={i}
-              className="h-4 w-6 rounded-full border-2 border-white/40 bg-gradient-to-b from-white/50 to-white/5 shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
-            />
-          ))}
+        <span className="flex items-center gap-4">
+          <span
+            aria-hidden="true"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-line2 bg-cavity font-display text-xl font-bold tracking-wider text-white"
+          >
+            {mark}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block break-words font-display text-base font-semibold uppercase leading-tight text-t1">{binder.name}</span>
+            <span className="mt-0.5 block text-xs text-t3">
+              {l.label} · {binder.uniqueCount} unique · {binder.totalQty} copies
+            </span>
+          </span>
         </span>
 
-        <span className="relative flex min-w-0 flex-1 flex-col p-4">
-          {/* leather grain + shine */}
-          <span
-            className="pointer-events-none absolute inset-0 opacity-[0.05]"
-            style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 0.5px, transparent 0.6px)", backgroundSize: "4px 4px" }}
-          />
-
-          <span className="relative flex items-start justify-between gap-2">
-            <span className="rounded-md bg-black/40 px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-widest text-white/80">
-              {l.label}
-            </span>
-            {binder.setId ? (
-              <span className="rounded-md bg-black/50 px-2 py-0.5 font-display text-[10px] font-bold tracking-widest" style={{ color: cover.glow }}>
-                {binder.setId}
-              </span>
-            ) : (
-              <span className="rounded-md bg-black/40 px-2 py-0.5 text-[10px] font-semibold text-white/70">{binder.pageCount} pages</span>
-            )}
-          </span>
-
-          {/* embossed name plate */}
-          <span className="relative my-auto py-3">
-            <span
-              className="block rounded-lg border border-white/20 bg-black/30 px-3 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-[2px]"
-            >
-              <span className="block break-words font-display text-xl font-bold uppercase leading-tight tracking-wide text-white [text-shadow:0_2px_0_rgba(0,0,0,0.5)]">
-                {binder.name}
-              </span>
-            </span>
-          </span>
-
-          <span className="relative flex items-end gap-3">
-            <span className="w-14 shrink-0">
-              <PocketGrid layout={binder.layout} fill={fill} glow={cover.glow} />
-            </span>
-            <span className="min-w-0 flex-1 text-right">
-              {value !== null && (
-                <span className="block font-display text-2xl font-bold leading-none text-white [text-shadow:0_2px_0_rgba(0,0,0,0.4)]">
-                  ≈ {formatEur(value)}
-                </span>
-              )}
-              <span className="mt-1 block text-[11px] text-white/65">
-                {binder.uniqueCount} unique · {binder.totalQty} copies
-              </span>
-            </span>
-          </span>
-
-          {progressLabel && (
-            <span className="relative mt-3 flex items-baseline justify-between text-[11px] text-white/70">
-              <span className="truncate">{progressLabel}</span>
-              <b className="text-white">{Math.round(completion * 100)}%</b>
+        <span className="block">
+          {value !== null && (
+            <span className="mb-3 block">
+              <span className="label block">Value</span>
+              <span className="num block text-2xl font-bold leading-tight text-t1">{formatEur(value)}</span>
             </span>
           )}
-          <span className={`relative ${progressLabel ? "mt-1" : "mt-3"} block h-1.5 overflow-hidden rounded-sm bg-black/40`}>
-            <span
-              className="block h-full rounded-md transition-all duration-700"
-              style={{ width: `${Math.min(100, completion * 100)}%`, background: cover.glow }}
-            />
+          <span className="mb-1.5 flex items-baseline justify-between gap-3 text-xs text-t2">
+            <span className="truncate">{progressLabel ?? `${binder.pageCount} pages · ${Math.round(fill * 100)}% full`}</span>
+            <b className="num text-t1">{progressLabel ? pct : Math.round(fill * 100)}%</b>
+          </span>
+          <span className="block h-1.5 overflow-hidden rounded-sm bg-cavity">
+            <span className="block h-full rounded-sm bg-brand-gold" style={{ width: `${progressLabel ? Math.min(100, completion * 100) : Math.min(100, fill * 100)}%` }} />
           </span>
         </span>
       </Link>
@@ -148,7 +108,8 @@ export function BinderCard({
         <button
           onClick={onDelete}
           title="Delete binder"
-          className="absolute right-1.5 top-1.5 z-10 flex h-9 w-9 items-center justify-center rounded-md bg-black/50 text-white/70 backdrop-blur transition hover:bg-brand-red hover:text-white md:opacity-0 md:group-hover:opacity-100"
+          aria-label={`Delete ${binder.name}`}
+          className="absolute -right-2 -top-2 z-10 flex h-11 w-11 items-center justify-center rounded-md border border-line bg-panel2 text-t2 transition hover:bg-bad hover:text-on-accent md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
         >
           ✕
         </button>

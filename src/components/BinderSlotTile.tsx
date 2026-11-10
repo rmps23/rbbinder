@@ -18,6 +18,7 @@ export function BinderSlotTile({
   onDropCard,
   onInsertAt,
   onOpen,
+  onInspect,
   selected = false,
   moveActive = false,
   compact = false,
@@ -32,6 +33,8 @@ export function BinderSlotTile({
   // Touch mode (phones): tapping a filled slot opens its details instead of
   // relying on hover/drag, which don't exist there.
   onOpen?: () => void;
+  // Desktop: click opens the large card view.
+  onInspect?: () => void;
   selected?: boolean;
   moveActive?: boolean;
   compact?: boolean;
@@ -61,15 +64,22 @@ export function BinderSlotTile({
           const from = Number(e.dataTransfer.getData("text/plain"));
           if (!Number.isNaN(from) && from !== position) onDropCard(from, position);
         }}
-        className={`flex aspect-[744/1039] w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed transition active:scale-[0.97] ${
+        className={`group relative flex aspect-[744/1039] w-full flex-col items-center justify-center gap-2.5 rounded-lg border border-dashed transition active:scale-[0.97] ${
           dropZone || moveActive
-            ? "border-brand-gold/70 bg-brand-gold/10 text-brand-gold"
-            : "border-white/10 bg-ink/40 text-white/15 hover:border-brand-gold/50 hover:text-brand-gold/70"
+            ? "border-brand-gold bg-brand-gold/10 text-brand-gold"
+            : "border-line2 bg-panel2/40 text-t2 hover:border-brand-gold/60 hover:bg-brand-gold/5 hover:text-brand-gold"
         }`}
       >
-        <span className={`leading-none ${compact ? "text-2xl" : "text-3xl"}`}>+</span>
-        <span className="text-[10px] font-medium">{moveActive ? "Move here" : "Add card"}</span>
-        <span className="text-[10px] font-semibold tabular-nums">#{position + 1}</span>
+        <span className="num absolute left-2 top-2 rounded-md border border-line2 bg-cavity px-2 py-0.5 text-xs font-bold text-t1">#{position + 1}</span>
+        <span
+          aria-hidden="true"
+          className={`flex items-center justify-center rounded-full border border-current transition group-hover:bg-brand-gold/10 ${compact ? "h-8 w-8" : "h-11 w-11"}`}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={compact ? "h-4 w-4" : "h-5 w-5"}>
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </span>
+        <span className={`font-semibold ${compact ? "text-[11px]" : "text-xs"}`}>{moveActive ? "Move here" : "Add card"}</span>
       </button>
     );
   }
@@ -123,23 +133,23 @@ export function BinderSlotTile({
       onDragOver={touch ? undefined : handleDragOver}
       onDragLeave={touch ? undefined : () => setDropZone(null)}
       onDrop={touch ? undefined : handleDrop}
-      onClick={touch ? onOpen : undefined}
+      onClick={touch ? onOpen : onInspect}
       onKeyDown={
-        touch
+        touch || onInspect
           ? (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                onOpen?.();
+                (touch ? onOpen : onInspect)?.();
               }
             }
           : undefined
       }
-      role={touch ? "button" : undefined}
-      tabIndex={touch ? 0 : undefined}
-      aria-label={touch ? `${card.name}, open details` : undefined}
-      className={`group relative aspect-[744/1039] w-full overflow-hidden rounded-lg border border-white/15 bg-[#0a0c10] transition ${
-        touch ? "cursor-pointer active:scale-[0.97]" : "cursor-grab active:cursor-grabbing"
-      } ${dropZone === "swap" ? "ring-2 ring-brand-gold/60" : ""} ${selected ? "ring-2 ring-brand-cyan" : ""} ${
+      role={touch || onInspect ? "button" : undefined}
+      tabIndex={touch || onInspect ? 0 : undefined}
+      aria-label={touch || onInspect ? `${card.name}, open details` : undefined}
+      className={`group relative aspect-[744/1039] w-full overflow-hidden rounded-lg border border-line bg-[#0a0c10] transition ${
+        touch ? "cursor-pointer active:scale-[0.97]" : "cursor-pointer active:cursor-grabbing"
+      } ${dropZone === "swap" ? "ring-2 ring-brand-gold/60" : ""} ${selected ? "ring-2 ring-ok" : ""} ${
         moveActive && !selected ? "ring-1 ring-brand-gold/50" : ""
       }`}
     >
@@ -156,19 +166,11 @@ export function BinderSlotTile({
           draggable={false}
         />
       ) : (
-        <div className="flex h-full items-center justify-center p-2 text-center text-xs text-white/40">{card.name}</div>
+        <div className="flex h-full items-center justify-center p-2 text-center text-xs text-t3">{card.name}</div>
       )}
 
       {dropZone === "before" && <span className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-brand-gold" />}
       {dropZone === "after" && <span className="pointer-events-none absolute inset-y-0 right-0 w-1.5 bg-brand-gold" />}
-
-      <span
-        className={`absolute flex items-center justify-center rounded-md bg-ink/80 font-display font-bold text-brand-gold ring-1 ring-white/10 ${
-          compact ? "left-1 top-1 h-5 w-5 text-xs" : "left-1.5 top-1.5 h-7 w-7 text-base"
-        }`}
-      >
-        {qty}
-      </span>
 
       {!touch && (
         <button
@@ -179,7 +181,7 @@ export function BinderSlotTile({
           }}
           title="Remove card from this slot"
           aria-label="Remove card from this slot"
-          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-md bg-brand-red/90 text-white opacity-0 shadow transition hover:bg-brand-red group-hover:opacity-100"
+          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-md bg-brand-red/90 text-t1 opacity-0 shadow transition hover:bg-brand-red group-hover:opacity-100"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
             <path
@@ -192,10 +194,15 @@ export function BinderSlotTile({
       )}
 
       {!touch && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col justify-end bg-gradient-to-b from-transparent to-black/90 p-2 pt-8 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          <p className="line-clamp-2 text-xs font-semibold leading-tight text-white">{card.name}</p>
-          <p className="text-[10px] text-white/60">{card.publicCode}</p>
-          {price !== null && <p className="text-[11px] font-semibold text-brand-gold">≈ {formatEur(price)}</p>}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 border-t border-line2 bg-ink/95 px-2.5 py-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          <p className={`line-clamp-2 font-semibold leading-tight text-t1 ${compact ? "text-xs" : "text-sm"}`}>{card.name}</p>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <p className="num truncate text-[11px] text-t2">
+              {card.publicCode}
+              {qty > 1 && <span className="ml-1.5 font-bold text-t1">×{qty}</span>}
+            </p>
+            {price !== null && <p className={`num shrink-0 font-bold text-brand-gold ${compact ? "text-xs" : "text-sm"}`}>{formatEur(price)}</p>}
+          </div>
         </div>
       )}
     </div>

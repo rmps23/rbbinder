@@ -1,26 +1,27 @@
 "use client";
 
+import { DashboardSkeleton } from "@/components/Skeletons";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAppData } from "@/components/AppDataProvider";
-import { BinderCard, coverFor } from "@/components/BinderCard";
-import { CardArt, primaryColor } from "@/components/DeckViews";
+import { CardArt } from "@/components/DeckViews";
+import { binderProgress } from "@/lib/binderProgress";
 import { PriceModeSwitch } from "@/components/PriceModeSwitch";
 import { typicalFinish } from "@/lib/cardFinish";
 import { displayName } from "@/lib/deck";
 import { formatEur } from "@/lib/format";
-import { binderProgress } from "@/lib/binderProgress";
 import { isBaseCard } from "@/lib/setCollection";
 import { useBinders } from "@/lib/useBinders";
 import { valueBulk, valueContents } from "@/lib/valuation";
 import type { CardsSyncResult, Deck } from "@/lib/types";
 
-function Stat({ label, value, sub, accent, href }: { label: string; value: string | number; sub?: string; accent: string; href?: string }) {
+
+function MiniStat({ label, value, sub, href }: { label: string; value: string | number; sub?: string; href?: string }) {
   const body = (
-    <div className="relative h-full animate-card-in overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-4 transition duration-200 hover:-translate-y-1 hover:border-white/20 sm:p-5">
-      <p className="relative font-display text-2xl font-bold text-white sm:text-3xl">{value}</p>
-      <p className="relative mt-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</p>
-      {sub && <p className="relative mt-0.5 text-[11px] text-white/30">{sub}</p>}
+    <div className="h-full rounded-lg bg-cavity/50 px-3 py-2.5 transition hover:bg-cavity">
+      <p className="label">{label}</p>
+      <p className="num mt-1 font-display text-xl font-bold leading-none text-t1">{value}</p>
+      {sub && <p className="mt-1 text-[11px] text-t3">{sub}</p>}
     </div>
   );
   return href ? (
@@ -32,20 +33,27 @@ function Stat({ label, value, sub, accent, href }: { label: string; value: strin
   );
 }
 
-function SectionTitle({ children, href, link }: { children: React.ReactNode; href?: string; link?: string }) {
+function Panel({ title, href, link, children, className = "" }: { title: string; href?: string; link?: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="mb-3 flex items-center gap-3">
-      <span className="inline-block h-5 w-1 rounded-sm bg-white/25" />
-      <h2 className="font-display text-lg font-semibold uppercase tracking-[0.12em] text-white">{children}</h2>
-      <span className="h-px flex-1 bg-white/10" />
-      {href && (
-        <Link href={href} className="text-xs font-semibold text-brand-gold hover:underline">
-          {link ?? "See all"} →
-        </Link>
-      )}
-    </div>
+    <section className={`flex flex-col rounded-xl border border-line bg-panel p-4 sm:p-5 ${className}`}>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="font-display text-base font-semibold uppercase tracking-[0.08em] text-t1">{title}</h2>
+        {href && (
+          <Link
+            href={href}
+            className="inline-flex min-h-11 items-center rounded-lg border border-line px-3.5 font-display text-xs font-semibold uppercase tracking-wide text-t2 transition hover:border-line2 hover:bg-panel2 hover:text-t1"
+          >
+            {link ?? "See all"}
+          </Link>
+        )}
+      </div>
+      {children}
+    </section>
   );
 }
+
+const btnBase = "inline-flex min-h-11 items-center justify-center rounded-lg px-4 font-display text-xs font-semibold uppercase tracking-wide transition";
+const btnGhost = `${btnBase} border border-line text-t2 hover:border-line2 hover:bg-panel2 hover:text-t1`;
 
 export default function DashboardPage() {
   const { cards, sets, bulk, prices, priceOf, loading: appLoading, reloadCards } = useAppData();
@@ -136,218 +144,195 @@ export default function DashboardPage() {
     return { owned: owned.size, copies, bindersValue, bulkValue, perSet, top, baseOwned, baseTotal: base.length };
   }, [binders, bulk, cards, sets, cardById, priceOf, prices]);
 
-  if (appLoading || bindersLoading) return <p className="py-10 text-center text-white/40">Loading collection...</p>;
+  if (appLoading || bindersLoading) return <DashboardSkeleton />;
 
-  const completion = stats.baseTotal ? stats.baseOwned / stats.baseTotal : 0;
   const bindersByValue = [...binders]
     .map((b) => ({ b, v: valueContents(b.contents, cardById, priceOf).value }))
     .sort((a, b) => b.v - a.v)
     .slice(0, 4);
+  const completion = stats.baseTotal ? stats.baseOwned / stats.baseTotal : 0;
 
   return (
-    <div>
-      {/* hero */}
-      <div className="relative mb-6 overflow-hidden rounded-3xl border border-white/[0.08] bg-panel p-5 sm:p-7">
-        <div className="relative flex flex-wrap items-center justify-between gap-5">
-          <div>
-            <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-white sm:text-4xl">Dashboard</h1>
-            <p className="mt-1 text-sm text-white/50">
-              {prices ? (
-                <>
-                  Your collection is worth{" "}
-                  <span className="font-display text-xl font-semibold text-brand-gold">
-                    ≈ {formatEur(stats.bindersValue + stats.bulkValue)}
-                  </span>{" "}
-                  <span className="text-white/35">· Cardmarket, in euros</span>
-                </>
-              ) : (
-                "Your Riftbound collection at a glance."
-              )}
-            </p>
-            <div className="mt-3">
-              <PriceModeSwitch />
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/binders" className="rounded-md border-[1.5px] border-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold transition hover:bg-brand-gold/10 active:scale-95">
-                + New binder
-              </Link>
-              <Link href="/bulk" className="rounded-md border border-white/15 px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-white/70 transition hover:bg-white/5 active:scale-95">
-                Scan to bulk
-              </Link>
-              <Link href="/decks" className="rounded-md border border-white/15 px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-white/70 transition hover:bg-white/5 active:scale-95">
-                Build a deck
-              </Link>
-              <button
-                onClick={syncCards}
-                disabled={syncing}
-                className="rounded-md bg-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95 disabled:cursor-wait disabled:opacity-60"
-              >
-                {syncing ? "Syncing..." : "Sync cards"}
-              </button>
-            </div>
-            {syncResult && <p className="mt-2 text-sm text-emerald-300">{syncResult}</p>}
-            {syncError && <p className="mt-2 text-sm text-red-300">{syncError}</p>}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="relative h-24 w-24">
-              <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90">
-                <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="5" />
-                <circle
-                  cx="24"
-                  cy="24"
-                  r="20"
-                  fill="none"
-                  className="stroke-brand-gold"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 20}
-                  strokeDashoffset={2 * Math.PI * 20 * (1 - completion)}
-                  style={{ transition: "stroke-dashoffset 900ms cubic-bezier(0.22,1,0.36,1)" }}
-                />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center font-display text-xl font-bold">
-                {Math.round(completion * 100)}%
-              </span>
-            </div>
-            <div className="text-sm">
-              <p className="font-display text-2xl font-bold text-white">
-                {stats.baseOwned}
-                <span className="text-white/35"> / {stats.baseTotal}</span>
-              </p>
-              <p className="text-[11px] uppercase tracking-wide text-white/40">cards collected · one of each, specials not counted</p>
-            </div>
-          </div>
+    <div className="flex flex-col gap-4 md:min-h-[calc(100dvh-3rem)]">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold uppercase tracking-wide text-t1">Dashboard</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/binders" className={btnGhost}>+ New binder</Link>
+          <button onClick={syncCards} disabled={syncing} className={`${btnBase} btn-3d disabled:cursor-wait disabled:opacity-60`}>
+            {syncing ? "Syncing..." : "Sync cards"}
+          </button>
         </div>
-      </div>
-
+      </header>
+      {syncResult && <p role="status" className="text-sm text-ok">✓ {syncResult}</p>}
+      {syncError && <p role="alert" className="text-sm text-bad">✕ {syncError}</p>}
       {cards.length === 0 && (
-        <div className="mb-5 rounded-lg border border-brand-gold/30 bg-brand-gold/10 p-4 text-sm text-brand-goldSoft">
-          There are no cards in the database yet. Click &quot;Sync cards&quot; to fetch the official catalog.
+        <div className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-sm text-warn">
+          ⚠ No cards yet. Click &quot;Sync cards&quot; to fetch the official catalog.
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <Stat label="Binders value" value={prices ? formatEur(stats.bindersValue) : "…"} accent="rgb(var(--accent))" href="/binders" />
-        <Stat label="Bulk value" value={prices ? formatEur(stats.bulkValue) : "…"} accent="rgb(var(--mint))" href="/bulk" />
-        <Stat label="Binders" value={binders.length} accent="#a35de0" href="/binders" />
-        <Stat label="Decks" value={decks.length} accent="rgb(var(--danger))" href="/decks" />
-        <Stat label="Cards owned" value={stats.copies} sub={`${stats.owned} unique`} accent="#3d7fe0" />
-        <Stat label="In the catalog" value={cards.length} accent="#8b93a3" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <section className="flex flex-col justify-between rounded-xl border border-line bg-panel p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3 [&_*]:whitespace-nowrap">
+            <div>
+              <p className="label">Collection value</p>
+              <p className="num mt-1.5 whitespace-nowrap text-3xl font-bold leading-none text-t1">
+                {prices ? `${formatEur(stats.bindersValue + stats.bulkValue)}` : "…"}
+              </p>
+            </div>
+            <PriceModeSwitch />
+          </div>
+          <p className="num mt-3 text-xs text-t3">
+            Binders <b className="text-t2">{prices ? formatEur(stats.bindersValue) : "…"}</b> · Bulk{" "}
+            <b className="text-t2">{prices ? formatEur(stats.bulkValue) : "…"}</b>
+          </p>
+        </section>
+
+        <section className="flex items-center gap-5 rounded-xl border border-line bg-panel p-5">
+          <div className="relative h-20 w-20 shrink-0" role="img" aria-label={`${Math.round(completion * 100)} percent of the collection completed`}>
+            <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90" aria-hidden="true">
+              <circle cx="24" cy="24" r="20" fill="none" className="stroke-cavity" strokeWidth="5" />
+              <circle
+                cx="24"
+                cy="24"
+                r="20"
+                fill="none"
+                className="stroke-brand-gold"
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 20}
+                strokeDashoffset={2 * Math.PI * 20 * (1 - completion)}
+                style={{ transition: "stroke-dashoffset 900ms cubic-bezier(0.22,1,0.36,1)" }}
+              />
+            </svg>
+            <span className="num absolute inset-0 flex items-center justify-center font-display text-lg font-bold text-t1">
+              {Math.round(completion * 100)}%
+            </span>
+          </div>
+          <div>
+            <p className="label">Collected</p>
+            <p className="num mt-1.5 whitespace-nowrap font-display text-3xl font-bold leading-none text-t1">
+              {stats.baseOwned}
+              <span className="text-t3"> / {stats.baseTotal}</span>
+            </p>
+            <p className="num mt-2 text-xs text-t3">
+              {stats.copies} cards · {stats.owned} unique · {binders.length} binders · {decks.length} decks
+            </p>
+          </div>
+        </section>
       </div>
 
-      <div className="mt-8 grid gap-8 xl:grid-cols-[1.15fr_1fr]">
-        <section>
-          <SectionTitle>Collection by set</SectionTitle>
-          <div className="flex flex-col gap-2.5">
+      <div className="grid flex-[1.2] gap-4 md:grid-cols-2">
+        <Panel title="Sets">
+          <ul className="flex flex-1 flex-col justify-between gap-3">
             {stats.perSet.map((s) => {
               const pct = s.total ? s.have / s.total : 0;
               return (
-                <div key={s.id} className="rounded-xl border border-white/[0.06] bg-panel px-4 py-3 transition hover:border-white/20">
-                  <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                    <span className="truncate text-sm font-semibold text-white">
-                      <span className="mr-2 font-display text-[11px] tracking-widest text-brand-gold">{s.id}</span>
-                      {s.name}
-                    </span>
-                    <span className="shrink-0 text-xs text-white/50">
-                      <b className="text-white">{s.have}</b> / {s.total} · {Math.round(pct * 100)}%
-                    </span>
+                <li key={s.id} className="grid grid-cols-[2.75rem_1fr_auto] items-center gap-3" title={s.name}>
+                  <span className="font-display text-xs tracking-widest text-brand-gold">{s.id}</span>
+                  <div className="h-2 overflow-hidden rounded-sm bg-cavity">
+                    <div className="h-full rounded-sm bg-brand-gold" style={{ width: `${pct * 100}%` }} />
                   </div>
-                  <div className="h-2 overflow-hidden rounded-sm bg-white/10">
-                    <div
-                      className="h-full rounded-md bg-brand-gold transition-all duration-700"
-                      style={{ width: `${pct * 100}%` }}
-                    />
-                  </div>
-                </div>
+                  <span className="num w-24 text-right text-xs text-t3">
+                    <b className="text-t1">{s.have}</b>/{s.total} · {Math.round(pct * 100)}%
+                  </span>
+                </li>
               );
             })}
-          </div>
-        </section>
+          </ul>
+        </Panel>
 
-        <section>
-          <SectionTitle>Most valuable cards</SectionTitle>
+        <Panel title="Top cards">
           {stats.top.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/10 py-8 text-center text-sm text-white/35">
-              {prices ? "Add cards to your binders or bulk to see them here." : "Loading prices…"}
+            <p className="rounded-lg border border-dashed border-line py-6 text-center text-sm text-t3">
+              {prices ? "Add cards to see them here." : "Loading prices…"}
             </p>
           ) : (
-            <div className="grid grid-cols-3 gap-3">
-              {stats.top.map(({ card, price }, i) => (
-                <div key={card.id} className="animate-card-in" style={{ animationDelay: `${i * 60}ms` }}>
-                  <div
-                    className="relative rounded-xl ring-2 ring-transparent transition hover:-translate-y-1.5 hover:ring-brand-gold/60"
-                    style={{ boxShadow: `0 10px 26px -14px ${primaryColor(card)}` }}
-                  >
-                    <CardArt card={card} sizes="160px" className="rounded-xl" />
-                    <span className="absolute -left-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-brand-gold font-display text-xs font-bold text-ink shadow-lg">
+            <div className="grid flex-1 grid-cols-4 items-center gap-4">
+              {stats.top.slice(0, 4).map(({ card, price }, i) => (
+                <div key={card.id} title={displayName(card)}>
+                  <div className="relative">
+                    <CardArt card={card} sizes="(min-width: 1536px) 320px, 240px" quality={90} className="rounded-md" />
+                    <span className="num absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded bg-warn px-1 text-[11px] font-bold text-ink">
                       {i + 1}
                     </span>
                   </div>
-                  <p className="mt-1.5 truncate text-[11px] text-white/70">{displayName(card)}</p>
-                  <p className="font-display text-sm font-semibold text-brand-gold">{formatEur(price)}</p>
+                  <p className="num mt-2 text-center font-display text-base font-semibold text-warn">{formatEur(price)}</p>
                 </div>
               ))}
             </div>
           )}
-        </section>
+        </Panel>
       </div>
 
-      <div className="mt-10">
-        <SectionTitle href="/binders" link="All binders">
-          Top binders
-        </SectionTitle>
-        {binders.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-white/10 py-8 text-center text-sm text-white/35">
-            No binders yet. <Link href="/binders" className="text-brand-gold underline">Create one</Link>.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {bindersByValue.map(({ b, v }) => (
-              <BinderCard
-                key={b.id}
-                binder={b}
-                value={prices ? v : null}
-                completion={binderProgress(b, cards, sets).completion}
-                progressLabel={binderProgress(b, cards, sets).label}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      <div className="grid flex-1 gap-4 md:grid-cols-2">
+        <Panel title="Top binders" href="/binders" link="All binders">
+          {binders.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-line py-6 text-center text-sm text-t3">
+              No binders yet. <Link href="/binders" className="text-brand-gold underline">Create one</Link>.
+            </p>
+          ) : (
+            <ul className="flex flex-1 flex-col justify-between gap-2">
+              {bindersByValue.map(({ b, v }, idx) => {
+                const prog = binderProgress(b, cards, sets);
+                return (
+                  <li key={b.id} className={idx > 2 ? "[@media(max-height:1000px)]:hidden" : ""}>
+                    <Link
+                      href={`/binder/${b.id}`}
+                      className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-lg bg-cavity/40 px-3 py-2.5 transition hover:bg-cavity"
+                    >
+                      <span className="truncate text-sm font-semibold text-t1">
+                        {b.setId && <span className="mr-2 font-display text-xs tracking-widest text-brand-gold">{b.setId}</span>}
+                        {b.name}
+                      </span>
+                      <span className="num text-sm font-semibold text-t1">{prices ? `${formatEur(v)}` : "…"}</span>
+                      <span className="col-span-2 flex items-center gap-3">
+                        <span className="h-1.5 flex-1 overflow-hidden rounded-sm bg-cavity">
+                          <span className="block h-full rounded-sm bg-brand-gold" style={{ width: `${Math.min(100, prog.completion * 100)}%` }} />
+                        </span>
+                        <span className="num w-10 text-right text-xs text-t3">{Math.round(prog.completion * 100)}%</span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
 
-      {decks.length > 0 && (
-        <div className="mt-10">
-          <SectionTitle href="/decks" link="All decks">
-            Recent decks
-          </SectionTitle>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {decks.slice(0, 3).map((d) => {
-              const legend = d.entries.find((e) => e.zone === "legend");
-              const lc = legend && cardById.get(legend.cardId);
-              const color = lc ? primaryColor(lc) : coverFor(d.id).glow;
-              return (
-                <Link
-                  key={d.id}
-                  href={`/decks/${d.id}`}
-                  className="group relative flex animate-card-in items-center gap-4 overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-4 transition hover:-translate-y-1 hover:border-white/25"
-                  style={{ boxShadow: `0 14px 36px -22px ${color}` }}
-                >
-                  {lc ? (
-                    <CardArt card={lc} sizes="64px" className="w-14 shrink-0 rounded-lg transition group-hover:scale-105" />
-                  ) : (
-                    <div className="aspect-[744/1039] w-14 shrink-0 rounded-lg border border-dashed border-white/15" />
-                  )}
-                  <span className="min-w-0">
-                    <span className="block truncate font-display text-base font-semibold text-white">{d.name}</span>
-                    <span className="block truncate text-xs text-white/45">{lc ? displayName(lc) : "No legend yet"}</span>
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
+        <Panel title="Recent decks" href="/decks" link="All decks">
+          {decks.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-line py-6 text-center text-sm text-t3">
+              No decks yet. <Link href="/decks" className="text-brand-gold underline">Build one</Link>.
+            </p>
+          ) : (
+            <ul className="flex flex-1 flex-col justify-between gap-2">
+              {decks.slice(0, 4).map((d, idx) => {
+                const legend = d.entries.find((e) => e.zone === "legend");
+                const lc = legend && cardById.get(legend.cardId);
+                return (
+                  <li key={d.id} className={idx > 2 ? "[@media(max-height:1000px)]:hidden" : ""}>
+                    <Link
+                      href={`/decks/${d.id}`}
+                      className="flex min-h-11 items-center gap-3 rounded-lg bg-cavity/40 px-3 py-2 transition hover:bg-cavity"
+                    >
+                      {lc ? (
+                        <CardArt card={lc} sizes="96px" quality={90} className="w-9 shrink-0 rounded" />
+                      ) : (
+                        <div className="aspect-[744/1039] w-9 shrink-0 rounded border border-dashed border-line" />
+                      )}
+                      <span className="min-w-0">
+                        <span className="block truncate font-display text-sm font-semibold text-t1">{d.name}</span>
+                        <span className="block truncate text-xs text-t3">{lc ? displayName(lc) : "No legend yet"}</span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+      </div>
     </div>
   );
 }

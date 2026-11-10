@@ -1,5 +1,6 @@
 "use client";
 
+import { SlideGroup } from "@/components/SlideGroup";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { matchScan, targetPosition, type ScanMatch } from "@/lib/cardScan";
@@ -395,7 +396,7 @@ export function ScanCardModal({
   return (
     <div ref={containerRef} className="fixed inset-0 z-50 overflow-hidden bg-black">
       {error ? (
-        <p className="p-6 text-sm text-red-400">{error}</p>
+        <p className="p-6 text-sm text-bad">{error}</p>
       ) : (
         <>
           <video ref={videoRef} playsInline muted className="absolute inset-0 h-full w-full object-cover" />
@@ -411,43 +412,44 @@ export function ScanCardModal({
       )}
 
       <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 bg-gradient-to-b from-black/80 to-transparent px-4 pb-6 pt-4">
-        <button onClick={onClose} className="rounded-md bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur hover:bg-white/25">
+        <button onClick={onClose} className="rounded-md bg-cavity px-4 py-2 text-sm font-medium text-t1  hover:bg-white/25">
           Done{addedCount > 0 ? ` (${addedCount})` : ""}
         </button>
         {bulk && (
-          <div role="group" aria-label="Finish of the cards you scan" className="flex rounded-md bg-white/15 p-0.5 backdrop-blur">
+          <SlideGroup role="group" aria-label="Finish of the cards you scan" className="flex rounded-md bg-cavity p-0.5" indicatorClassName={finish === "foil" ? "bg-foil" : "bg-ok"}>
             {(["normal", "foil"] as const).map((f) => (
               <button
                 key={f}
                 type="button"
+                data-active={finish === f}
                 aria-pressed={finish === f}
                 onClick={() => chooseFinish(f)}
                 className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                  finish === f ? (f === "foil" ? "bg-foil text-ink" : "bg-brand-cyan text-ink") : "text-white/80"
+                  finish === f ? "text-ink" : "text-t1"
                 }`}
               >
                 {f === "foil" ? "✦ Foil" : "Normal"}
               </button>
             ))}
-          </div>
+          </SlideGroup>
         )}
-        <label className="flex cursor-pointer items-center gap-2 rounded-md bg-white/15 px-3 py-2 text-xs text-white backdrop-blur">
+        <label className="flex cursor-pointer items-center gap-2 rounded-md bg-cavity px-3 py-2 text-xs text-t1 ">
           <input type="checkbox" checked={autoAdd} onChange={(e) => setAutoAdd(e.target.checked)} />
           Auto-add
         </label>
       </div>
 
       {!error && (
-        <p className="pointer-events-none absolute inset-x-0 top-16 text-center text-xs text-white/80">
+        <p className="pointer-events-none absolute inset-x-0 top-16 text-center text-xs text-t1">
           {toast ?? status}
-          <span className="mt-0.5 block text-[10px] text-white/40">{debug}</span>
-          <span className="block text-[10px] text-white/40">{imgDebug}</span>
-          <span className="block text-[10px] text-white/30">build {process.env.NEXT_PUBLIC_BUILD_SHA}</span>
+          <span className="mt-0.5 block text-[10px] text-t3">{debug}</span>
+          <span className="block text-[10px] text-t3">{imgDebug}</span>
+          <span className="block text-[10px] text-t3">build {process.env.NEXT_PUBLIC_BUILD_SHA}</span>
         </p>
       )}
 
       <div
-        className={`absolute inset-x-0 bottom-0 mx-auto max-w-xl rounded-t-3xl border border-b-0 border-brand-gold/40 bg-panel p-4 pb-6 shadow-2xl transition-transform duration-300 ease-out ${
+        className={`absolute inset-x-0 bottom-0 mx-auto max-w-xl rounded-t-3xl border border-b-0 border-brand-gold/40 bg-panel p-4 pb-6  transition-transform duration-300 ease-out ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -458,11 +460,11 @@ export function ScanCardModal({
                 {chosen.image.url && <Image src={chosen.image.url} alt={chosen.image.alt} fill sizes="80px" className="object-cover" />}
               </div>
               <div className="min-w-0 text-sm">
-                <p className="font-semibold text-white">
+                <p className="font-semibold text-t1">
                   {chosen.name}
                   {chosen.subtitle ? `, ${chosen.subtitle}` : ""}
                 </p>
-                <p className="text-xs text-white/50">{chosen.publicCode}</p>
+                <p className="text-xs text-t3">{chosen.publicCode}</p>
                 {target && (
                   <p className="mt-1 text-xs text-brand-gold">
                     Page {Math.floor(target.position / perPage) + 1}, slot {(target.position % perPage) + 1}
@@ -475,13 +477,13 @@ export function ScanCardModal({
                   </p>
                 )}
                 {priceNow !== null && (
-                  <p className="mt-1 text-xs text-white/70">
-                    ≈ <span className="font-semibold text-white">{formatEur(priceNow)}</span>{" "}
-                    <span className="text-white/40">{activeFinish === "foil" ? "foil" : "normal"} · Cardmarket</span>
+                  <p className="mt-1 text-xs text-t2">
+                    ≈ <span className="font-semibold text-t1">{formatEur(priceNow)}</span>{" "}
+                    <span className="text-t3">{activeFinish === "foil" ? "foil" : "normal"} · Cardmarket</span>
                   </p>
                 )}
-                {shown?.via === "name" && <p className="mt-1 text-[11px] text-white/40">Matched by name - check the print</p>}
-                {shown?.via === "image" && shown.candidates.length > 1 && <p className="mt-1 text-[11px] text-white/40">Other prints of this card are available below</p>}
+                {shown?.via === "name" && <p className="mt-1 text-[11px] text-t3">Matched by name - check the print</p>}
+                {shown?.via === "image" && shown.candidates.length > 1 && <p className="mt-1 text-[11px] text-t3">Other prints of this card are available below</p>}
               </div>
             </div>
 
@@ -492,7 +494,7 @@ export function ScanCardModal({
                     key={c.id}
                     onClick={() => setPick(i)}
                     className={`rounded-md border px-2 py-1 text-[11px] ${
-                      i === pick ? "border-brand-gold bg-brand-gold/10 text-brand-gold" : "border-white/10 text-white/60 hover:text-white"
+                      i === pick ? "border-brand-gold bg-brand-gold/10 text-brand-gold" : "border-line text-t2 hover:text-t1"
                     }`}
                   >
                     {c.publicCode.replace(/\/.*/, "")}
@@ -515,8 +517,8 @@ export function ScanCardModal({
                           activeFinish === f
                             ? f === "foil"
                               ? "bg-brand-gold text-ink"
-                              : "bg-brand-cyan text-ink"
-                            : "border border-white/15 text-white/70"
+                              : "bg-ok text-ink"
+                            : "border border-line text-t2"
                         }`}
                       >
                         {f === "foil" ? "✦ Foil" : "Normal"}
@@ -524,7 +526,7 @@ export function ScanCardModal({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-white/60">
+                  <p className="text-xs text-t2">
                     This card only exists as{" "}
                     <span className="font-semibold text-foil">{activeFinish === "foil" ? "foil" : "normal"}</span>.
                   </p>
@@ -541,7 +543,7 @@ export function ScanCardModal({
               </button>
               <button
                 onClick={() => dismiss(chosen)}
-                className="rounded-md border border-white/15 px-5 py-3 text-sm text-white/70 hover:text-white"
+                className="rounded-md border border-line px-5 py-3 text-sm text-t2 hover:text-t1"
               >
                 Skip
               </button>
