@@ -12,7 +12,6 @@ export const SORT_OPTIONS: { id: SortKey; label: string }[] = [
   { id: "domain", label: "Domain" },
   { id: "rarity", label: "Rarity" },
   { id: "set", label: "Set" },
-  { id: "owned", label: "Owned" },
 ];
 
 const RARITY_ORDER = ["common", "uncommon", "rare", "epic", "showcase"];
@@ -53,9 +52,15 @@ function valueOf(card: RiftCard, key: SortKey, ctx: SortCtx): number | string | 
   }
 }
 
-export function sortCards(cards: RiftCard[], key: SortKey, dir: SortDir, ctx: SortCtx): RiftCard[] {
+// With `ownedFirst`, the cards you own most copies of come first, and `key`/`dir` order the cards within
+// each group of equal ownership.
+export function sortCards(cards: RiftCard[], key: SortKey, dir: SortDir, ctx: SortCtx, ownedFirst = false): RiftCard[] {
   const sign = dir === "asc" ? 1 : -1;
   return [...cards].sort((a, b) => {
+    if (ownedFirst) {
+      const d = ctx.owned(b) - ctx.owned(a);
+      if (d !== 0) return d;
+    }
     const va = valueOf(a, key, ctx);
     const vb = valueOf(b, key, ctx);
     if (va !== vb) {

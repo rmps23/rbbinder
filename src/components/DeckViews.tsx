@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useRef, useSyncExternalStore, type PointerEvent } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore, type PointerEvent } from "react";
 import { displayName } from "@/lib/deck";
 import { formatEur } from "@/lib/format";
 import { domainColor } from "@/lib/style";
@@ -9,21 +9,15 @@ import type { DeckEntry, DeckZone, RiftCard } from "@/lib/types";
 
 export type Row = { entry: DeckEntry; card: RiftCard };
 
-// Shadows around cards stay neutral (no coloured glows) - the domain is shown
-// by its dots instead.
-export function primaryColor(_card?: RiftCard): string {
-  return "rgba(0,0,0,0.55)";
-}
-
-export function CardArt({ card, sizes, className = "" }: { card: RiftCard; sizes: string; className?: string }) {
+export function CardArt({ card, sizes, className = "", quality }: { card: RiftCard; sizes: string; className?: string; quality?: number }) {
   return (
     <div
-      className={`relative aspect-[744/1039] overflow-hidden bg-[#0a0c10] ring-1 ring-white/15 shadow-[0_8px_18px_-8px_rgba(0,0,0,0.8)] ${className}`}
+      className={`relative aspect-[744/1039] overflow-hidden bg-[#0a0c10] ring-1 ring-line2 ${className}`}
     >
       {card.image.url ? (
-        <Image src={card.image.url} alt={card.image.alt} fill sizes={sizes} className="object-cover" />
+        <Image src={card.image.url} alt={card.image.alt} fill sizes={sizes} quality={quality} className="object-cover" />
       ) : (
-        <span className="flex h-full items-center justify-center p-1 text-center text-[10px] text-white/40">{card.name}</span>
+        <span className="flex h-full items-center justify-center p-1 text-center text-[10px] text-t3">{card.name}</span>
       )}
     </div>
   );
@@ -84,7 +78,7 @@ function PreviewLayer({ store }: { store: PreviewStore }) {
       {card.image.url ? (
         <Image src={card.image.url} alt="" fill sizes={`${PREVIEW_W}px`} className="bg-[#0a0c10] object-cover" priority />
       ) : (
-        <span className="flex h-full items-center justify-center bg-panel p-4 text-center text-sm text-white/60">{displayName(card)}</span>
+        <span className="flex h-full items-center justify-center bg-panel p-4 text-center text-sm text-t2">{displayName(card)}</span>
       )}
     </div>
   );
@@ -129,8 +123,8 @@ export function DomainDots({ card }: { card: RiftCard }) {
 function Pip({ children, tone = "gold" }: { children: React.ReactNode; tone?: "gold" | "cyan" }) {
   return (
     <span
-      className={`inline-flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[11px] font-bold ${
-        tone === "gold" ? "bg-brand-gold text-ink" : "bg-brand-cyan text-ink"
+      className={`num inline-flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[11px] font-bold ${
+        tone === "gold" ? "bg-brand-gold text-on-accent" : "bg-ok text-on-accent"
       }`}
     >
       {children}
@@ -142,41 +136,62 @@ export { Pip };
 // "How many do I own?" badge. Without `need` (the card pool) it's cyan when you
 // own it and dim when you don't; with `need` (a card in the deck) it's green when
 // you have enough copies, amber when you have some, red when you have none.
-export function OwnedBadge({ owned, need, className = "" }: { owned: number; need?: number; className?: string }) {
+export function OwnedBadge({ owned, need, className = "", large = false }: { owned: number; need?: number; className?: string; large?: boolean }) {
   const tone =
     need === undefined
       ? owned > 0
-        ? "text-brand-cyan"
-        : "text-white/35"
+        ? "text-ok"
+        : "text-t3"
       : owned >= need
-        ? "text-emerald-300"
+        ? "text-ok"
         : owned > 0
-          ? "text-amber-300"
-          : "text-red-300";
+          ? "text-warn"
+          : "text-bad";
   const dot =
     need === undefined
       ? owned > 0
-        ? "bg-brand-cyan"
-        : "bg-white/25"
+        ? "bg-ok"
+        : "bg-t3"
       : owned >= need
-        ? "bg-emerald-400"
+        ? "bg-ok"
         : owned > 0
-          ? "bg-amber-400"
-          : "bg-red-400";
+          ? "bg-warn"
+          : "bg-bad";
   const title =
     need === undefined
       ? `You own ${owned}`
       : owned >= need
         ? `You own ${owned} - enough for this deck (${need})`
         : `You own ${owned} of the ${need} this deck needs`;
+  if (large) {
+    // card pool: a big pill that is green when you own the card and plain when you don't
+    const has = owned > 0;
+    return (
+      <span
+        title={title}
+        className={`pointer-events-none inline-flex h-8 items-center gap-2 rounded-lg px-2.5 font-bold leading-none tabular-nums ring-2 ${
+          has ? "bg-ink text-ok ring-ok" : "bg-ink text-t2 ring-line2"
+        } ${className}`}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" role="img" aria-label="You own">
+          <title>You own</title>
+          <rect x="7" y="3" width="13" height="17" rx="2" />
+          <path d="M4 7v12a2 2 0 0 0 2 2h9" />
+          {has && <path d="m11 11.5 2 2 3.5-4" />}
+        </svg>
+        <span className="text-base">{owned}</span>
+      </span>
+    );
+  }
   return (
     <span
       title={title}
-      className={`pointer-events-none inline-flex h-5 items-center gap-1 rounded-md bg-black/80 px-1.5 text-[11px] font-bold leading-none tabular-nums shadow ring-1 ring-white/10 backdrop-blur ${tone} ${className}`}
+      className={`pointer-events-none inline-flex h-7 items-center gap-1.5 rounded-lg bg-ink px-2.5 text-xs font-bold leading-none tabular-nums ring-1 ring-line2 ${tone} ${className}`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-      {owned}
-      {need !== undefined && owned < need && <span className="font-medium text-white/45">/{need}</span>}
+      <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />
+      {need === undefined && <span className="font-semibold text-t2">Own</span>}
+      <span className="text-sm">{owned}</span>
+      {need !== undefined && owned < need && <span className="font-medium text-t3">/{need}</span>}
     </span>
   );
 }
@@ -195,15 +210,38 @@ function RowButton({
   return (
     <button
       type="button"
+      aria-label={title}
       title={title}
       onClick={onClick}
-      className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold leading-none transition active:scale-95 ${
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition ${
         tone === "gold"
-          ? "border-brand-gold/50 bg-brand-gold/10 text-brand-gold hover:bg-brand-gold hover:text-ink"
-          : "border-white/15 bg-white/[0.04] text-white/65 hover:border-white/35 hover:bg-white/10 hover:text-white"
+          ? "border-brand-gold/50 text-brand-gold hover:bg-brand-gold hover:text-on-accent"
+          : "border-line bg-ink text-t2 hover:border-line2 hover:text-t1"
       }`}
     >
       {children}
+    </button>
+  );
+}
+
+// A small square button with an eye: hovering it shows the big card preview, clicking it opens the full details.
+export function EyeButton({ card, preview, onInspect, className = "", small = false }: { card: RiftCard; preview: PreviewBind; onInspect: (card: RiftCard) => void; className?: string; small?: boolean }) {
+  return (
+    <button
+      type="button"
+      {...preview(card)}
+      onClick={(e) => {
+        e.stopPropagation();
+        onInspect(card);
+      }}
+      aria-label={`Preview ${displayName(card)}`}
+      title="Preview card"
+      className={`flex shrink-0 items-center justify-center rounded-lg border border-line bg-ink text-t2 transition hover:border-line2 hover:text-t1 ${small ? "h-7 w-7" : "h-9 w-9"} ${className}`}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={small ? "h-4 w-4" : "h-[18px] w-[18px]"} aria-hidden="true">
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
     </button>
   );
 }
@@ -219,6 +257,7 @@ export function ListView({
   ownedOf,
   neededOf,
   preview,
+  onInspect,
   onPickPrinting,
   onAdjust,
   onMove,
@@ -231,6 +270,7 @@ export function ListView({
   ownedOf: (card: RiftCard) => number;
   neededOf: (card: RiftCard) => number;
   preview: PreviewBind;
+  onInspect: (card: RiftCard) => void;
   onPickPrinting: (row: Row) => void;
   onAdjust: (row: Row, delta: number) => void;
   onMove: (row: Row, to: DeckZone) => void;
@@ -244,95 +284,95 @@ export function ListView({
         const done = zone.target !== null && count >= zone.target;
         return (
           <section key={zone.id}>
-            <h3 className="mb-2 flex items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
+            <h3 className="mb-2 flex items-center justify-between font-display text-sm font-semibold uppercase tracking-[0.08em] text-t1">
               {zone.label}
               <span
-                className={`rounded-md px-2 py-0.5 text-[11px] tracking-normal ${
-                  done ? "bg-emerald-400/15 text-emerald-300" : "bg-white/5 text-white/50"
+                className={`num rounded-md px-2 py-0.5 text-xs font-semibold tracking-normal ${
+                  done ? "bg-ok/15 text-ok" : "bg-cavity text-t2"
                 }`}
               >
+                {done ? "✓ " : ""}
                 {count}
                 {goal ? ` / ${goal}` : ""}
               </span>
             </h3>
             {rows.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-white/10 py-3 text-center text-xs text-white/25">
+              <p className="rounded-lg border border-dashed border-line2 py-3 text-center text-xs text-t3">
                 Nothing here yet
               </p>
             ) : (
-              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <ul className="flex flex-col gap-1.5">
                 {rows.map((row) => {
                   const { entry, card } = row;
-                  const color = primaryColor(card);
                   return (
                     <li
                       key={`${entry.zone}:${entry.cardId}`}
-                      {...preview(card)}
-                      className="group relative flex animate-card-in items-center gap-2 overflow-hidden rounded-xl border border-white/[0.07] bg-panel2 p-1.5 transition hover:border-white/20"
+                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-line bg-panel2 p-2 transition hover:border-line2"
                     >
                       <button
                         type="button"
                         onClick={() => onPickPrinting(row)}
-                        title={versionsOf(card) > 1 ? "Choose the version (regular, alt art, …)" : card.publicCode}
-                        className="relative ml-1 w-11 shrink-0"
+                        title={versionsOf(card) > 1 ? `Choose the version (${versionsOf(card)} available)` : card.publicCode}
+                        className="relative w-11 shrink-0"
                       >
-                        <CardArt card={card} sizes="48px" className="rounded-md" />
+                        <CardArt card={card} sizes="96px" quality={85} className="rounded-md" />
                         {versionsOf(card) > 1 && (
-                          <span className="absolute inset-x-0 bottom-0 rounded-b-md bg-black/75 text-center text-[8px] font-semibold leading-3 text-white/85">
-                            {versionsOf(card)} versions
+                          <span className="num absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-md bg-cavity px-1 text-[10px] font-bold text-t1 ring-1 ring-line2">
+                            {versionsOf(card)}
                           </span>
                         )}
                       </button>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-semibold text-white">{displayName(card)}</span>
-                        <span className="flex items-center gap-1.5 text-[11px] text-white/40">
-                          {card.energy !== null && <Pip>{card.energy}</Pip>}
-                          <DomainDots card={card} />
-                          <OwnedBadge owned={ownedOf(card)} need={neededOf(card)} className="ml-auto" />
-                        </span>
-                        <span className="mt-1.5 flex gap-1.5">
-                          {entry.zone === "main" && card.types.includes("unit") && canChampion(card) && (
-                            <RowButton tone="gold" onClick={() => onMove(row, "champion")} title="Use as your chosen champion">
-                              ★ Champion
-                            </RowButton>
-                          )}
-                          {entry.zone === "main" && (
-                            <RowButton onClick={() => onMove(row, "sideboard")} title="Move one copy to the sideboard">
-                              ⇄ Sideboard
-                            </RowButton>
-                          )}
-                          {entry.zone === "sideboard" && (
-                            <RowButton onClick={() => onMove(row, "main")} title="Move one copy to the main deck">
-                              ⇄ Main deck
-                            </RowButton>
-                          )}
-                          {entry.zone === "champion" && (
-                            <RowButton onClick={() => onMove(row, "main")} title="Put it back in the main deck">
-                              ✕ Unset
-                            </RowButton>
-                          )}
+
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-t1" title={displayName(card)}>{displayName(card)}</span>
+                        <span className="mt-1 flex items-center gap-2">
+                          <OwnedBadge owned={ownedOf(card)} need={neededOf(card)} />
                         </span>
                       </span>
-                      <span className="flex shrink-0 flex-col items-center">
-                        <button
-                          type="button"
-                          aria-label="Add one"
-                          onClick={() => onAdjust(row, 1)}
-                          className="flex h-6 w-7 items-center justify-center rounded-t-md bg-white/5 text-sm hover:bg-brand-gold hover:text-ink active:scale-95"
-                        >
-                          +
-                        </button>
-                        <span key={entry.qty} className="animate-pop py-0.5 font-display text-lg font-bold leading-none text-brand-gold">
-                          {entry.qty}
+
+                      <span className="flex items-center gap-1.5">
+                        <EyeButton card={card} preview={preview} onInspect={onInspect} />
+                        {entry.zone === "main" && card.types.includes("unit") && canChampion(card) && (
+                          <RowButton tone="gold" onClick={() => onMove(row, "champion")} title="Use as your chosen champion">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5L2.6 9.8l6.5-.9L12 3Z" /></svg>
+                          </RowButton>
+                        )}
+                        {entry.zone === "main" && (
+                          <RowButton onClick={() => onMove(row, "sideboard")} title="Move one copy to the sideboard">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="M7 7h13m-4-4 4 4-4 4M17 17H4m4-4-4 4 4 4" /></svg>
+                          </RowButton>
+                        )}
+                        {entry.zone === "sideboard" && (
+                          <RowButton onClick={() => onMove(row, "main")} title="Move one copy to the main deck">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="M7 7h13m-4-4 4 4-4 4M17 17H4m4-4-4 4 4 4" /></svg>
+                          </RowButton>
+                        )}
+                        {entry.zone === "champion" && (
+                          <RowButton onClick={() => onMove(row, "main")} title="Put it back in the main deck (unset champion)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                          </RowButton>
+                        )}
+                        <span className="flex items-center rounded-lg border border-line bg-ink">
+                          <button
+                            type="button"
+                            aria-label={`Remove one ${displayName(card)}`}
+                            onClick={() => onAdjust(row, -1)}
+                            className="flex h-9 w-9 items-center justify-center rounded-l-lg text-t2 transition hover:bg-bad/15 hover:text-bad"
+                          >
+                            −
+                          </button>
+                          <span key={entry.qty} className="num w-7 animate-pop text-center font-display text-lg font-bold leading-none text-brand-gold" aria-live="polite">
+                            {entry.qty}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Add one ${displayName(card)}`}
+                            onClick={() => onAdjust(row, 1)}
+                            className="flex h-9 w-9 items-center justify-center rounded-r-lg text-t2 transition hover:bg-cavity hover:text-t1"
+                          >
+                            +
+                          </button>
                         </span>
-                        <button
-                          type="button"
-                          aria-label="Remove one"
-                          onClick={() => onAdjust(row, -1)}
-                          className="flex h-6 w-7 items-center justify-center rounded-b-md bg-white/5 text-sm hover:bg-brand-red hover:text-white active:scale-95"
-                        >
-                          −
-                        </button>
                       </span>
                     </li>
                   );
@@ -354,6 +394,7 @@ export function ArtView({
   ownedOf,
   neededOf,
   preview,
+  onInspect,
   onAdjust,
 }: {
   zones: { id: DeckZone; label: string }[];
@@ -361,6 +402,7 @@ export function ArtView({
   ownedOf: (card: RiftCard) => number;
   neededOf: (card: RiftCard) => number;
   preview: PreviewBind;
+  onInspect: (card: RiftCard) => void;
   onAdjust: (row: Row, delta: number) => void;
 }) {
   return (
@@ -370,23 +412,22 @@ export function ArtView({
         if (!rows.length) return null;
         return (
           <section key={zone.id}>
-            <h3 className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">{zone.label}</h3>
+            <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-[0.08em] text-t1">{zone.label}</h3>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {rows.map((row) => (
                 <div key={`${row.entry.zone}:${row.entry.cardId}`} className="group relative animate-card-in">
                   <button
                     type="button"
                     onClick={() => onAdjust(row, 1)}
-                    {...preview(row.card)}
-                    className="block w-full rounded-lg ring-2 ring-transparent transition hover:-translate-y-1 hover:ring-brand-gold/70"
-                    style={{ boxShadow: `0 6px 18px -8px ${primaryColor(row.card)}` }}
+                    className="block w-full rounded-lg ring-2 ring-transparent transition hover:ring-brand-gold/70"
                   >
-                    <CardArt card={row.card} sizes="120px" className="rounded-lg" />
+                    <CardArt card={row.card} sizes="(min-width: 1024px) 240px, 30vw" quality={92} className="rounded-lg" />
                   </button>
+                  <EyeButton card={row.card} preview={preview} onInspect={onInspect} className="absolute left-1 top-1 bg-ink/95 sm:opacity-0 sm:focus-visible:opacity-100 sm:group-hover:opacity-100" />
                   <OwnedBadge owned={ownedOf(row.card)} need={neededOf(row.card)} className="absolute bottom-1 left-1" />
                   <span
                     key={row.entry.qty}
-                    className="absolute -right-1 -top-1 flex h-6 min-w-6 animate-pop items-center justify-center rounded-md bg-brand-gold px-1 text-xs font-bold text-ink shadow-lg"
+                    className="num absolute -right-1 -top-1 flex h-6 min-w-6 animate-pop items-center justify-center rounded-md bg-brand-gold px-1 text-xs font-bold text-on-accent"
                   >
                     ×{row.entry.qty}
                   </span>
@@ -394,7 +435,7 @@ export function ArtView({
                     type="button"
                     aria-label="Remove one"
                     onClick={() => onAdjust(row, -1)}
-                    className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-sm opacity-0 transition hover:bg-brand-red group-hover:opacity-100"
+                    className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-md border border-line2 bg-ink/95 text-sm text-t1 opacity-0 transition hover:border-bad hover:text-bad focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     −
                   </button>
@@ -404,136 +445,6 @@ export function ArtView({
           </section>
         );
       })}
-    </div>
-  );
-}
-
-// ---------- stats ----------
-
-export function StatsView({ rows }: { rows: Row[] }) {
-  // Everything that goes into the 40 (main + champion), runes/battlefields aside.
-  const playable = rows.filter((r) => r.entry.zone === "main" || r.entry.zone === "champion");
-  const curve = Array.from({ length: 8 }, () => 0);
-  const domains = new Map<string, number>();
-  const types = new Map<string, number>();
-  let energyTotal = 0;
-  let energyCount = 0;
-  for (const { entry, card } of playable) {
-    const q = entry.qty;
-    for (const t of card.types) types.set(t, (types.get(t) ?? 0) + q);
-    for (const d of card.domains) domains.set(d.id, (domains.get(d.id) ?? 0) + q);
-    if (card.energy !== null) {
-      curve[Math.min(7, card.energy)] += q;
-      energyTotal += card.energy * q;
-      energyCount += q;
-    }
-  }
-  const peak = Math.max(1, ...curve);
-  const total = playable.reduce((n, r) => n + r.entry.qty, 0);
-
-  // Power (coloured cost) the deck asks for per domain, against the runes that pay for it.
-  const power = new Map<string, { pips: number; cards: number; runes: number }>();
-  const bump = (d: string) => power.get(d) ?? power.set(d, { pips: 0, cards: 0, runes: 0 }).get(d)!;
-  for (const { entry, card } of playable) {
-    if (!card.power) continue;
-    for (const d of card.domains) {
-      if (d.id === "colorless") continue;
-      const p = bump(d.id);
-      p.pips += card.power * entry.qty;
-      p.cards += entry.qty;
-    }
-  }
-  for (const { entry, card } of rows) {
-    if (entry.zone !== "rune") continue;
-    for (const d of card.domains) bump(d.id).runes += entry.qty;
-  }
-
-  return (
-    <div className="flex flex-col gap-5">
-      <section className="rounded-xl border border-white/[0.07] bg-panel2 p-4">
-        <h3 className="mb-3 flex items-baseline justify-between font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
-          Energy curve
-          <span className="text-[11px] normal-case tracking-normal text-white/40">
-            avg {energyCount ? (energyTotal / energyCount).toFixed(1) : "–"}
-          </span>
-        </h3>
-        <div className="flex h-36 items-end gap-2">
-          {curve.map((n, i) => (
-            <div key={i} className="flex flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[11px] text-white/50">{n || ""}</span>
-              <div
-                className="w-full rounded-t-md bg-white/70 transition-all duration-500"
-                style={{ height: `${(n / peak) * 100}%`, minHeight: n ? 4 : 0 }}
-              />
-              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/10 text-[10px] font-bold">
-                {i === 7 ? "7+" : i}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-white/[0.07] bg-panel2 p-4">
-        <h3 className="mb-3 font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Colours</h3>
-        {[...domains].length === 0 ? (
-          <p className="text-xs text-white/30">No cards yet.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {[...domains].sort((a, b) => b[1] - a[1]).map(([id, n]) => (
-              <div key={id} className="flex items-center gap-2 text-xs">
-                <span className="w-16 capitalize text-white/60">{id}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-sm bg-white/10">
-                  <div
-                    className="h-full rounded-md transition-all duration-500"
-                    style={{ width: `${(n / Math.max(1, total)) * 100}%`, background: domainColor(id) }}
-                  />
-                </div>
-                <span className="w-6 text-right text-white/50">{n}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-white/[0.07] bg-panel2 p-4">
-        <h3 className="mb-1 font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Power &amp; runes</h3>
-        <p className="mb-3 text-[11px] text-white/35">Coloured power your cards cost, by domain, and the runes in the deck that produce it.</p>
-        {power.size === 0 ? (
-          <p className="text-xs text-white/30">No cards with a power cost yet.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {[...power].sort((a, b) => b[1].pips - a[1].pips).map(([id, p]) => {
-              const short = p.pips > 0 && p.runes === 0;
-              return (
-                <div key={id} className="flex items-center gap-3 text-xs">
-                  <span className="flex w-16 items-center gap-1.5 capitalize text-white/70">
-                    <span className="h-2 w-2 rounded-full" style={{ background: domainColor(id) }} />
-                    {id}
-                  </span>
-                  <span className="flex-1 text-white/55">
-                    {p.cards} card{p.cards === 1 ? "" : "s"} · {p.pips} power
-                  </span>
-                  <span className={short ? "font-semibold text-brand-red" : "text-white/80"}>
-                    {p.runes} rune{p.runes === 1 ? "" : "s"}
-                    {short ? " - none!" : ""}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-white/[0.07] bg-panel2 p-4">
-        <h3 className="mb-3 font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Card types</h3>
-        <div className="flex flex-wrap gap-2">
-          {[...types].sort((a, b) => b[1] - a[1]).map(([t, n]) => (
-            <span key={t} className="rounded-md bg-white/5 px-3 py-1 text-xs capitalize text-white/70">
-              {t} <b className="text-brand-gold">{n}</b>
-            </span>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
@@ -549,6 +460,25 @@ export type CompareData = {
   totalHave: number;
 };
 
+function SectionToggle({ open, onToggle, label, count, tone }: { open: boolean; onToggle: () => void; label: string; count: number; tone: "ok" | "bad" }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-line bg-ink px-3.5 text-left transition hover:border-line2"
+    >
+      <span className="font-display text-sm font-semibold uppercase tracking-[0.08em] text-t1">{label}</span>
+      <span className="flex items-center gap-3">
+        <span className={`num rounded-md px-2 py-0.5 text-xs font-semibold ${tone === "ok" ? "bg-brand-gold/15 text-brand-gold" : "bg-bad/15 text-bad"}`}>{count}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={`h-4 w-4 text-t3 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </button>
+  );
+}
+
 export function BulkView({
   compare,
   hasCards,
@@ -557,6 +487,8 @@ export function BulkView({
   includeSideboard,
   onIncludeSideboard,
   onWants,
+  preview,
+  onInspect,
 }: {
   compare: CompareData;
   hasCards: boolean;
@@ -565,91 +497,130 @@ export function BulkView({
   includeSideboard: boolean;
   onIncludeSideboard: (v: boolean) => void;
   onWants: () => void;
+  preview: PreviewBind;
+  onInspect: (card: RiftCard) => void;
 }) {
+  const [haveOpen, setHaveOpen] = useState(false);
+  const [missingOpen, setMissingOpen] = useState(false);
   const pct = compare.totalNeeded ? Math.round((compare.totalHave / compare.totalNeeded) * 100) : 0;
+  const complete = pct >= 100;
+
+  const Toggle = ({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className="flex h-11 flex-1 items-center justify-between gap-3 rounded-lg border border-line bg-ink px-3.5 text-sm font-semibold text-t2 transition hover:border-line2"
+    >
+      {label}
+      <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${on ? "bg-brand-gold" : "bg-cavity"}`}>
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
+      </span>
+    </button>
+  );
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-white/[0.07] bg-panel2 p-4">
-        <div className="flex items-end justify-between">
-          <p className="font-display text-3xl font-bold">
-            <span className="text-brand-cyan">{compare.totalHave}</span>
-            <span className="text-white/35"> / {compare.totalNeeded}</span>
-          </p>
-          <span className="font-display text-xl text-white/60">{pct}%</span>
+      {/* summary */}
+      <section className="rounded-xl border border-line bg-ink p-4">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="label">You own</p>
+            <p className="num mt-1 font-display text-3xl font-bold leading-none">
+              <span className="text-ok">{compare.totalHave}</span>
+              <span className="text-t3"> / {compare.totalNeeded}</span>
+            </p>
+          </div>
+          <span className={`num rounded-md px-2.5 py-1 text-sm font-bold ${complete ? "bg-ok/15 text-ok" : "bg-cavity text-t1"}`}>
+            {complete ? "✓ " : ""}
+            {pct}%
+          </span>
         </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-sm bg-white/10">
-          <div className="h-full rounded-md bg-brand-gold transition-all duration-700" style={{ width: `${pct}%` }} />
+        <div className="mt-3 h-2 overflow-hidden rounded-sm bg-cavity">
+          <div className={`h-full rounded-sm transition-all duration-700 ${complete ? "bg-ok" : "bg-brand-gold"}`} style={{ width: `${pct}%` }} />
         </div>
-        <p className="mt-1 text-[11px] uppercase tracking-wide text-white/40">cards you own (bulk + binders, regular versions)</p>
+        <p className="mt-2 text-xs text-t3">Cards from bulk and binders, regular versions.</p>
+
         {compare.missing.length > 0 && (
-          <p className="mt-3 text-sm text-white/60">
-            To complete it <span className="font-display text-lg font-semibold text-brand-gold">≈ {formatEur(compare.missingCost)}</span>
-            <span className="block text-[11px] text-white/35">
-              cheapest printing (Cardmarket trend){compare.missingUnpriced ? ` · ${compare.missingUnpriced} without a price` : ""}
-            </span>
-          </p>
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-line bg-panel2 px-3.5 py-3">
+            <div>
+              <p className="label">To complete it</p>
+              <p className="num mt-1 text-xl font-bold leading-none text-brand-gold">{formatEur(compare.missingCost)}</p>
+            </div>
+            <p className="max-w-[11rem] text-right text-[11px] leading-snug text-t3">
+              Cheapest printing, Cardmarket trend
+              {compare.missingUnpriced ? ` · ${compare.missingUnpriced} without a price` : ""}
+            </p>
+          </div>
         )}
-        <label className="mt-3 flex items-center gap-2 text-xs text-white/50">
-          <input type="checkbox" checked={includeRunes} onChange={(e) => onIncludeRunes(e.target.checked)} />
-          Include runes
-        </label>
-        <label className="mt-1 flex items-center gap-2 text-xs text-white/50">
-          <input type="checkbox" checked={includeSideboard} onChange={(e) => onIncludeSideboard(e.target.checked)} />
-          Include sideboard
-        </label>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Toggle on={includeRunes} onChange={onIncludeRunes} label="Include runes" />
+          <Toggle on={includeSideboard} onChange={onIncludeSideboard} label="Include sideboard" />
+        </div>
+
         {compare.missing.length > 0 && (
           <button
             type="button"
             onClick={onWants}
-            className="mt-3 w-full rounded-md border border-white/15 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/5"
+            className="btn-3d mt-4 flex h-11 w-full items-center justify-center rounded-lg font-display text-xs font-semibold uppercase tracking-wide"
           >
             Export missing cards for Cardmarket
           </button>
         )}
-      </div>
-
-      <section>
-        <h3 className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-brand-cyan">In your collection</h3>
-        {compare.have.length === 0 ? (
-          <p className="text-xs text-white/30">Nothing from the deck is in your collection.</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-2.5">
-            {compare.have.map((r) => (
-              <div key={r.key} className="animate-card-in">
-                <div className="relative rounded-lg ring-2 ring-brand-cyan/40" title={displayName(r.card)}>
-                  <CardArt card={r.card} sizes="140px" className="rounded-lg" />
-                  <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-md bg-brand-cyan px-1.5 text-xs font-bold text-ink shadow-lg">
-                    {r.qty}
-                    {r.qty < r.needed ? `/${r.needed}` : ""}
-                  </span>
-                </div>
-                <p className="mt-1 truncate text-[11px] text-white/70">{displayName(r.card)}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
+      {/* have */}
       <section>
-        <h3 className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-brand-red">Missing</h3>
-        {compare.missing.length === 0 ? (
-          <p className="text-xs text-white/30">{hasCards ? "You have everything. Time to sleeve up!" : "Add cards to the deck."}</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-2.5">
-            {compare.missing.map((r) => (
-              <div key={r.key} className="animate-card-in">
-                <div className="relative rounded-lg ring-2 ring-brand-red/40" title={displayName(r.card)}>
-                  <CardArt card={r.card} sizes="140px" className="rounded-lg opacity-80" />
-                  <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-md bg-brand-red px-1.5 text-xs font-bold text-white shadow-lg">
-                    ×{r.qty}
-                  </span>
+        <SectionToggle open={haveOpen} onToggle={() => setHaveOpen((o) => !o)} label="In your collection" count={compare.have.length} tone="ok" />
+        {haveOpen &&
+          (compare.have.length === 0 ? (
+            <p className="mt-2.5 rounded-lg border border-dashed border-line2 py-4 text-center text-xs text-t3">Nothing from the deck is in your collection.</p>
+          ) : (
+            <div className="mt-3 grid grid-cols-5 gap-2.5">
+              {compare.have.map((r) => (
+                <div key={r.key} className="group">
+                  <div className="relative overflow-hidden rounded-lg border-2 border-brand-gold/70" title={displayName(r.card)}>
+                    <CardArt card={r.card} sizes="(min-width: 1024px) 160px, 20vw" quality={90} className="rounded-none ring-0" />
+                    <EyeButton small card={r.card} preview={preview} onInspect={onInspect} className="absolute left-1 top-1 bg-ink/95 sm:opacity-0 sm:focus-visible:opacity-100 sm:group-hover:opacity-100" />
+                    <span className="num absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-md bg-brand-gold px-1 text-[11px] font-bold text-on-accent">
+                      {r.qty}
+                      {r.qty < r.needed ? `/${r.needed}` : ""}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 truncate text-[11px] text-t2">{displayName(r.card)}</p>
                 </div>
-                <p className="mt-1 truncate text-[11px] text-white/70">{displayName(r.card)}</p>
-                {r.price !== null && <p className="text-[10px] text-white/40">from {formatEur(r.price)}</p>}
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          ))}
+      </section>
+
+      {/* missing */}
+      <section>
+        <SectionToggle open={missingOpen} onToggle={() => setMissingOpen((o) => !o)} label="Missing" count={compare.missing.length} tone="bad" />
+        {missingOpen &&
+          (compare.missing.length === 0 ? (
+            <p className="mt-2.5 rounded-lg border border-dashed border-line2 py-4 text-center text-xs text-t3">
+              {hasCards ? "✓ You have everything. Time to sleeve up!" : "Add cards to the deck."}
+            </p>
+          ) : (
+            <div className="mt-3 grid grid-cols-5 gap-2.5">
+              {compare.missing.map((r) => (
+                <div key={r.key} className="group">
+                  <div className="relative overflow-hidden rounded-lg border-2 border-bad/60" title={displayName(r.card)}>
+                    <CardArt card={r.card} sizes="(min-width: 1024px) 160px, 20vw" quality={90} className="rounded-none ring-0 opacity-75" />
+                    <EyeButton small card={r.card} preview={preview} onInspect={onInspect} className="absolute left-1 top-1 bg-ink/95 sm:opacity-0 sm:focus-visible:opacity-100 sm:group-hover:opacity-100" />
+                    <span className="num absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-md bg-bad px-1 text-[11px] font-bold text-on-accent">
+                      ×{r.qty}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 truncate text-[11px] text-t2">{displayName(r.card)}</p>
+                  {r.price !== null && <p className="num text-[10px] text-t3">from {formatEur(r.price)}</p>}
+                </div>
+              ))}
+            </div>
+          ))}
       </section>
     </div>
   );
@@ -669,28 +640,28 @@ export function RulesPanel({
   stale: boolean;
 }) {
   return (
-    <details className="group mb-4 rounded-xl border border-white/[0.07] bg-panel2" open={!legal}>
-      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5">
-        <span className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Deck rules</span>
+    <details className="group mb-4 rounded-xl border border-line bg-ink" open={!legal}>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3">
+        <span className="font-display text-sm font-semibold uppercase tracking-[0.08em] text-t1">Deck rules</span>
         <span
-          className={`rounded-md px-2.5 py-0.5 text-[11px] font-semibold ${
-            legal ? "bg-emerald-400/15 text-emerald-300" : "bg-brand-gold/15 text-brand-goldSoft"
+          className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+            legal ? "bg-ok/15 text-ok" : "bg-warn/15 text-warn"
           }`}
         >
           {legal ? "✓ Legal" : `${checks.filter((c) => !c.ok).length} to fix`}
         </span>
       </summary>
-      <ul className="grid grid-cols-1 gap-x-4 gap-y-1 px-3 pb-3 text-xs sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-x-5 gap-y-1.5 border-t border-line px-3 py-3 text-xs sm:grid-cols-2">
         {checks.map((c) => (
           <li key={c.id} className="flex items-start gap-2">
-            <span className={`mt-px ${c.ok ? "text-emerald-300" : "text-white/30"}`}>{c.ok ? "✓" : "○"}</span>
-            <span className={`flex-1 ${c.ok ? "text-white/60" : "text-white/85"}`}>{c.label}</span>
-            <span className={c.ok ? "text-white/30" : "text-brand-gold"}>{c.detail}</span>
+            <span className={`mt-px ${c.ok ? "text-ok" : "text-t3"}`} aria-label={c.ok ? "met" : "not met"}>{c.ok ? "✓" : "○"}</span>
+            <span className={`flex-1 ${c.ok ? "text-t2" : "text-t1"}`}>{c.label}</span>
+            <span className={`num ${c.ok ? "text-t3" : "text-warn"}`}>{c.detail}</span>
           </li>
         ))}
       </ul>
       {problems.length > 0 && (
-        <ul className="border-t border-white/[0.06] px-3 py-2 text-xs text-brand-red">
+        <ul className="border-t border-line px-3 py-2 text-xs text-bad">
           {problems.slice(0, 6).map((p) => (
             <li key={p}>⚠ {p}</li>
           ))}
@@ -698,7 +669,7 @@ export function RulesPanel({
         </ul>
       )}
       {stale && (
-        <p className="border-t border-white/[0.06] px-3 py-2 text-[11px] text-white/40">
+        <p className="border-t border-line px-3 py-2 text-[11px] text-t3">
           Press “Sync cards” on the dashboard once to load champion and signature data - until then those two rules aren&apos;t checked.
         </p>
       )}

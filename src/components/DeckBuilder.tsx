@@ -1,5 +1,9 @@
 "use client";
 
+import { SlideGroup } from "@/components/SlideGroup";
+import { ListSkeleton } from "@/components/Skeletons";
+import { Select } from "@/components/Select";
+import { MultiSelect } from "@/components/MultiSelect";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppData } from "./AppDataProvider";
@@ -8,9 +12,12 @@ import { WantsModal } from "./WantsModal";
 import { useCollection } from "@/lib/useCollection";
 import { cardmarketWants } from "@/lib/wants";
 import { PRINTING_LABEL, printingKind } from "@/lib/setCollection";
-import { ArtView, BulkView, CardArt, DomainDots, ListView, OwnedBadge, Pip, RulesPanel, StatsView, primaryColor, useCardPreview, type CompareData, type Row } from "./DeckViews";
+import { CardDetailModal } from "./CardDetailModal";
+import { DeckStats } from "./DeckStats";
+import { ArtView, BulkView, CardArt, EyeButton, ListView, OwnedBadge, RulesPanel, useCardPreview, type CompareData, type Row } from "./DeckViews";
 import { DOMAIN_OPTIONS } from "@/lib/constants";
 import { availableFinishes } from "@/lib/cardFinish";
+import { isBanned } from "@/lib/banlist";
 import { buildDeckIndex, cardKey, displayName, exportDeck, neededByKey, parseDeck, ZONES } from "@/lib/deck";
 import { belongsInPool, checkDeck, hasRuleData, LIMITS, whyNot } from "@/lib/deckRules";
 import { domainColor } from "@/lib/style";
@@ -32,24 +39,22 @@ const VIEWS: { id: View; label: string }[] = [
   { id: "bulk", label: "Owned" },
 ];
 
-const chip = (on: boolean) =>
-  `rounded-md px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
-    on ? "bg-brand-gold text-ink" : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-  }`;
+const chipSlide = (on: boolean) =>
+  `rounded-md px-3 text-sm font-semibold transition ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`;
 
 function Ring({ pct }: { pct: number }) {
   const r = 20;
   const c = 2 * Math.PI * r;
   return (
-    <svg viewBox="0 0 48 48" className="h-12 w-12 -rotate-90 shrink-0">
-      <circle cx="24" cy="24" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="5" />
+    <svg viewBox="0 0 48 48" className="h-[72px] w-[72px] -rotate-90 shrink-0">
+      <circle cx="24" cy="24" r={r} fill="none" className="stroke-cavity" strokeWidth="4" />
       <circle
         cx="24"
         cy="24"
         r={r}
         fill="none"
-        className={pct >= 100 ? "stroke-emerald-400" : "stroke-brand-gold"}
-        strokeWidth="5"
+        className={pct >= 100 ? "stroke-ok" : "stroke-brand-gold"}
+        strokeWidth="4"
         strokeLinecap="round"
         strokeDasharray={c}
         strokeDashoffset={c * (1 - Math.min(1, pct / 100))}
@@ -76,7 +81,7 @@ export function DeckBuilder({ id }: { id: string }) {
 
   const [poolZone, setPoolZone] = useState<DeckZone>("legend");
   const [search, setSearch] = useState("");
-  const [domainId, setDomainId] = useState("");
+  const [domainIds, setDomainIds] = useState<string[]>([]);
   const [setId, setSetId] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [onlyBulk, setOnlyBulk] = useState(false);
@@ -84,8 +89,10 @@ export function DeckBuilder({ id }: { id: string }) {
   const { bind: preview, node: previewNode } = useCardPreview();
   const [sortBy, setSortBy] = useState<SortKey>("energy");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [ownedFirst, setOwnedFirst] = useState(false);
+  const [hideBanned, setHideBanned] = useState(false);
+  const [inspectCard, setInspectCard] = useState<RiftCard | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
-  const [kwOpen, setKwOpen] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
 
   const dirty = useRef(false);
@@ -179,6 +186,7 @@ export function DeckBuilder({ id }: { id: string }) {
 
   const addFromPool = useCallback(
     (card: RiftCard) => {
+      if (isBanned(card)) return;
       if (!tryAdjust(card, poolZone, 1)) return;
       setFlash(card.id);
       setTimeout(() => setFlash((f) => (f === card.id ? null : f)), 300);
@@ -321,12 +329,16 @@ export function DeckBuilder({ id }: { id: string }) {
     return out;
   }, [index, poolZone, legend]);
 
-  // Keyword chips: the keywords that exist on this zone's cards, most common first.
+  // Keyword chips: the keywords that exist on this zone's cards, in alphabetical order.
   const keywordOptions = useMemo(() => {
     const counts = new Map<string, number>();
     for (const c of zoneCards) for (const k of searchIndex.get(cardKey(c))?.keywords ?? []) counts.set(k, (counts.get(k) ?? 0) + 1);
-    return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    return [...counts].sort((a, b) => a[0].localeCompare(b[0]));
   }, [zoneCards, searchIndex]);
+
+  // Once a legend is chosen the pool is already limited to its domains, so the domain filter is only
+  // needed while picking the legend itself (or before one exists).
+  const showDomainFilter = !legend || poolZone === "legend";
 
   const pool = useMemo(() => {
     const q = search.trim();
@@ -336,18 +348,20 @@ export function DeckBuilder({ id }: { id: string }) {
       const info = searchIndex.get(key);
       if (q && info && !matchesSearch(info, q)) continue;
       if (keywords.length && !keywords.every((k) => info?.keywords.has(k))) continue;
-      if (domainId && !rep.domains.some((d) => d.id === domainId)) continue;
+      // every ticked domain must be on the card (with two ticked, only cards that have both)
+      if (showDomainFilter && domainIds.length && !domainIds.every((id) => rep.domains.some((d) => d.id === id))) continue;
       if (setId && !(index.byKey.get(key) ?? []).some((c) => c.set.id === setId)) continue;
       if (onlyBulk && !ownedByKey.has(key)) continue;
+      if (hideBanned && isBanned(rep)) continue;
       out.push(rep);
     }
     return sortCards(out, sortBy, sortDir, {
       owned: (c) => ownedByKey.get(cardKey(c)) ?? 0,
       setOrder: (c) => sets.findIndex((s) => s.id === c.set.id),
-    });
-  }, [index, zoneCards, searchIndex, search, keywords, domainId, setId, onlyBulk, ownedByKey, sortBy, sortDir, sets]);
+    }, ownedFirst);
+  }, [index, zoneCards, searchIndex, search, keywords, domainIds, showDomainFilter, setId, onlyBulk, hideBanned, ownedByKey, sortBy, sortDir, ownedFirst, sets]);
 
-  useEffect(() => setVisible(STEP), [poolZone, search, domainId, setId, onlyBulk, keywords, sortBy, sortDir]);
+  useEffect(() => setVisible(STEP), [poolZone, search, domainIds, setId, onlyBulk, hideBanned, keywords, sortBy, sortDir, ownedFirst]);
 
   const inZone = useMemo(() => {
     const m = new Map<string, number>();
@@ -358,31 +372,30 @@ export function DeckBuilder({ id }: { id: string }) {
   if (loadError) {
     return (
       <div className="py-10 text-center">
-        <p className="mb-3 text-red-300">{loadError}</p>
+        <p className="mb-3 text-bad">{loadError}</p>
         <Link href="/decks" className="text-brand-gold underline">
           Back to decks
         </Link>
       </div>
     );
   }
-  if (loading || !deck) return <p className="py-10 text-center text-white/40">Loading deck...</p>;
+  if (loading || !deck) return <ListSkeleton label="Loading deck" />;
 
-  const accent = "linear-gradient(90deg, rgb(var(--accent)), rgb(var(--mint)))";
   const tgt = (z: DeckZone) => ZONES.find((x) => x.id === z)!;
   
   return (
-    <div>
+    <div className="lg:flex lg:h-[calc(100dvh-3rem)] lg:flex-col">
       {/* header */}
-      <div className="relative mb-4 overflow-hidden rounded-2xl border border-white/[0.07] bg-panel p-3 sm:p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href="/decks" className="text-sm text-white/50 hover:text-white">
-            ←
+      <header className="mb-4 rounded-xl border border-line bg-panel p-3 sm:p-4 lg:shrink-0">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <Link href="/decks" aria-label="Back to decks" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line text-t2 transition hover:border-line2 hover:bg-panel2 hover:text-t1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
           </Link>
-          <div className="relative">
+          <div className="relative shrink-0" role="img" aria-label={`${progress} percent complete`}>
             <Ring pct={progress} />
-            <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold">{progress}%</span>
+            <span className="num absolute inset-0 flex items-center justify-center text-[13px] font-bold leading-none tracking-tight text-t1">{progress}%</span>
           </div>
-          <div className="min-w-0 flex-1 basis-48">
+          <div className="min-w-0 flex-1 basis-56">
             <input
               value={name}
               onChange={(e) => {
@@ -390,78 +403,94 @@ export function DeckBuilder({ id }: { id: string }) {
                 setName(e.target.value);
               }}
               aria-label="Deck name"
-              className="w-full rounded-md border border-transparent bg-transparent px-1 font-display text-xl font-semibold uppercase tracking-wide text-white outline-none hover:border-white/10 focus:border-brand-gold"
+              className="h-10 w-full rounded-lg border border-transparent bg-transparent px-2 font-display text-2xl font-semibold uppercase tracking-wide text-t1 hover:border-line"
             />
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 text-[11px] text-white/45">
-              {legend ? <span style={{ color: primaryColor(legend) }}>{displayName(legend)}</span> : <span>Pick a legend to start</span>}
-              <span>{mainTotal}/40 main</span>
-              <span>{countOf("battlefield")}/3 battlefields</span>
-              <span>{countOf("rune")}/12 runes</span>
-              <span className={rules.legal ? "font-semibold text-emerald-300" : "text-white/45"}>{rules.legal ? "✓ Legal deck" : "Not legal yet"}</span>
-              <span className={save === "error" ? "text-red-300" : ""}>
-                {save === "saving" ? "Saving…" : save === "error" ? "Couldn't save" : "✓ Saved"}
-              </span>
+            <p className="num flex flex-wrap items-center gap-x-4 gap-y-1 px-2 text-xs text-t3">
+              {legend ? <span className="font-semibold text-t2">{displayName(legend)}</span> : <span>Pick a legend to start</span>}
+              <span><b className="text-t1">{mainTotal}</b>/40 main</span>
+              <span><b className="text-t1">{countOf("battlefield")}</b>/3 battlefields</span>
+              <span><b className="text-t1">{countOf("rune")}</b>/12 runes</span>
             </p>
           </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setModal("import")} className="rounded-md border-[1.5px] border-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-brand-gold transition hover:bg-brand-gold/10 active:scale-95">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className={`inline-flex h-8 items-center rounded-md px-3 text-xs font-semibold ${rules.legal ? "bg-ok/15 text-ok" : "bg-cavity text-t2"}`}>
+              {rules.legal ? "✓ Legal deck" : "Not legal yet"}
+            </span>
+            <span className={`text-xs ${save === "error" ? "text-bad" : "text-t3"}`} aria-live="polite">
+              {save === "saving" ? "Saving…" : save === "error" ? "✕ Couldn't save" : "✓ Saved"}
+            </span>
+            <button type="button" onClick={() => setModal("import")} className="inline-flex h-11 items-center rounded-lg border border-line px-5 text-sm font-semibold text-t2 transition hover:border-line2 hover:bg-panel2 hover:text-t1">
               Import
             </button>
-            <button type="button" onClick={() => setModal("export")} className="rounded-md bg-brand-gold px-4 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-ink transition hover:bg-brand-goldSoft active:scale-95">
+            <button type="button" onClick={() => setModal("export")} className="btn-3d h-11 rounded-lg px-6 font-display text-xs font-semibold uppercase tracking-wide">
               Export
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* mobile switch */}
-      <div className="sticky top-[57px] z-10 mb-3 flex gap-1 rounded-md bg-ink/90 p-1 backdrop-blur lg:hidden">
+      <SlideGroup className="sticky top-2 z-10 mb-3 flex gap-1 rounded-lg border border-line bg-ink p-1 lg:hidden">
         {(["pool", "deck"] as Mobile[]).map((m) => (
-          <button key={m} type="button" onClick={() => setMobile(m)} className={`flex-1 ${chip(mobile === m)}`}>
+          <button key={m} type="button" data-active={mobile === m} onClick={() => setMobile(m)} className={`h-11 flex-1 ${chipSlide(mobile === m)}`}>
             {m === "pool" ? "Cards" : `Deck · ${mainTotal}/40`}
           </button>
         ))}
-      </div>
+      </SlideGroup>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(400px,1fr)] lg:items-start">
+      <div className="grid gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(400px,1fr)]">
         {/* ---- pool ---- */}
-        <section className={`${mobile === "pool" ? "" : "hidden"} lg:block`}>
-          <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
+        <section className={`${mobile === "pool" ? "" : "hidden"} lg:block lg:h-full lg:min-h-0 lg:overflow-y-scroll lg:pr-2`}>
+          <SlideGroup className="mb-3 flex gap-1 overflow-x-auto rounded-xl border border-line bg-panel p-1">
             {POOL_ORDER.map((z) => {
               const z0 = tgt(z);
+              const on = poolZone === z;
               return (
-                <button key={z} type="button" onClick={() => setPoolZone(z)} className={`shrink-0 ${chip(poolZone === z)}`}>
+                <button key={z} type="button" data-active={on} onClick={() => setPoolZone(z)} className={`flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`}>
                   {z0.label}
-                  <span className={`ml-1.5 ${poolZone === z ? "text-ink/60" : "text-white/35"}`}>
+                  <span className={`num text-xs font-medium ${on ? "text-on-accent/75" : "text-t3"}`}>
                     {z === "main" ? mainTotal : countOf(z)}
                     {z0.target ? `/${z0.target}` : z0.max ? `/${z0.max}` : ""}
                   </span>
                 </button>
               );
             })}
-          </div>
+          </SlideGroup>
 
-          <div className="mb-3 flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-panel/70 p-2.5">
-            <div className="flex gap-2">
+          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-line bg-panel p-3">
+            <div className="flex flex-wrap gap-2">
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={`Search ${tgt(poolZone).label.toLowerCase()} cards: name, text, tag, type…`}
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink px-3 py-2 text-sm text-white outline-none focus:border-brand-gold"
+                className="h-11 min-w-[200px] flex-1 rounded-lg border border-line bg-ink px-3.5 text-sm text-t1 placeholder:text-t3"
               />
-              <select
-                value={setId}
-                onChange={(e) => setSetId(e.target.value)}
-                className="w-28 rounded-lg border border-white/10 bg-panel px-2 py-2 text-xs text-white/80 outline-none focus:border-brand-gold sm:w-40"
-              >
-                <option value="">All sets</option>
-                {sets.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              <div className="w-40 shrink-0">
+                <Select
+                  value={setId}
+                  onChange={setSetId}
+                  ariaLabel="Filter by set"
+                  searchPlaceholder="Search sets…"
+                  className="h-11 text-sm"
+                  menuMinWidth={220}
+                  options={[{ value: "", label: "All sets" }, ...sets.map((s) => ({ value: s.id, label: s.name }))]}
+                />
+              </div>
+              {keywordOptions.length > 0 && (
+                <div className="w-44 shrink-0">
+                  <MultiSelect
+                    values={keywords}
+                    onChange={setKeywords}
+                    ariaLabel="Keywords"
+                    placeholder="Keywords"
+                    searchPlaceholder="Search keywords…"
+                    className="h-11 text-sm"
+                    menuMinWidth={260}
+                    options={keywordOptions.map(([k, n]) => ({ value: k, label: k, count: n }))}
+                  />
+                </div>
+              )}
               <SortMenu
                 sortBy={sortBy}
                 dir={sortDir}
@@ -471,118 +500,129 @@ export function DeckBuilder({ id }: { id: string }) {
                 }}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {DOMAIN_OPTIONS.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  title={d.label}
-                  onClick={() => setDomainId(domainId === d.id ? "" : d.id)}
-                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
-                    domainId === d.id ? "text-ink" : "bg-white/5 text-white/60 hover:bg-white/10"
-                  }`}
-                  style={domainId === d.id ? { background: domainColor(d.id) } : undefined}
-                >
-                  <span className="h-2 w-2 rounded-full" style={{ background: domainColor(d.id) }} />
-                  {d.label}
-                </button>
-              ))}
+            {showDomainFilter && (
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Domain">
+              {DOMAIN_OPTIONS.map((d) => {
+                const on = domainIds.includes(d.id);
+                // at most two domains at once: once two are picked, the others are greyed out
+                const locked = !on && domainIds.length >= 2;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={locked}
+                    title={locked ? "Two domains at most - untick one first" : undefined}
+                    onClick={() => setDomainIds((cur) => (on ? cur.filter((x) => x !== d.id) : cur.length >= 2 ? cur : [...cur, d.id]))}
+                    className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition ${
+                      on
+                        ? "border-line2 bg-cavity text-t1"
+                        : locked
+                          ? "cursor-not-allowed border-line text-t3 opacity-40"
+                          : "border-line text-t2 hover:border-line2 hover:text-t1"
+                    }`}
+                    style={on ? { boxShadow: `inset 0 -2px 0 ${domainColor(d.id)}` } : undefined}
+                  >
+                    <span className={`h-2.5 w-2.5 rounded-full ${locked ? "grayscale" : ""}`} style={{ background: domainColor(d.id) }} aria-hidden="true" />
+                    {d.label}
+                  </button>
+                );
+              })}
             </div>
-            {keywordOptions.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setKwOpen((o) => !o)}
-                  aria-expanded={kwOpen}
-                  className="flex items-center gap-1.5 self-start text-[11px] font-semibold uppercase tracking-wider text-white/45 transition hover:text-white/80"
-                >
-                  <span className={`inline-block transition ${kwOpen ? "rotate-90" : ""}`}>▸</span>
-                  Keywords
-                  {keywords.length > 0 && <span className="rounded bg-brand-gold px-1.5 text-[10px] text-ink">{keywords.length}</span>}
-                </button>
-                {(kwOpen || keywords.length > 0) && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {(kwOpen ? keywordOptions : keywordOptions.filter(([k]) => keywords.includes(k))).map(([k, n]) => {
-                      const on = keywords.includes(k);
-                      return (
-                        <button
-                          key={k}
-                          type="button"
-                          onClick={() => setKeywords((cur) => (on ? cur.filter((x) => x !== k) : [...cur, k]))}
-                          className={`rounded-md px-2 py-1 text-[11px] font-semibold transition active:scale-95 ${
-                            on ? "bg-brand-gold text-ink" : "bg-white/5 text-white/60 hover:bg-white/10"
-                          }`}
-                        >
-                          {k} <span className={on ? "text-ink/60" : "text-white/30"}>{n}</span>
-                        </button>
-                      );
-                    })}
-                    {keywords.length > 0 && (
-                      <button type="button" onClick={() => setKeywords([])} className="px-1 text-[11px] text-white/40 underline hover:text-white/70">
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
             )}
-            <div className="flex flex-wrap gap-4 text-xs text-white/55">
-              <label className="flex items-center gap-1.5">
-                <input type="checkbox" checked={onlyBulk} onChange={(e) => setOnlyBulk(e.target.checked)} />
+            <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={onlyBulk}
+                onClick={() => setOnlyBulk((v) => !v)}
+                className="flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
+              >
+                <span className={`relative h-5 w-9 rounded-full transition-colors ${onlyBulk ? "bg-brand-gold" : "bg-cavity"}`}>
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${onlyBulk ? "left-[18px]" : "left-0.5"}`} />
+                </span>
                 Only cards I own
-              </label>
-              <span className="ml-auto text-white/35">{pool.length} cards</span>
+              </button>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={ownedFirst}
+                onClick={() => setOwnedFirst((v) => !v)}
+                title="Show the cards you own the most copies of first, then apply the sort above within each group"
+                className="flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
+              >
+                <span className={`relative h-5 w-9 rounded-full transition-colors ${ownedFirst ? "bg-brand-gold" : "bg-cavity"}`}>
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${ownedFirst ? "left-[18px]" : "left-0.5"}`} />
+                </span>
+                Most owned first
+              </button>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={hideBanned}
+                onClick={() => setHideBanned((v) => !v)}
+                title="Hide the cards that are banned in Constructed"
+                className="flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
+              >
+                <span className={`relative h-5 w-9 rounded-full transition-colors ${hideBanned ? "bg-brand-gold" : "bg-cavity"}`}>
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${hideBanned ? "left-[18px]" : "left-0.5"}`} />
+                </span>
+                Hide banned
+              </button>
+              <span className="num ml-auto text-sm text-t3">{pool.length} cards</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          <div className="grid grid-cols-3 gap-3">
             {pool.slice(0, visible).map((card) => {
               const qty = inZone.get(cardKey(card)) ?? 0;
               const owned = ownedByKey.get(cardKey(card)) ?? 0;
-              const color = primaryColor(card);
+              const banned = isBanned(card);
               return (
                 <div key={card.id} className="group relative">
                   <button
                     type="button"
                     onClick={() => addFromPool(card)}
-                    {...preview(card)}
-                    aria-label={`Add ${displayName(card)}`}
-                    className={`relative block w-full rounded-xl text-left ring-2 transition duration-200 hover:-translate-y-1.5 hover:scale-[1.03] active:scale-95 ${
-                      flash === card.id ? "ring-brand-gold" : qty > 0 ? "ring-brand-gold/60" : "ring-transparent hover:ring-white/30"
+                    disabled={banned}
+                    aria-label={banned ? `${displayName(card)} is banned` : `Add ${displayName(card)}`}
+                    title={banned ? "Banned - can't be added to a deck" : undefined}
+                    className={`relative block w-full rounded-xl text-left transition duration-150 ${
+                      banned
+                        ? "cursor-not-allowed opacity-40 ring-2 ring-transparent"
+                        : `active:scale-[0.97] ${flash === card.id ? "shadow-[0_0_0_2px_rgb(var(--accent-soft)),0_0_14px_2px_rgb(var(--accent-soft)/0.55)]" : qty > 0 ? "shadow-[0_0_0_1.5px_rgb(var(--accent)),0_0_9px_1px_rgb(var(--accent)/0.4)]" : "ring-2 ring-transparent hover:ring-line2"}`
                     }`}
-                    style={{ boxShadow: `0 8px 22px -10px ${color}` }}
                   >
-                    <CardArt card={card} sizes="(max-width: 640px) 30vw, 14vw" className={`rounded-xl transition ${qty > 0 ? "" : "opacity-95"}`} />
-                    <OwnedBadge owned={owned} className="absolute bottom-1.5 left-1.5" />
+                    <CardArt card={card} sizes="(max-width: 640px) 32vw, 340px" quality={92} className={`rounded-xl ${banned ? "grayscale" : ""}`} />
+                    <OwnedBadge owned={owned} large className="absolute bottom-2 left-2" />
                   </button>
                   {qty > 0 && (
-                    <>
-                      <span key={qty} className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-6 min-w-6 animate-pop items-center justify-center rounded-md bg-brand-gold px-1 text-xs font-bold text-ink shadow-lg">
-                        {qty}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label="Remove one"
-                        onClick={() => adjust(card, poolZone, -1)}
-                        className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-md bg-black/75 text-base opacity-100 transition hover:bg-brand-red sm:opacity-0 sm:group-hover:opacity-100"
-                      >
-                        −
-                      </button>
-                    </>
+                    <span
+                      key={qty}
+                      title={`${qty} in the deck`}
+                      aria-label={`${qty} in the deck`}
+                      className="num pointer-events-none absolute -right-2.5 -top-2.5 z-10 flex h-8 min-w-8 animate-pop items-center justify-center rounded-lg bg-brand-gold px-2 text-base font-bold text-on-accent shadow-[0_0_8px_1px_rgb(var(--accent)/0.5)]"
+                    >
+                      ×{qty}
+                    </span>
                   )}
-                  <div className="mt-1 flex items-center gap-1.5 px-0.5">
-                    <p className="min-w-0 flex-1 truncate text-[11px] font-medium text-white/70">{displayName(card)}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-0.5">
-                    {card.energy !== null && <Pip>{card.energy}</Pip>}
-                    <DomainDots card={card} />
-                  </div>
+                  <EyeButton card={card} preview={preview} onInspect={setInspectCard} className="absolute left-1.5 top-1.5 bg-ink/95 sm:opacity-0 sm:focus-visible:opacity-100 sm:group-hover:opacity-100" />
+                  {qty > 0 && (
+                    <button
+                      type="button"
+                      aria-label={`Remove one ${displayName(card)}`}
+                      title="Remove one"
+                      onClick={() => adjust(card, poolZone, -1)}
+                      className="absolute bottom-1.5 right-1.5 flex h-9 w-9 items-center justify-center rounded-lg border border-line2 bg-ink/95 text-t1 transition hover:border-bad hover:text-bad"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-4 w-4" aria-hidden="true"><path d="M5 12h14" /></svg>
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
           {pool.length === 0 && (
-            <p className="py-12 text-center text-sm text-white/40">
+            <p className="py-12 text-center text-sm text-t3">
               {legend || poolZone === "legend" ? "No cards match." : "Pick a legend first - the other cards depend on its domains."}
             </p>
           )}
@@ -590,7 +630,7 @@ export function DeckBuilder({ id }: { id: string }) {
             <button
               type="button"
               onClick={() => setVisible((v) => v + STEP)}
-              className="mt-4 w-full rounded-xl border border-white/10 py-2.5 text-sm text-white/60 transition hover:bg-white/5"
+              className="mt-4 h-11 w-full rounded-xl border border-line bg-panel text-sm font-semibold text-t2 transition hover:border-line2 hover:bg-panel2 hover:text-t1"
             >
               Show more ({pool.length - visible} left)
             </button>
@@ -599,20 +639,20 @@ export function DeckBuilder({ id }: { id: string }) {
 
         {/* ---- workspace ---- */}
         <section
-          className={`${mobile === "deck" ? "" : "hidden"} rounded-2xl border border-white/[0.07] bg-panel p-3 sm:p-4 lg:sticky lg:top-[76px] lg:block lg:max-h-[calc(100vh-92px)] lg:overflow-y-auto`}
+          className={`${mobile === "deck" ? "" : "hidden"} rounded-xl border border-line bg-panel p-3 sm:p-4 lg:block lg:h-full lg:min-h-0 lg:overflow-y-scroll`}
         >
-          <div className="mb-4 flex gap-1 rounded-md bg-ink/60 p-1">
+          <SlideGroup className="mb-4 flex gap-1 rounded-lg border border-line bg-ink p-1">
             {VIEWS.map((v) => (
-              <button key={v.id} type="button" onClick={() => setView(v.id)} className={`flex-1 ${chip(view === v.id)}`}>
+              <button key={v.id} type="button" data-active={view === v.id} onClick={() => setView(v.id)} className={`h-10 flex-1 ${chipSlide(view === v.id)}`}>
                 {v.label}
                 {v.id === "bulk" && compare.totalNeeded > 0 && (
-                  <span className={`ml-1 ${view === v.id ? "text-ink/60" : "text-brand-cyan"}`}>
+                  <span className={`ml-1 ${view === v.id ? "text-on-accent/70" : "text-ok"}`}>
                     {compare.totalHave}/{compare.totalNeeded}
                   </span>
                 )}
               </button>
             ))}
-          </div>
+          </SlideGroup>
 
           {view !== "bulk" && <RulesPanel checks={rules.checks} problems={rules.problems} legal={rules.legal} stale={!ruleData} />}
 
@@ -627,13 +667,14 @@ export function DeckBuilder({ id }: { id: string }) {
               ownedOf={ownedOf}
               neededOf={neededOf}
               preview={preview}
+              onInspect={setInspectCard}
               onPickPrinting={(row) => setPrintingRow(row)}
               onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)}
               onMove={moveOne}
             />
           )}
-          {view === "art" && <ArtView zones={ZONES} rowsByZone={rowsByZone} ownedOf={ownedOf} neededOf={neededOf} preview={preview} onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)} />}
-          {view === "stats" && <StatsView rows={allRows} />}
+          {view === "art" && <ArtView zones={ZONES} rowsByZone={rowsByZone} ownedOf={ownedOf} neededOf={neededOf} preview={preview} onInspect={setInspectCard} onAdjust={(row, d) => tryAdjust(row.card, row.entry.zone, d)} />}
+          {view === "stats" && <DeckStats rows={allRows} legal={rules.legal} deckId={id} ownedOf={ownedOf} />}
           {view === "bulk" && (
             <BulkView
               compare={compare}
@@ -643,10 +684,12 @@ export function DeckBuilder({ id }: { id: string }) {
               includeSideboard={includeSideboard}
               onIncludeSideboard={setIncludeSideboard}
               onWants={() => setWantsOpen(true)}
+              preview={preview}
+              onInspect={setInspectCard}
             />
           )}
           {view !== "bulk" && allRows.length === 0 && (
-            <p className="mt-4 text-center text-sm text-white/35">
+            <p className="mt-4 text-center text-sm text-t3">
               Tap cards on the left to build your deck — start with a <b className="text-brand-gold">legend</b>.
             </p>
           )}
@@ -655,13 +698,15 @@ export function DeckBuilder({ id }: { id: string }) {
 
       {notice && (
         <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
-          <p className="animate-card-in rounded-md border border-brand-red/40 bg-ink/95 px-5 py-2.5 text-sm text-white shadow-2xl backdrop-blur">
+          <p role="alert" className="animate-card-in rounded-lg border border-bad/50 bg-panel px-5 py-3 text-sm text-t1">
             ⚠ {notice}
           </p>
         </div>
       )}
 
       {previewNode}
+
+      {inspectCard && <CardDetailModal card={inspectCard} onClose={() => setInspectCard(null)} />}
 
       {wantsOpen && (
         <WantsModal
@@ -677,14 +722,14 @@ export function DeckBuilder({ id }: { id: string }) {
       )}
 
       {printingRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3" onClick={() => setPrintingRow(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3" onClick={() => setPrintingRow(null)}>
           <div
-            className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/10 bg-panel p-4"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-xl border border-line2 bg-panel p-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-display text-lg font-semibold text-white">{displayName(printingRow.card)} - versions</h3>
-              <button onClick={() => setPrintingRow(null)} aria-label="Close" className="flex h-8 w-8 items-center justify-center rounded-md text-white/50 hover:bg-white/10">
+              <h3 className="font-display text-lg font-semibold text-t1">{displayName(printingRow.card)} - versions</h3>
+              <button onClick={() => setPrintingRow(null)} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-t2 hover:border-line2 hover:text-t1">
                 ✕
               </button>
             </div>
@@ -699,11 +744,11 @@ export function DeckBuilder({ id }: { id: string }) {
                       setPrinting(printingRow, c.id);
                       setPrintingRow(null);
                     }}
-                    className={`rounded-lg p-1.5 text-left transition ${on ? "bg-white/[0.08] ring-2 ring-brand-gold" : "hover:bg-white/[0.05]"}`}
+                    className={`rounded-lg p-1.5 text-left transition ${on ? "bg-cavity ring-2 ring-brand-gold" : "hover:bg-panel2"}`}
                   >
                     <CardArt card={c} sizes="160px" className="rounded" />
-                    <p className="mt-1 text-xs font-semibold text-white/85">{PRINTING_LABEL[printingKind(c)]}</p>
-                    <p className="text-[11px] text-white/45">
+                    <p className="mt-1 text-xs font-semibold text-t1">{PRINTING_LABEL[printingKind(c)]}</p>
+                    <p className="text-[11px] text-t3">
                       {c.publicCode} · {c.set.name}
                     </p>
                   </button>

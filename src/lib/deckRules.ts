@@ -41,10 +41,21 @@ export function fitsIdentity(card: RiftCard, identity: Set<string> | null): bool
 function legendTags(legend: RiftCard | undefined): string[] {
   return (legend?.tags ?? []).map((t) => t.toLowerCase());
 }
+
+// A legend's tags mix the champion's name ("Kennen") with generic ones ("Yordle") that many champions share.
+// Only the champion name identifies the legend's champion, so we need to know which tags are champion names.
+let championNames = new Set<string>();
+export function setChampionNames(cards: RiftCard[]) {
+  championNames = new Set(cards.filter((c) => c.types.includes("unit") && hasSuper(c, "champion")).map((c) => c.name.toLowerCase()));
+}
+
 export function matchesLegendTag(card: RiftCard, legend: RiftCard | undefined): boolean {
   const lt = legendTags(legend);
   if (!lt.length) return true; // no data to judge by
-  return card.tags.some((t) => lt.includes(t.toLowerCase()));
+  const champTags = lt.filter((t) => championNames.has(t));
+  // the legend's champion: the card must carry that champion's tag (Fizz has "Yordle" too, but isn't Kennen)
+  const need = champTags.length ? champTags : lt;
+  return card.tags.some((t) => need.includes(t.toLowerCase()));
 }
 
 type Ctx = { entries: DeckEntry[]; cardById: Map<string, RiftCard> };
