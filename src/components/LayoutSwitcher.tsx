@@ -1,5 +1,6 @@
 "use client";
 
+import { SlideGroup } from "@/components/SlideGroup";
 import { BINDER_LAYOUTS } from "@/lib/constants";
 import type { BinderLayout } from "@/lib/types";
 
@@ -11,19 +12,22 @@ export function LayoutSwitcher({
   onChange: (layout: BinderLayout) => void;
 }) {
   return (
-    <div className="flex gap-1 rounded-md border border-white/10 bg-panel p-1">
+    <SlideGroup className="flex h-11 items-stretch gap-1 rounded-lg border border-line bg-ink p-1" role="radiogroup" aria-label="Pockets per page">
       {BINDER_LAYOUTS.map((l) => (
         <button
           key={l.id}
           type="button"
+          role="radio"
+          data-active={value === l.id}
+          aria-checked={value === l.id}
           onClick={() => onChange(l.id)}
-          className={`rounded px-2.5 py-1 font-display text-xs font-semibold uppercase tracking-wide transition ${
-            value === l.id ? "bg-brand-gold text-ink" : "text-white/60 hover:bg-white/10 hover:text-white"
+          className={`rounded-md px-3 text-sm font-semibold transition ${
+            value === l.id ? "text-on-accent" : "text-t2 hover:text-t1"
           }`}
         >
           {l.label}
         </button>
       ))}
-    </div>
+    </SlideGroup>
   );
 }

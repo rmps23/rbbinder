@@ -1,5 +1,6 @@
 "use client";
 
+import { SlideGroup } from "@/components/SlideGroup";
 import { useState } from "react";
 import type { SetInfo } from "@/lib/types";
 import { DOMAIN_OPTIONS, RARITY_OPTIONS, TYPE_OPTIONS } from "@/lib/constants";
@@ -50,11 +51,15 @@ function Orb({
   );
 }
 
-function Group({ label, children }: { label: string; children: React.ReactNode }) {
+function Group({ label, children, slide = false }: { label: string; children: React.ReactNode; slide?: boolean }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="font-display text-[9px] font-semibold uppercase tracking-[0.22em] text-white/30">{label}</span>
-      <div className="flex items-center gap-0.5 rounded-md bg-white/[0.04] p-0.5">{children}</div>
+      <span className="font-display text-[9px] font-semibold uppercase tracking-[0.22em] text-t3">{label}</span>
+      {slide ? (
+        <SlideGroup className="flex items-center gap-0.5 rounded-md bg-panel2 p-0.5" indicatorClassName="bg-brand-gold">{children}</SlideGroup>
+      ) : (
+        <div className="flex items-center gap-0.5 rounded-md bg-panel2 p-0.5">{children}</div>
+      )}
     </div>
   );
 }
@@ -84,25 +89,25 @@ export function Filters({
   const tab = (on: boolean) =>
     `shrink-0 whitespace-nowrap rounded-md px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider transition active:scale-95 ${
       on
-        ? "bg-brand-gold text-ink"
-        : "text-white/55 hover:bg-white/[0.07] hover:text-white"
+        ? "text-on-accent"
+        : "text-t2 hover:text-t1"
     }`;
 
   return (
     <div className="mb-5 flex flex-col gap-3">
       {/* sets as tabs */}
-      <div className="flex gap-1 overflow-x-auto rounded-md border border-white/[0.07] bg-panel/80 p-1 backdrop-blur">
-        <button type="button" className={tab(!state.setId)} onClick={() => set("setId", "")}>
+      <SlideGroup className="flex gap-1 overflow-x-auto rounded-md border border-line bg-panel/80 p-1">
+        <button type="button" data-active={!state.setId} className={tab(!state.setId)} onClick={() => set("setId", "")}>
           All sets
         </button>
         {sets.map((s) => (
-          <button key={s.id} type="button" title={s.name} className={tab(state.setId === s.id)} onClick={() => set("setId", state.setId === s.id ? "" : s.id)}>
+          <button key={s.id} type="button" data-active={state.setId === s.id} title={s.name} className={tab(state.setId === s.id)} onClick={() => set("setId", state.setId === s.id ? "" : s.id)}>
             {s.id}
           </button>
         ))}
-      </div>
+      </SlideGroup>
 
-      <div className="relative rounded-2xl border border-white/[0.07] bg-panel/70 p-3 backdrop-blur">
+      <div className="relative rounded-2xl border border-line bg-panel/70 p-3 ">
         <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
           <div className="relative min-w-[200px] flex-1 self-end">
             <svg
@@ -111,7 +116,7 @@ export function Filters({
               stroke="currentColor"
               strokeWidth={2}
               strokeLinecap="round"
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35"
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-t3"
             >
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-3.5-3.5" />
@@ -121,14 +126,14 @@ export function Filters({
               placeholder="Search by name or code…"
               value={state.search}
               onChange={(e) => set("search", e.target.value)}
-              className="h-11 w-full rounded-md border border-white/10 bg-ink pl-10 pr-10 text-sm text-white outline-none transition focus:border-brand-gold focus:"
+              className="h-11 w-full rounded-md border border-line bg-ink pl-10 pr-10 text-sm text-t1 outline-none transition focus:border-brand-gold focus:"
             />
             {state.search && (
               <button
                 type="button"
                 aria-label="Clear search"
                 onClick={() => set("search", "")}
-                className="absolute right-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-white/40 hover:bg-white/10 hover:text-white"
+                className="absolute right-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-t3 hover:bg-cavity hover:text-t1"
               >
                 ✕
               </button>
@@ -139,7 +144,7 @@ export function Filters({
             type="button"
             onClick={() => setOpen((v) => !v)}
             className={`flex h-11 items-center gap-2 rounded-md border px-4 text-xs font-semibold transition active:scale-95 md:hidden ${
-              active ? "border-brand-gold/50 text-brand-gold" : "border-white/10 text-white/60"
+              active ? "border-brand-gold/50 text-brand-gold" : "border-line text-t2"
             }`}
           >
             Filters
@@ -164,11 +169,11 @@ export function Filters({
             <Group label="Type">
               {TYPE_OPTIONS.map((t) => (
                 <Orb key={t.id} on={state.typeId === t.id} onClick={() => toggle("typeId", t.id)} label={t.label} color="rgb(var(--accent))">
-                  <span className="text-sm text-white/85">{TYPE_ICON[t.id] ?? "•"}</span>
+                  <span className="text-sm text-t1">{TYPE_ICON[t.id] ?? "•"}</span>
                 </Orb>
               ))}
             </Group>
-            <Group label="Art">
+            <Group label="Art" slide>
               {(
                 [
                   ["all", "All"],
@@ -179,9 +184,10 @@ export function Filters({
                 <button
                   key={id}
                   type="button"
+                  data-active={state.altArt === id}
                   onClick={() => set("altArt", id)}
                   className={`h-9 rounded-md px-3 text-[11px] font-semibold transition active:scale-95 ${
-                    state.altArt === id ? "bg-brand-cyan text-ink" : "text-white/55 hover:text-white"
+                    state.altArt === id ? "text-on-accent" : "text-t2 hover:text-t1"
                   }`}
                 >
                   {label}
@@ -194,9 +200,9 @@ export function Filters({
                 role="switch"
                 aria-checked={state.onlyOwned}
                 onClick={() => set("onlyOwned", !state.onlyOwned)}
-                className="flex h-11 items-center gap-2.5 rounded-md border border-white/10 bg-white/[0.03] px-4 text-xs font-semibold text-white/70 transition hover:border-white/25 active:scale-95"
+                className="flex h-11 items-center gap-2.5 rounded-md border border-line bg-panel2 px-4 text-xs font-semibold text-t2 transition hover:border-line2 active:scale-95"
               >
-                <span className={`relative h-5 w-9 rounded-full transition-colors ${state.onlyOwned ? "bg-brand-gold" : "bg-white/15"}`}>
+                <span className={`relative h-5 w-9 rounded-full transition-colors ${state.onlyOwned ? "bg-brand-gold" : "bg-cavity"}`}>
                   <span
                     className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
                       state.onlyOwned ? "left-[18px]" : "left-0.5"

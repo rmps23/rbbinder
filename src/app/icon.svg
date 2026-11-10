@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 64 64">
+  <defs>
+    <path id="arm" d="M1.5-4.5C8-9.5 16-6.5 17 3C13-1.5 7-3 1.5-4.5Z"/>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0E0F12"/>
+  <g fill="none" stroke="#4AC0DE" stroke-width="2.4">
+    <rect x="22" y="6" width="32" height="42" rx="6" opacity=".32"/>
+    <rect x="16" y="11" width="32" height="42" rx="6" opacity=".6"/>
+  </g>
+  <rect x="10" y="16" width="32" height="42" rx="6" fill="#4AC0DE"/>
+  <circle cx="26" cy="37" r="13" fill="#0E0F12"/>
+  <g transform="translate(26 37) scale(.62)" fill="#4AC0DE">
+    <use xlink:href="#arm"/>
+    <use xlink:href="#arm" transform="rotate(120)"/>
+    <use xlink:href="#arm" transform="rotate(240)"/>
+  </g>
+  <circle cx="26" cy="37" r="2.6" fill="#0E0F12"/>
+</svg>

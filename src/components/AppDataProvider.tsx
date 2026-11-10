@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { cacheGet, cacheSet } from "@/lib/clientCache";
 import { setFinishData, type Finish } from "@/lib/cardFinish";
+import { setChampionNames } from "@/lib/deckRules";
 import type { BulkMap, BulkVariant, PriceMode, PricesResponse, RiftCard, SetInfo } from "@/lib/types";
 
 type AppData = {
@@ -52,19 +54,45 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const pending = useRef<Map<string, { cardId: string; variant: BulkVariant; qty: number }>>(new Map());
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
+  // Stale-while-revalidate: the last known data is shown instantly from IndexedDB while fresh data loads.
+  const gotFresh = useRef(false);
+  const gotFreshPrices = useRef(false);
+  const finishesRef = useRef<unknown>(undefined);
+  type Snapshot = { cards: RiftCard[]; sets: SetInfo[]; finishes?: unknown; bulk: BulkMap };
+
+  useEffect(() => {
+    cacheGet<Snapshot>("app:v1").then((snap) => {
+      if (!snap || gotFresh.current) return;
+      finishesRef.current = snap.finishes;
+      if (snap.finishes) setFinishData(snap.finishes as Parameters<typeof setFinishData>[0]);
+      setChampionNames(snap.cards ?? []);
+      setCards(snap.cards ?? []);
+      setSets(snap.sets ?? []);
+      setBulk(snap.bulk ?? {});
+      setLoading(false);
+    });
+    cacheGet<PricesResponse>("prices:v1").then((p) => {
+      if (p && !gotFreshPrices.current) setPrices(p);
+    });
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const [cardsRes, bulkRes] = await Promise.all([fetch("/api/cards"), fetch("/api/bulk")]);
       if (cancelled) return;
       const cardsJson = cardsRes.ok ? await cardsRes.json() : { cards: [], sets: [] };
+      finishesRef.current = cardsJson.finishes;
       if (cardsJson.finishes) setFinishData(cardsJson.finishes);
       const bulkJson = bulkRes.ok ? await bulkRes.json() : {};
       if (cancelled) return;
+      gotFresh.current = true;
+      setChampionNames(cardsJson.cards ?? []);
       setCards(cardsJson.cards ?? []);
       setSets(cardsJson.sets ?? []);
       setBulk(bulkJson);
       setLoading(false);
+      if (cardsRes.ok && bulkRes.ok) cacheSet("app:v1", { cards: cardsJson.cards ?? [], sets: cardsJson.sets ?? [], finishes: cardsJson.finishes, bulk: bulkJson });
     }
     load();
     return () => {
@@ -72,14 +100,22 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     };
   }, [cardsVersion]);
 
-  // Prices load after the main data so they never hold up the page.
+  // Keep the cached snapshot's bulk in step with local edits, so a quick reload never flashes old counts.
   useEffect(() => {
-    if (loading) return;
+    if (!gotFresh.current || cards.length === 0) return;
+    cacheSet("app:v1", { cards, sets, finishes: finishesRef.current, bulk });
+  }, [bulk, cards, sets]);
+
+  // Prices load in parallel with the main data and never hold up the page.
+  useEffect(() => {
     let cancelled = false;
     fetch("/api/prices", { cache: pricesVersion ? "no-store" : "default" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled && data?.prices) setPrices(data);
+        if (cancelled || !data?.prices) return;
+        gotFreshPrices.current = true;
+        setPrices(data);
+        cacheSet("prices:v1", data);
       })
       .catch(() => {
         // prices are optional - the UI just doesn't show them
@@ -87,7 +123,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [loading, pricesVersion]);
+  }, [pricesVersion]);
 
   const priceOf = useCallback(
     (card: Pick<RiftCard, "id">, finish: Finish) => {

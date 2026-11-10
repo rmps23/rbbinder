@@ -9,7 +9,7 @@ import type { LegendInfo, MetaOption } from "@/lib/metaCheck";
 
 type Meta = { fetchedAt: string; events: { title: string; date: string; url: string }[]; decks: MetaOption[]; legends: LegendInfo[] };
 
-const label = "font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40";
+const label = "font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-t3";
 const shortDate = (iso: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
 const eventName = (title: string) => title.replace(/[’']s? Top Decks$/i, "").replace(/^From .*?,\s*/i, "");
 const missingCount = (d: MetaOption) => d.missing.reduce((n, m) => n + m.qty, 0);
@@ -102,26 +102,26 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-label="Meta decks"
         onClick={(e) => e.stopPropagation()}
-        className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-2xl border border-white/10 bg-panel p-5 shadow-2xl animate-card-in sm:p-6"
+        className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-2xl border border-line bg-panel p-5  animate-card-in sm:p-6"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-display text-2xl font-semibold uppercase tracking-wide text-white">Meta decks</h2>
-            <p className="mt-1 text-sm text-white/50">
+            <h2 className="font-display text-2xl font-semibold uppercase tracking-wide text-t1">Meta decks</h2>
+            <p className="mt-1 text-sm text-t3">
               Pick a legend and see how many cards you&apos;re missing for each recent meta list. Counts your bulk and binders - regular printings only. Runes and
               sideboard aren&apos;t counted.
             </p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-white/50 hover:bg-white/10 hover:text-white">
+          <button onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-t3 hover:bg-cavity hover:text-t1">
             ✕
           </button>
         </div>
 
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/45">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-t3">
           <span>
             From Riot&apos;s official Top Decks:{" "}
             {meta?.events.map((e, i) => (
-              <a key={e.url} href={e.url} target="_blank" rel="noreferrer" className="underline decoration-white/20 hover:text-white">
+              <a key={e.url} href={e.url} target="_blank" rel="noreferrer" className="underline decoration-white/20 hover:text-t1">
                 {eventName(e.title)} ({shortDate(e.date)}){i < meta.events.length - 1 ? ", " : ""}
               </a>
             )) ?? "…"}
@@ -129,7 +129,7 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
               <>
                 {" "}
                 + popular community decks from{" "}
-                <a href="https://piltoverarchive.com/decks" target="_blank" rel="noreferrer" className="underline decoration-white/20 hover:text-white">
+                <a href="https://piltoverarchive.com/decks" target="_blank" rel="noreferrer" className="underline decoration-white/20 hover:text-t1">
                   Piltover Archive
                 </a>
               </>
@@ -139,20 +139,20 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={() => load(true)}
             disabled={loading}
-            className="rounded-md border border-white/10 px-2.5 py-1 text-white/60 hover:bg-white/5 hover:text-white disabled:opacity-50"
+            className="rounded-md border border-line px-2.5 py-1 text-t2 hover:bg-panel2 hover:text-t1 disabled:opacity-50"
           >
             {loading ? "Loading…" : "Refresh"}
           </button>
         </div>
 
         {error && <p className="mb-3 rounded-md bg-brand-red/10 px-3 py-2 text-sm text-brand-red">⚠ {error}</p>}
-        {!meta && loading && <p className="py-6 text-center text-sm text-white/40">Reading Riot&apos;s latest event decklists…</p>}
+        {!meta && loading && <p className="py-6 text-center text-sm text-t3">Reading Riot&apos;s latest event decklists…</p>}
 
         {meta && (
           <>
             <div className="mb-4">
               <span className={label}>Legend</span>
-              <div className="mt-1.5 flex items-center gap-2 rounded-md border border-white/10 bg-ink px-3 py-2 focus-within:border-brand-gold">
+              <div className="mt-1.5 flex items-center gap-2 rounded-md border border-line bg-ink px-3 py-2 focus-within:border-brand-gold">
                 {chosen && !pickerOpen && cardById.get(chosen.imageId) && <CardArt card={cardById.get(chosen.imageId)!} sizes="28px" className="w-5 shrink-0 rounded-sm" />}
                 <input
                   value={pickerOpen ? query : chosen?.name ?? ""}
@@ -169,7 +169,7 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                     }
                   }}
                   placeholder="Search a legend or champion (e.g. Evelynn)…"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-t1 outline-none placeholder:text-t3"
                 />
                 <button
                   type="button"
@@ -178,7 +178,7 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                     setQuery("");
                     setPickerOpen(!pickerOpen);
                   }}
-                  className="text-white/40 hover:text-white"
+                  className="text-t3 hover:text-t1"
                 >
                   {pickerOpen ? "▴" : "▾"}
                 </button>
@@ -187,8 +187,8 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
               {pickerOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
-                  <ul className="relative z-20 mt-1.5 max-h-[min(24rem,45dvh)] overflow-y-auto rounded-lg border border-white/10 bg-panel2 p-1 shadow-2xl">
-                    {filtered.length === 0 && <li className="px-3 py-3 text-sm text-white/40">No legend found.</li>}
+                  <ul className="relative z-20 mt-1.5 max-h-[min(24rem,45dvh)] overflow-y-auto rounded-lg border border-line bg-panel2 p-1 ">
+                    {filtered.length === 0 && <li className="px-3 py-3 text-sm text-t3">No legend found.</li>}
                     {filtered.map((l) => {
                       const card = cardById.get(l.imageId);
                       return (
@@ -196,19 +196,19 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                           <button
                             type="button"
                             onClick={() => pick(l.key)}
-                            className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition hover:bg-white/[0.07] ${l.key === legendKey ? "bg-white/[0.08]" : ""}`}
+                            className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition hover:bg-cavity ${l.key === legendKey ? "bg-white/[0.08]" : ""}`}
                           >
                             {card && <CardArt card={card} sizes="48px" className={`w-10 shrink-0 rounded ${l.owned ? "" : "opacity-60"}`} />}
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-semibold text-white">{l.name}</span>
-                              <span className="flex items-center gap-1 text-[11px] text-white/45">
+                              <span className="block truncate text-sm font-semibold text-t1">{l.name}</span>
+                              <span className="flex items-center gap-1 text-[11px] text-t3">
                                 {l.domains.map((dm) => (
                                   <span key={dm} className="h-1.5 w-1.5 rounded-full" style={{ background: domainColor(dm) }} />
                                 ))}
                                 {l.owned ? "owned" : "not owned"}
                               </span>
                             </span>
-                            <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold ${l.decks ? "bg-brand-gold/15 text-brand-gold" : "bg-white/[0.05] text-white/35"}`}>
+                            <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold ${l.decks ? "bg-brand-gold/15 text-brand-gold" : "bg-white/[0.05] text-t3"}`}>
                               {l.decks ? `${l.decks} ${l.decks === 1 ? "deck" : "decks"}` : "no meta decks"}
                             </span>
                           </button>
@@ -220,8 +220,8 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
               )}
             </div>
 
-            {!chosen && <p className="py-4 text-center text-sm text-white/35">{legends.filter((l) => l.decks > 0).length} of {legends.length} legends have decks in the latest events.</p>}
-            {chosen && decks.length === 0 && <p className="py-4 text-center text-sm text-white/35">No meta decks for {chosen.name} in the latest events.</p>}
+            {!chosen && <p className="py-4 text-center text-sm text-t3">{legends.filter((l) => l.decks > 0).length} of {legends.length} legends have decks in the latest events.</p>}
+            {chosen && decks.length === 0 && <p className="py-4 text-center text-sm text-t3">No meta decks for {chosen.name} in the latest events.</p>}
 
             {chosen && (
               <ul className="flex flex-col gap-2">
@@ -231,36 +231,36 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                   const pct = d.total ? d.have / d.total : 0;
                   const isOpen = open === d.id;
                   return (
-                    <li key={d.id} className="rounded-lg border border-white/[0.07] bg-panel2 p-2.5">
+                    <li key={d.id} className="rounded-lg border border-line bg-panel2 p-2.5">
                       <div className="flex items-center gap-3">
                         {legend && <CardArt card={legend} sizes="56px" className="w-11 shrink-0 rounded" />}
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-white">
+                          <p className="truncate text-sm font-semibold text-t1">
                             {d.champion ?? d.legendName}
-                            <span className="font-normal text-white/45"> · {d.player}</span>
+                            <span className="font-normal text-t3"> · {d.player}</span>
                           </p>
-                          <p className="truncate text-[11px] text-white/45">
-                            <a href={d.url} target="_blank" rel="noreferrer" className="underline decoration-white/20 hover:text-white">
+                          <p className="truncate text-[11px] text-t3">
+                            <a href={d.url} target="_blank" rel="noreferrer" className="underline decoration-white/20 hover:text-t1">
                               {eventName(d.event)} {shortDate(d.date)}
                             </a>{" "}
                             · {d.section === "community" ? `♥ ${d.likes ?? 0} · ${d.title ?? ""}` : d.placement}
                           </p>
                           <div className="mt-1.5 flex items-center gap-2">
-                            <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-white/10">
-                              <div className={`h-full rounded-sm ${missing === 0 ? "bg-emerald-400" : "bg-brand-gold"}`} style={{ width: `${pct * 100}%` }} />
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-cavity">
+                              <div className={`h-full rounded-sm ${missing === 0 ? "bg-ok" : "bg-brand-gold"}`} style={{ width: `${pct * 100}%` }} />
                             </div>
-                            <span className="shrink-0 text-[11px] text-white/60">
+                            <span className="shrink-0 text-[11px] text-t2">
                               {d.have}/{d.total}
                             </span>
                           </div>
                         </div>
                         {missing === 0 ? (
-                          <span className="shrink-0 rounded-md bg-emerald-400/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-300">✓ You have it all</span>
+                          <span className="shrink-0 rounded-md bg-ok/15 px-2.5 py-1.5 text-[11px] font-semibold text-ok">✓ You have it all</span>
                         ) : (
                           <button
                             type="button"
                             onClick={() => setOpen(isOpen ? null : d.id)}
-                            className="shrink-0 rounded-md bg-white/[0.07] px-2.5 py-1.5 text-[11px] font-semibold text-white/80 transition hover:bg-white/[0.12]"
+                            className="shrink-0 rounded-md bg-cavity px-2.5 py-1.5 text-[11px] font-semibold text-t1 transition hover:bg-white/[0.12]"
                           >
                             {missing} missing {isOpen ? "▴" : "▾"}
                           </button>
@@ -268,7 +268,7 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         {saved[d.id] ? (
-                          <Link href={`/decks/${saved[d.id]}`} className="text-[11px] font-semibold text-emerald-300 hover:underline">
+                          <Link href={`/decks/${saved[d.id]}`} className="text-[11px] font-semibold text-ok hover:underline">
                             ✓ Added to your decks - open it
                           </Link>
                         ) : saving?.id === d.id ? (
@@ -285,12 +285,12 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                               onChange={(e) => setSaving({ ...saving, name: e.target.value })}
                               maxLength={80}
                               placeholder="Deck name"
-                              className="min-w-[200px] flex-1 rounded-md border border-white/10 bg-ink px-3 py-1.5 text-sm text-white outline-none focus:border-brand-gold"
+                              className="min-w-[200px] flex-1 rounded-md border border-line bg-ink px-3 py-1.5 text-sm text-t1 outline-none focus:border-brand-gold"
                             />
                             <button type="submit" disabled={saving.busy || !saving.name.trim()} className="rounded-md bg-brand-gold px-3 py-1.5 text-[11px] font-semibold text-ink hover:bg-brand-goldSoft disabled:opacity-50">
                               {saving.busy ? "Saving…" : "Save deck"}
                             </button>
-                            <button type="button" onClick={() => setSaving(null)} className="rounded-md px-2 py-1.5 text-[11px] text-white/50 hover:text-white">
+                            <button type="button" onClick={() => setSaving(null)} className="rounded-md px-2 py-1.5 text-[11px] text-t3 hover:text-t1">
                               Cancel
                             </button>
                             {saving.error && <span className="w-full text-[11px] text-brand-red">⚠ {saving.error}</span>}
@@ -299,17 +299,17 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                           <button
                             type="button"
                             onClick={() => setSaving({ id: d.id, name: `${d.champion ?? d.legendName} - ${d.title ?? d.player}`.slice(0, 80), busy: false, error: null })}
-                            className="rounded-md border border-white/15 px-2.5 py-1 text-[11px] font-semibold text-white/70 transition hover:bg-white/5"
+                            className="rounded-md border border-line px-2.5 py-1 text-[11px] font-semibold text-t2 transition hover:bg-panel2"
                           >
                             + Add to my decks
                           </button>
                         )}
                       </div>
                       {isOpen && missing > 0 && (
-                        <ul className="mt-2 grid grid-cols-1 gap-x-4 gap-y-0.5 border-t border-white/[0.07] pt-2 text-xs text-white/65 sm:grid-cols-2">
+                        <ul className="mt-2 grid grid-cols-1 gap-x-4 gap-y-0.5 border-t border-line pt-2 text-xs text-t2 sm:grid-cols-2">
                           {d.missing.map((m) => (
                             <li key={m.name}>
-                              <b className="text-white/85">{m.qty}×</b> {m.name}
+                              <b className="text-t1">{m.qty}×</b> {m.name}
                             </li>
                           ))}
                         </ul>

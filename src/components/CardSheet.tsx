@@ -32,41 +32,41 @@ export function CardSheet({
   return (
     <BottomSheet onClose={onClose}>
       <div className="flex gap-4">
-        <div className="relative aspect-[744/1039] w-32 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-black">
+        <div className="relative aspect-[744/1039] w-32 shrink-0 overflow-hidden rounded-lg border border-line bg-black">
           {card.image.url && (
             <Image src={card.image.url} alt={card.image.alt} fill sizes="128px" className="object-cover" />
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-xl font-semibold leading-tight text-white">{card.name}</p>
-          {card.subtitle && <p className="text-sm text-white/60">{card.subtitle}</p>}
-          <p className="mt-2 text-xs text-white/50">{card.publicCode}</p>
-          <p className="text-xs text-white/50">
+          <p className="font-display text-xl font-semibold leading-tight text-t1">{card.name}</p>
+          {card.subtitle && <p className="text-sm text-t2">{card.subtitle}</p>}
+          <p className="mt-2 text-xs text-t3">{card.publicCode}</p>
+          <p className="text-xs text-t3">
             {card.set.name}
             {card.rarity ? ` · ${card.rarity.label}` : ""}
           </p>
           {priced.length > 0 && (
-            <p className="mt-2 text-xs text-white/60">
+            <p className="mt-2 text-xs text-t2">
               {priced.map((p) => (
                 <span key={p.finish} className="mr-3 whitespace-nowrap">
                   {p.finish === "foil" ? "✦ Foil" : "Normal"}{" "}
-                  <span className="font-semibold text-white">{formatEur(p.price)}</span>
+                  <span className="font-semibold text-t1">{formatEur(p.price)}</span>
                 </span>
               ))}
-              <span className="block text-[10px] text-white/35">Cardmarket</span>
+              <span className="block text-[10px] text-t3">Cardmarket</span>
             </p>
           )}
 
-          <p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wide text-white/40">
+          <p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wide text-t3">
             Copies in this slot
           </p>
-          <div className="flex items-center gap-1 self-start rounded-md bg-white/5 p-1 ring-1 ring-inset ring-white/10">
+          <div className="flex items-center gap-1 self-start rounded-md bg-panel2 p-1 ring-1 ring-inset ring-white/10">
             <button
               type="button"
               onClick={() => onQty(qty - 1)}
               disabled={qty <= 1}
               aria-label="One less copy"
-              className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-white/70 active:bg-white/10 disabled:opacity-25"
+              className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-t2 active:bg-cavity disabled:opacity-25"
             >
               −
             </button>
@@ -75,7 +75,7 @@ export function CardSheet({
               type="button"
               onClick={() => onQty(qty + 1)}
               aria-label="One more copy"
-              className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-white/70 active:bg-white/10"
+              className="flex h-11 w-11 items-center justify-center rounded-md text-xl text-t2 active:bg-cavity"
             >
               +
             </button>

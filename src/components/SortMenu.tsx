@@ -39,16 +39,16 @@ export default function SortMenu({
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-full items-center gap-1.5 rounded-lg border border-white/10 bg-panel px-2.5 py-2 text-xs text-white/80 outline-none transition hover:bg-white/5 focus:border-brand-gold"
+        className="flex h-11 items-center gap-2 rounded-lg border border-line bg-ink px-3.5 text-sm text-t1 transition hover:border-line2 focus-visible:border-brand-gold"
       >
-        <span className="text-white/40">Sort</span>
+        <span className="text-t3">Sort</span>
         <span className="font-semibold">{current}</span>
-        <span className="text-white/50">{dir === "asc" ? "↑" : "↓"}</span>
+        <span className="text-t3">{dir === "asc" ? "↑" : "↓"}</span>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-40 mt-1.5 w-56 rounded-xl border border-white/10 bg-panel p-2 shadow-2xl">
-          <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Sort by</p>
+        <div className="absolute right-0 top-full z-40 mt-1.5 w-56 rounded-xl border border-line2 bg-panel p-2">
+          <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-t3">Sort by</p>
           <ul role="listbox" className="flex flex-col">
             {SORT_OPTIONS.map((o) => {
               const on = o.id === sortBy;
@@ -59,31 +59,29 @@ export default function SortMenu({
                     role="option"
                     aria-selected={on}
                     onClick={() => {
-                      // "Owned" makes most sense most-first, so it starts descending
-                      onChange(o.id, o.id === "owned" && !on ? "desc" : dir);
+                      onChange(o.id, dir);
                       setOpen(false);
                     }}
-                    className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm transition ${
-                      on ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5"
+                    className={`flex w-full items-center justify-between min-h-10 rounded-md px-2.5 text-left text-sm transition ${
+                      on ? "bg-cavity text-t1" : "text-t2 hover:bg-panel2"
                     }`}
                   >
                     {o.label}
-                    {o.id === "owned" && !on && <span className="text-[10px] text-brand-cyan">most first</span>}
                     {on && <span aria-hidden>✓</span>}
                   </button>
                 </li>
               );
             })}
           </ul>
-          <p className="px-2 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Direction</p>
+          <p className="px-2 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-t3">Direction</p>
           <div className="grid grid-cols-2 gap-1.5">
             {(["asc", "desc"] as const).map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => onChange(sortBy, d)}
-                className={`rounded-md border px-2 py-1.5 text-sm transition ${
-                  dir === d ? "border-white/30 bg-white/10 text-white" : "border-white/10 text-white/50 hover:bg-white/5"
+                className={`min-h-10 rounded-md border px-2 text-sm transition ${
+                  dir === d ? "border-line2 bg-cavity text-t1" : "border-line text-t3 hover:bg-panel2"
                 }`}
               >
                 {d === "asc" ? "Asc" : "Desc"}

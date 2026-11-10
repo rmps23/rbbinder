@@ -8,20 +8,60 @@
    Card colours (rarity/domain/foil) are fixed elsewhere. */
 :root {
   color-scheme: dark;
-  --ink: 24 24 27;
-  --panel: 33 33 37;
-  --panel2: 42 42 47;
-  --accent: 228 228 231;
-  --accent-soft: 244 244 245;
-  --mint: 161 161 170;
-  --danger: 239 106 106;
-  --scroll: 63 63 70;
+  --ink: 14 15 18;          /* page background #0E0F12 */
+  --panel: 21 23 27;        /* cards #15171B */
+  --panel2: 28 31 36;       /* elevated #1C1F24 */
+  --cavity: 38 42 48;       /* wells / bars #262A30 */
+  --line: 43 48 55;         /* border #2B3037 */
+  --line2: 59 66 75;        /* strong border #3B424B */
+  --t1: 232 232 232;        /* text primary */
+  --t2: 166 173 181;        /* text secondary */
+  --t3: 140 148 157;        /* text muted */
+  --accent: 74 192 222;     /* #4AC0DE */
+  --accent-soft: 125 211 232; /* hover */
+  --on-accent: 6 35 43;     /* text on accent */
+  --mint: 61 214 160;       /* positive #3DD6A0 */
+  --danger: 255 107 122;    /* negative #FF6B7A */
+  --warn: 245 184 75;       /* highlight / warning #F5B84B */
+  --scroll: 59 66 75;
 }
 
 body {
   background-color: rgb(var(--ink));
-  color: #e4e4e7;
+  color: rgb(var(--t1));
   font-family: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.num { font-variant-numeric: tabular-nums; }
+.label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgb(var(--t3)); }
+
+/* Tactile primary button: solid 3px edge, lifts on hover, sinks on press. */
+.btn-3d {
+  background: rgb(var(--accent));
+  color: rgb(var(--on-accent));
+  box-shadow: 0 3px 0 rgb(37 120 142);
+  transition: transform 120ms, box-shadow 120ms, background-color 120ms;
+}
+.btn-3d:hover { background: rgb(var(--accent-soft)); transform: translateY(-1px); box-shadow: 0 4px 0 rgb(37 120 142); }
+.btn-3d:active { transform: translateY(2px); box-shadow: 0 1px 0 rgb(37 120 142); }
+
+:focus-visible { outline: 1px solid rgb(var(--accent) / 0.85); outline-offset: 1px; }
+
+/* Text fields: just the 1px border turns accent (smooth, small). Fields without a border keep the default outline below. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea,
+select {
+  transition: border-color 150ms ease, outline-color 150ms ease;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([data-bare]):focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: rgb(var(--accent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
 ::-webkit-scrollbar {

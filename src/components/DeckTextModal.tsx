@@ -45,7 +45,7 @@ export function DeckTextModal({
 
   return (
     <BottomSheet title={mode === "import" ? "Import deck" : "Export deck"} onClose={onClose}>
-      <p className="mb-2 text-xs text-white/50">
+      <p className="mb-2 text-xs text-t3">
         {mode === "import"
           ? "Paste a deck list (Legend / Champion / MainDeck / Battlefields / Runes / Sideboard, one “3 Card name” per line)."
           : "Copy this list or download it as a .txt file."}
@@ -57,7 +57,7 @@ export function DeckTextModal({
         autoFocus
         spellCheck={false}
         placeholder={"Legend:\n1 …\n\nMainDeck:\n3 …"}
-        className="h-64 w-full resize-none rounded-lg border border-white/10 bg-ink p-3 font-mono text-xs text-white outline-none focus:border-brand-gold"
+        className="h-64 w-full resize-none rounded-lg border border-line bg-ink p-3 font-mono text-xs text-t1 outline-none focus:border-brand-gold"
       />
       {message && <p className="mt-2 whitespace-pre-line text-xs text-brand-goldSoft">{message}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
@@ -84,7 +84,7 @@ export function DeckTextModal({
             </button>
           </>
         )}
-        <button type="button" onClick={onClose} className={`${button} border border-white/20 text-white/70`}>
+        <button type="button" onClick={onClose} className={`${button} border border-line text-t2`}>
           Close
         </button>
       </div>
