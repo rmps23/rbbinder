@@ -275,113 +275,148 @@ export function ListView({
   onAdjust: (row: Row, delta: number) => void;
   onMove: (row: Row, to: DeckZone) => void;
 }) {
+  const renderRow = (row: Row, compact: boolean) => {
+    const { entry, card } = row;
+    const versions = versionsOf(card);
+    const art = (
+      <div className={`relative shrink-0 ${compact ? "w-[72px]" : "w-16"}`}>
+        <button type="button" onClick={() => onInspect(card)} title={`${displayName(card)} - open details`} className="block w-full">
+          <CardArt card={card} sizes="160px" quality={90} className="rounded-md" />
+        </button>
+        {versions > 1 && (
+          <button
+            type="button"
+            onClick={() => onPickPrinting(row)}
+            title={`Choose the version (${versions} available)`}
+            className="num absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-md bg-cavity px-1 text-[10px] font-bold text-t1 ring-1 ring-line2 transition hover:bg-panel2 hover:ring-brand-gold"
+          >
+            {versions}
+          </button>
+        )}
+      </div>
+    );
+    const label = (
+      <span className="min-w-0">
+                              <span className="block truncate text-sm font-semibold text-t1" title={displayName(card)}>{displayName(card)}</span>
+                              <span className="mt-1 flex items-center gap-2">
+                                <OwnedBadge owned={ownedOf(card)} need={neededOf(card)} />
+                              </span>
+                            </span>
+    );
+    const actions = (
+      <span className={`flex items-center gap-1.5 ${compact ? "flex-wrap" : ""}`}>
+                              <EyeButton card={card} preview={preview} onInspect={onInspect} />
+                              {entry.zone === "main" && card.types.includes("unit") && canChampion(card) && (
+                                <RowButton tone="gold" onClick={() => onMove(row, "champion")} title="Use as your chosen champion">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5L2.6 9.8l6.5-.9L12 3Z" /></svg>
+                                </RowButton>
+                              )}
+                              {entry.zone === "main" && (
+                                <RowButton onClick={() => onMove(row, "sideboard")} title="Move one copy to the sideboard">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="M7 7h13m-4-4 4 4-4 4M17 17H4m4-4-4 4 4 4" /></svg>
+                                </RowButton>
+                              )}
+                              {entry.zone === "sideboard" && (
+                                <RowButton onClick={() => onMove(row, "main")} title="Move one copy to the main deck">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="M7 7h13m-4-4 4 4-4 4M17 17H4m4-4-4 4 4 4" /></svg>
+                                </RowButton>
+                              )}
+                              {entry.zone === "champion" && (
+                                <RowButton onClick={() => onMove(row, "main")} title="Put it back in the main deck (unset champion)">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                                </RowButton>
+                              )}
+                              <span className="flex items-center rounded-lg border border-line bg-ink">
+                                <button
+                                  type="button"
+                                  aria-label={`Remove one ${displayName(card)}`}
+                                  onClick={() => onAdjust(row, -1)}
+                                  className="flex h-9 w-9 items-center justify-center rounded-l-lg text-t2 transition hover:bg-bad/15 hover:text-bad"
+                                >
+                                  −
+                                </button>
+                                <span key={entry.qty} className="num w-7 animate-pop text-center font-display text-lg font-bold leading-none text-brand-gold" aria-live="polite">
+                                  {entry.qty}
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Add one ${displayName(card)}`}
+                                  onClick={() => onAdjust(row, 1)}
+                                  className="flex h-9 w-9 items-center justify-center rounded-r-lg text-t2 transition hover:bg-cavity hover:text-t1"
+                                >
+                                  +
+                                </button>
+                              </span>
+                            </span>
+    );
+    return (
+      <li
+        key={`${entry.zone}:${entry.cardId}`}
+        className={`items-center gap-3 rounded-xl border border-line bg-panel2 p-2 transition hover:border-line2 ${
+          compact ? "grid grid-cols-[auto_minmax(0,1fr)] items-start" : "grid grid-cols-[auto_minmax(0,1fr)_auto]"
+        }`}
+      >
+        {art}
+        {compact ? (
+          <span className="flex min-w-0 flex-col gap-1.5">
+            {label}
+            {actions}
+          </span>
+        ) : (
+          <>
+            {label}
+            {actions}
+          </>
+        )}
+      </li>
+    );
+  };
+
+  // two = rows go in two columns (main deck); the legend and the champion sit side by side.
+  const renderSection = (zone: (typeof zones)[number], two: boolean) => {
+    const rows = rowsByZone.get(zone.id) ?? [];
+    const count = countOf(zone.id);
+    const goal = zone.target ?? zone.max;
+    const done = zone.target !== null && count >= zone.target;
+    return (
+      <section key={zone.id} className="min-w-0">
+        <h3 className="mb-2 flex items-center justify-between font-display text-sm font-semibold uppercase tracking-[0.08em] text-t1">
+          {zone.label}
+          <span
+            className={`num rounded-md px-2 py-0.5 text-xs font-semibold tracking-normal ${
+              done ? "bg-ok/15 text-ok" : "bg-cavity text-t2"
+            }`}
+          >
+            {done ? "✓ " : ""}
+            {count}
+            {goal ? ` / ${goal}` : ""}
+          </span>
+        </h3>
+        {rows.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-line2 py-3 text-center text-xs text-t3">Nothing here yet</p>
+        ) : (
+          <ul className={two ? "grid grid-cols-1 gap-1.5 min-[560px]:grid-cols-2" : "flex flex-col gap-1.5"}>
+            {rows.map((row) => renderRow(row, two || zone.id === "legend" || zone.id === "champion"))}
+          </ul>
+        )}
+      </section>
+    );
+  };
+
+  const legend = zones.find((z) => z.id === "legend");
+  const champion = zones.find((z) => z.id === "champion");
+
   return (
     <div className="flex flex-col gap-5">
-      {zones.map((zone) => {
-        const rows = rowsByZone.get(zone.id) ?? [];
-        const count = countOf(zone.id);
-        const goal = zone.target ?? zone.max;
-        const done = zone.target !== null && count >= zone.target;
-        return (
-          <section key={zone.id}>
-            <h3 className="mb-2 flex items-center justify-between font-display text-sm font-semibold uppercase tracking-[0.08em] text-t1">
-              {zone.label}
-              <span
-                className={`num rounded-md px-2 py-0.5 text-xs font-semibold tracking-normal ${
-                  done ? "bg-ok/15 text-ok" : "bg-cavity text-t2"
-                }`}
-              >
-                {done ? "✓ " : ""}
-                {count}
-                {goal ? ` / ${goal}` : ""}
-              </span>
-            </h3>
-            {rows.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-line2 py-3 text-center text-xs text-t3">
-                Nothing here yet
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-1.5">
-                {rows.map((row) => {
-                  const { entry, card } = row;
-                  return (
-                    <li
-                      key={`${entry.zone}:${entry.cardId}`}
-                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-line bg-panel2 p-2 transition hover:border-line2"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => onPickPrinting(row)}
-                        title={versionsOf(card) > 1 ? `Choose the version (${versionsOf(card)} available)` : card.publicCode}
-                        className="relative w-11 shrink-0"
-                      >
-                        <CardArt card={card} sizes="96px" quality={85} className="rounded-md" />
-                        {versionsOf(card) > 1 && (
-                          <span className="num absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-md bg-cavity px-1 text-[10px] font-bold text-t1 ring-1 ring-line2">
-                            {versionsOf(card)}
-                          </span>
-                        )}
-                      </button>
-
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold text-t1" title={displayName(card)}>{displayName(card)}</span>
-                        <span className="mt-1 flex items-center gap-2">
-                          <OwnedBadge owned={ownedOf(card)} need={neededOf(card)} />
-                        </span>
-                      </span>
-
-                      <span className="flex items-center gap-1.5">
-                        <EyeButton card={card} preview={preview} onInspect={onInspect} />
-                        {entry.zone === "main" && card.types.includes("unit") && canChampion(card) && (
-                          <RowButton tone="gold" onClick={() => onMove(row, "champion")} title="Use as your chosen champion">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5L2.6 9.8l6.5-.9L12 3Z" /></svg>
-                          </RowButton>
-                        )}
-                        {entry.zone === "main" && (
-                          <RowButton onClick={() => onMove(row, "sideboard")} title="Move one copy to the sideboard">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="M7 7h13m-4-4 4 4-4 4M17 17H4m4-4-4 4 4 4" /></svg>
-                          </RowButton>
-                        )}
-                        {entry.zone === "sideboard" && (
-                          <RowButton onClick={() => onMove(row, "main")} title="Move one copy to the main deck">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="M7 7h13m-4-4 4 4-4 4M17 17H4m4-4-4 4 4 4" /></svg>
-                          </RowButton>
-                        )}
-                        {entry.zone === "champion" && (
-                          <RowButton onClick={() => onMove(row, "main")} title="Put it back in the main deck (unset champion)">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
-                          </RowButton>
-                        )}
-                        <span className="flex items-center rounded-lg border border-line bg-ink">
-                          <button
-                            type="button"
-                            aria-label={`Remove one ${displayName(card)}`}
-                            onClick={() => onAdjust(row, -1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-l-lg text-t2 transition hover:bg-bad/15 hover:text-bad"
-                          >
-                            −
-                          </button>
-                          <span key={entry.qty} className="num w-7 animate-pop text-center font-display text-lg font-bold leading-none text-brand-gold" aria-live="polite">
-                            {entry.qty}
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={`Add one ${displayName(card)}`}
-                            onClick={() => onAdjust(row, 1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-r-lg text-t2 transition hover:bg-cavity hover:text-t1"
-                          >
-                            +
-                          </button>
-                        </span>
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        );
-      })}
+      {legend && champion && (
+        <div className="grid grid-cols-2 items-start gap-3">
+          {renderSection(legend, false)}
+          {renderSection(champion, false)}
+        </div>
+      )}
+      {zones
+        .filter((z) => !(legend && champion && (z.id === "legend" || z.id === "champion")))
+        .map((zone) => renderSection(zone, zone.id === "main"))}
     </div>
   );
 }
@@ -582,7 +617,7 @@ export function BulkView({
               {compare.have.map((r) => (
                 <div key={r.key} className="group">
                   <div className="relative overflow-hidden rounded-lg border-2 border-brand-gold/70" title={displayName(r.card)}>
-                    <CardArt card={r.card} sizes="(min-width: 1024px) 160px, 20vw" quality={90} className="rounded-none ring-0" />
+                    <button type="button" onClick={() => onInspect(r.card)} className="block w-full"><CardArt card={r.card} sizes="(min-width: 1024px) 160px, 20vw" quality={90} className="rounded-none ring-0" /></button>
                     <EyeButton small card={r.card} preview={preview} onInspect={onInspect} className="absolute left-1 top-1 bg-ink/95 sm:opacity-0 sm:focus-visible:opacity-100 sm:group-hover:opacity-100" />
                     <span className="num absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-md bg-brand-gold px-1 text-[11px] font-bold text-on-accent">
                       {r.qty}
@@ -609,7 +644,7 @@ export function BulkView({
               {compare.missing.map((r) => (
                 <div key={r.key} className="group">
                   <div className="relative overflow-hidden rounded-lg border-2 border-bad/60" title={displayName(r.card)}>
-                    <CardArt card={r.card} sizes="(min-width: 1024px) 160px, 20vw" quality={90} className="rounded-none ring-0 opacity-75" />
+                    <button type="button" onClick={() => onInspect(r.card)} className="block w-full"><CardArt card={r.card} sizes="(min-width: 1024px) 160px, 20vw" quality={90} className="rounded-none ring-0 opacity-75" /></button>
                     <EyeButton small card={r.card} preview={preview} onInspect={onInspect} className="absolute left-1 top-1 bg-ink/95 sm:opacity-0 sm:focus-visible:opacity-100 sm:group-hover:opacity-100" />
                     <span className="num absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-md bg-bad px-1 text-[11px] font-bold text-on-accent">
                       ×{r.qty}

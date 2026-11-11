@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAppData } from "./AppDataProvider";
+import { useCardInspect } from "./CardInspect";
 import { CardArt } from "./DeckViews";
 import { domainColor } from "@/lib/style";
 import type { LegendInfo, MetaOption } from "@/lib/metaCheck";
@@ -16,6 +17,7 @@ const missingCount = (d: MetaOption) => d.missing.reduce((n, m) => n + m.qty, 0)
 
 export function MetaDecksModal({ onClose }: { onClose: () => void }) {
   const { cards } = useAppData();
+  const inspect = useCardInspect();
   const cardById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
 
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -233,7 +235,11 @@ export function MetaDecksModal({ onClose }: { onClose: () => void }) {
                   return (
                     <li key={d.id} className="rounded-lg border border-line bg-panel2 p-2.5">
                       <div className="flex items-center gap-3">
-                        {legend && <CardArt card={legend} sizes="56px" className="w-11 shrink-0 rounded" />}
+                        {legend && (
+                          <button type="button" onClick={() => inspect(legend)} title="Open card details" className="w-11 shrink-0">
+                            <CardArt card={legend} sizes="96px" className="rounded" />
+                          </button>
+                        )}
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-t1">
                             {d.champion ?? d.legendName}

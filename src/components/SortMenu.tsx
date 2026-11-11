@@ -39,7 +39,7 @@ export default function SortMenu({
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-11 items-center gap-2 rounded-lg border border-line bg-ink px-3.5 text-sm text-t1 transition hover:border-line2 focus-visible:border-brand-gold"
+        className="flex h-9 items-center gap-2 rounded-lg border border-line bg-ink px-3 text-sm text-t1 transition hover:border-line2 focus-visible:border-brand-gold"
       >
         <span className="text-t3">Sort</span>
         <span className="font-semibold">{current}</span>

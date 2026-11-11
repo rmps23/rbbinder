@@ -4,6 +4,7 @@ import { DashboardSkeleton } from "@/components/Skeletons";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAppData } from "@/components/AppDataProvider";
+import { useCardInspect } from "@/components/CardInspect";
 import { CardArt } from "@/components/DeckViews";
 import { binderProgress } from "@/lib/binderProgress";
 import { PriceModeSwitch } from "@/components/PriceModeSwitch";
@@ -56,6 +57,7 @@ const btnBase = "inline-flex min-h-11 items-center justify-center rounded-lg px-
 const btnGhost = `${btnBase} border border-line text-t2 hover:border-line2 hover:bg-panel2 hover:text-t1`;
 
 export default function DashboardPage() {
+  const inspect = useCardInspect();
   const { cards, sets, bulk, prices, priceOf, loading: appLoading, reloadCards } = useAppData();
   const { binders, loading: bindersLoading } = useBinders();
   const [decks, setDecks] = useState<Deck[]>([]);
@@ -252,7 +254,9 @@ export default function DashboardPage() {
               {stats.top.slice(0, 4).map(({ card, price }, i) => (
                 <div key={card.id} title={displayName(card)}>
                   <div className="relative">
-                    <CardArt card={card} sizes="(min-width: 1536px) 320px, 240px" quality={90} className="rounded-md" />
+                    <button type="button" onClick={() => inspect(card)} className="block w-full" title={`${displayName(card)} - open details`}>
+                      <CardArt card={card} sizes="(min-width: 1536px) 320px, 240px" quality={90} className="rounded-md" />
+                    </button>
                     <span className="num absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded bg-warn px-1 text-[11px] font-bold text-ink">
                       {i + 1}
                     </span>

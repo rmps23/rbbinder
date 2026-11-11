@@ -46,7 +46,7 @@ function Ring({ pct }: { pct: number }) {
   const r = 20;
   const c = 2 * Math.PI * r;
   return (
-    <svg viewBox="0 0 48 48" className="h-[72px] w-[72px] -rotate-90 shrink-0">
+    <svg viewBox="0 0 48 48" className="h-11 w-11 -rotate-90 shrink-0">
       <circle cx="24" cy="24" r={r} fill="none" className="stroke-cavity" strokeWidth="4" />
       <circle
         cx="24"
@@ -84,13 +84,13 @@ export function DeckBuilder({ id }: { id: string }) {
   const [domainIds, setDomainIds] = useState<string[]>([]);
   const [setId, setSetId] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
-  const [onlyBulk, setOnlyBulk] = useState(false);
+  const [onlyBulk, setOnlyBulk] = useState(true);
   const [visible, setVisible] = useState(STEP);
   const { bind: preview, node: previewNode } = useCardPreview();
   const [sortBy, setSortBy] = useState<SortKey>("energy");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [ownedFirst, setOwnedFirst] = useState(false);
-  const [hideBanned, setHideBanned] = useState(false);
+  const [hideBanned, setHideBanned] = useState(true);
   const [inspectCard, setInspectCard] = useState<RiftCard | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [flash, setFlash] = useState<string | null>(null);
@@ -386,14 +386,14 @@ export function DeckBuilder({ id }: { id: string }) {
   return (
     <div className="lg:flex lg:h-[calc(100dvh-3rem)] lg:flex-col">
       {/* header */}
-      <header className="mb-4 rounded-xl border border-line bg-panel p-3 sm:p-4 lg:shrink-0">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-          <Link href="/decks" aria-label="Back to decks" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line text-t2 transition hover:border-line2 hover:bg-panel2 hover:text-t1">
+      <header className="mb-3 rounded-xl border border-line bg-panel px-3 py-2 lg:shrink-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Link href="/decks" aria-label="Back to decks" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line text-t2 transition hover:border-line2 hover:bg-panel2 hover:text-t1">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
           </Link>
           <div className="relative shrink-0" role="img" aria-label={`${progress} percent complete`}>
             <Ring pct={progress} />
-            <span className="num absolute inset-0 flex items-center justify-center text-[13px] font-bold leading-none tracking-tight text-t1">{progress}%</span>
+            <span className="num absolute inset-0 flex items-center justify-center text-[10px] font-bold leading-none tracking-tight text-t1">{progress}%</span>
           </div>
           <div className="min-w-0 flex-1 basis-56">
             <input
@@ -403,26 +403,26 @@ export function DeckBuilder({ id }: { id: string }) {
                 setName(e.target.value);
               }}
               aria-label="Deck name"
-              className="h-10 w-full rounded-lg border border-transparent bg-transparent px-2 font-display text-2xl font-semibold uppercase tracking-wide text-t1 hover:border-line"
+              className="h-8 w-full rounded-lg border border-transparent bg-transparent px-2 font-display text-xl font-semibold uppercase leading-none tracking-wide text-t1 hover:border-line"
             />
-            <p className="num flex flex-wrap items-center gap-x-4 gap-y-1 px-2 text-xs text-t3">
+            <p className="num flex flex-wrap items-center gap-x-3 gap-y-0.5 px-2 text-xs text-t3">
               {legend ? <span className="font-semibold text-t2">{displayName(legend)}</span> : <span>Pick a legend to start</span>}
               <span><b className="text-t1">{mainTotal}</b>/40 main</span>
               <span><b className="text-t1">{countOf("battlefield")}</b>/3 battlefields</span>
               <span><b className="text-t1">{countOf("rune")}</b>/12 runes</span>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className={`inline-flex h-8 items-center rounded-md px-3 text-xs font-semibold ${rules.legal ? "bg-ok/15 text-ok" : "bg-cavity text-t2"}`}>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex h-7 items-center rounded-md px-2.5 text-xs font-semibold ${rules.legal ? "bg-ok/15 text-ok" : "bg-cavity text-t2"}`}>
               {rules.legal ? "✓ Legal deck" : "Not legal yet"}
             </span>
             <span className={`text-xs ${save === "error" ? "text-bad" : "text-t3"}`} aria-live="polite">
               {save === "saving" ? "Saving…" : save === "error" ? "✕ Couldn't save" : "✓ Saved"}
             </span>
-            <button type="button" onClick={() => setModal("import")} className="inline-flex h-11 items-center rounded-lg border border-line px-5 text-sm font-semibold text-t2 transition hover:border-line2 hover:bg-panel2 hover:text-t1">
+            <button type="button" onClick={() => setModal("import")} className="inline-flex h-9 items-center rounded-lg border border-line px-4 text-sm font-semibold text-t2 transition hover:border-line2 hover:bg-panel2 hover:text-t1">
               Import
             </button>
-            <button type="button" onClick={() => setModal("export")} className="btn-3d h-11 rounded-lg px-6 font-display text-xs font-semibold uppercase tracking-wide">
+            <button type="button" onClick={() => setModal("export")} className="btn-3d h-9 rounded-lg px-5 font-display text-xs font-semibold uppercase tracking-wide">
               Export
             </button>
           </div>
@@ -440,15 +440,18 @@ export function DeckBuilder({ id }: { id: string }) {
 
       <div className="grid gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(400px,1fr)]">
         {/* ---- pool ---- */}
-        <section className={`${mobile === "pool" ? "" : "hidden"} lg:block lg:h-full lg:min-h-0 lg:overflow-y-scroll lg:pr-2`}>
-          <SlideGroup className="mb-3 flex gap-1 overflow-x-auto rounded-xl border border-line bg-panel p-1">
+        <section className={`${mobile === "pool" ? "" : "hidden"} lg:block lg:h-full lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-scroll lg:pr-3`}>
+          {/* tabs + filters stay put while the card grid scrolls under them */}
+          <div className="mb-4 lg:sticky lg:top-0 lg:z-20 lg:mb-0 lg:bg-ink lg:pb-3">
+          <div className="rounded-xl border border-line bg-panel">
+          <SlideGroup className="no-scrollbar flex gap-0.5 overflow-x-auto p-1">
             {POOL_ORDER.map((z) => {
               const z0 = tgt(z);
               const on = poolZone === z;
               return (
-                <button key={z} type="button" data-active={on} onClick={() => setPoolZone(z)} className={`flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`}>
+                <button key={z} type="button" data-active={on} onClick={() => setPoolZone(z)} className={`flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-1.5 text-xs font-semibold transition ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`}>
                   {z0.label}
-                  <span className={`num text-xs font-medium ${on ? "text-on-accent/75" : "text-t3"}`}>
+                  <span className={`num text-[11px] font-medium ${on ? "text-on-accent/75" : "text-t3"}`}>
                     {z === "main" ? mainTotal : countOf(z)}
                     {z0.target ? `/${z0.target}` : z0.max ? `/${z0.max}` : ""}
                   </span>
@@ -457,14 +460,14 @@ export function DeckBuilder({ id }: { id: string }) {
             })}
           </SlideGroup>
 
-          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-line bg-panel p-3">
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 border-t border-line p-2">
+            <div className="flex flex-wrap gap-1.5">
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={`Search ${tgt(poolZone).label.toLowerCase()} cards: name, text, tag, type…`}
-                className="h-11 min-w-[200px] flex-1 rounded-lg border border-line bg-ink px-3.5 text-sm text-t1 placeholder:text-t3"
+                className="h-9 min-w-[160px] flex-1 rounded-lg border border-line bg-ink px-3 text-sm text-t1 placeholder:text-t3"
               />
               <div className="w-40 shrink-0">
                 <Select
@@ -472,7 +475,7 @@ export function DeckBuilder({ id }: { id: string }) {
                   onChange={setSetId}
                   ariaLabel="Filter by set"
                   searchPlaceholder="Search sets…"
-                  className="h-11 text-sm"
+                  className="h-9 text-sm"
                   menuMinWidth={220}
                   options={[{ value: "", label: "All sets" }, ...sets.map((s) => ({ value: s.id, label: s.name }))]}
                 />
@@ -485,7 +488,7 @@ export function DeckBuilder({ id }: { id: string }) {
                     ariaLabel="Keywords"
                     placeholder="Keywords"
                     searchPlaceholder="Search keywords…"
-                    className="h-11 text-sm"
+                    className="h-9 text-sm"
                     menuMinWidth={260}
                     options={keywordOptions.map(([k, n]) => ({ value: k, label: k, count: n }))}
                   />
@@ -500,8 +503,9 @@ export function DeckBuilder({ id }: { id: string }) {
                 }}
               />
             </div>
+            <div className="flex flex-wrap items-center gap-1.5">
             {showDomainFilter && (
-            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Domain">
+            <div className="contents" role="group" aria-label="Domain">
               {DOMAIN_OPTIONS.map((d) => {
                 const on = domainIds.includes(d.id);
                 // at most two domains at once: once two are picked, the others are greyed out
@@ -514,7 +518,7 @@ export function DeckBuilder({ id }: { id: string }) {
                     disabled={locked}
                     title={locked ? "Two domains at most - untick one first" : undefined}
                     onClick={() => setDomainIds((cur) => (on ? cur.filter((x) => x !== d.id) : cur.length >= 2 ? cur : [...cur, d.id]))}
-                    className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition ${
+                    className={`flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition ${
                       on
                         ? "border-line2 bg-cavity text-t1"
                         : locked
@@ -530,13 +534,13 @@ export function DeckBuilder({ id }: { id: string }) {
               })}
             </div>
             )}
-            <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+            <span className="mx-1 hidden h-5 w-px bg-line sm:block" aria-hidden="true" />
               <button
                 type="button"
                 role="switch"
                 aria-checked={onlyBulk}
                 onClick={() => setOnlyBulk((v) => !v)}
-                className="flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
+                className="flex h-8 items-center gap-2 rounded-lg border border-line bg-ink px-2.5 text-xs font-semibold text-t2 transition hover:border-line2"
               >
                 <span className={`relative h-5 w-9 rounded-full transition-colors ${onlyBulk ? "bg-brand-gold" : "bg-cavity"}`}>
                   <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${onlyBulk ? "left-[18px]" : "left-0.5"}`} />
@@ -549,7 +553,7 @@ export function DeckBuilder({ id }: { id: string }) {
                 aria-checked={ownedFirst}
                 onClick={() => setOwnedFirst((v) => !v)}
                 title="Show the cards you own the most copies of first, then apply the sort above within each group"
-                className="flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
+                className="flex h-8 items-center gap-2 rounded-lg border border-line bg-ink px-2.5 text-xs font-semibold text-t2 transition hover:border-line2"
               >
                 <span className={`relative h-5 w-9 rounded-full transition-colors ${ownedFirst ? "bg-brand-gold" : "bg-cavity"}`}>
                   <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${ownedFirst ? "left-[18px]" : "left-0.5"}`} />
@@ -562,18 +566,20 @@ export function DeckBuilder({ id }: { id: string }) {
                 aria-checked={hideBanned}
                 onClick={() => setHideBanned((v) => !v)}
                 title="Hide the cards that are banned in Constructed"
-                className="flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
+                className="flex h-8 items-center gap-2 rounded-lg border border-line bg-ink px-2.5 text-xs font-semibold text-t2 transition hover:border-line2"
               >
                 <span className={`relative h-5 w-9 rounded-full transition-colors ${hideBanned ? "bg-brand-gold" : "bg-cavity"}`}>
                   <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${hideBanned ? "left-[18px]" : "left-0.5"}`} />
                 </span>
                 Hide banned
               </button>
-              <span className="num ml-auto text-sm text-t3">{pool.length} cards</span>
+              <span className="num ml-auto text-xs text-t3">{pool.length} cards</span>
             </div>
           </div>
+          </div>
+          </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {pool.slice(0, visible).map((card) => {
               const qty = inZone.get(cardKey(card)) ?? 0;
               const owned = ownedByKey.get(cardKey(card)) ?? 0;

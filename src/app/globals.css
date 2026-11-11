@@ -75,3 +75,11 @@ select:focus-visible {
   background: rgb(var(--scroll));
   border-radius: 8px;
 }
+
+/* a scrolling strip without the scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
