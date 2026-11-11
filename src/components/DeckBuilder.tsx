@@ -579,7 +579,7 @@ export function DeckBuilder({ id }: { id: string }) {
           </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+          <div className={poolZone === "battlefield" ? "grid grid-cols-2 gap-3" : "grid grid-cols-3 gap-3 sm:grid-cols-4"}>
             {pool.slice(0, visible).map((card) => {
               const qty = inZone.get(cardKey(card)) ?? 0;
               const owned = ownedByKey.get(cardKey(card)) ?? 0;

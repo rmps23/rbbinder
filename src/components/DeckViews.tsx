@@ -5,6 +5,7 @@ import { useCallback, useRef, useState, useSyncExternalStore, type PointerEvent 
 import { displayName } from "@/lib/deck";
 import { formatEur } from "@/lib/format";
 import { domainColor } from "@/lib/style";
+import { isLandscape } from "@/lib/cardUtils";
 import type { DeckEntry, DeckZone, RiftCard } from "@/lib/types";
 
 export type Row = { entry: DeckEntry; card: RiftCard };
@@ -12,7 +13,7 @@ export type Row = { entry: DeckEntry; card: RiftCard };
 export function CardArt({ card, sizes, className = "", quality }: { card: RiftCard; sizes: string; className?: string; quality?: number }) {
   return (
     <div
-      className={`relative aspect-[744/1039] overflow-hidden bg-[#0a0c10] ring-1 ring-line2 ${className}`}
+      className={`relative overflow-hidden bg-[#0a0c10] ring-1 ring-line2 ${isLandscape(card) ? "aspect-[1039/744]" : "aspect-[744/1039]"} ${className}`}
     >
       {card.image.url ? (
         <Image src={card.image.url} alt={card.image.alt} fill sizes={sizes} quality={quality} className="object-cover" />
@@ -28,8 +29,8 @@ export function CardArt({ card, sizes, className = "", quality }: { card: RiftCa
 // Hovering a card (mouse only) shows it big next to the pointer, so its text can
 // be read. `bind(card)` gives the handlers to spread on whatever shows the card;
 // `node` is the floating preview, rendered once by the owner.
-const PREVIEW_W = 300;
-const PREVIEW_H = Math.round((PREVIEW_W * 1039) / 744);
+const PREVIEW_LONG = 420; // the long side: tall for upright cards, wide for battlefields
+const PREVIEW_SHORT = Math.round((PREVIEW_LONG * 744) / 1039);
 const GAP = 22;
 
 export type PreviewBind = (card: RiftCard) => {
@@ -66,6 +67,8 @@ function PreviewLayer({ store }: { store: PreviewStore }) {
   const state = useSyncExternalStore(store.subscribe, store.get, () => null);
   if (!state) return null;
   const { card, x, y } = state;
+  const PREVIEW_W = isLandscape(card) ? PREVIEW_LONG : PREVIEW_SHORT;
+  const PREVIEW_H = isLandscape(card) ? PREVIEW_SHORT : PREVIEW_LONG;
   // right of the pointer, or left when there's no room; kept inside the window
   const left = x + GAP + PREVIEW_W > window.innerWidth - 8 ? x - GAP - PREVIEW_W : x + GAP;
   const top = Math.max(8, Math.min(y - PREVIEW_H / 3, window.innerHeight - PREVIEW_H - 8));
@@ -279,7 +282,7 @@ export function ListView({
     const { entry, card } = row;
     const versions = versionsOf(card);
     const art = (
-      <div className={`relative shrink-0 ${compact ? "w-[72px]" : "w-16"}`}>
+      <div className={`relative shrink-0 ${isLandscape(card) ? (compact ? "w-24" : "w-28") : compact ? "w-[72px]" : "w-16"}`}>
         <button type="button" onClick={() => onInspect(card)} title={`${displayName(card)} - open details`} className="block w-full">
           <CardArt card={card} sizes="160px" quality={90} className="rounded-md" />
         </button>
@@ -448,7 +451,7 @@ export function ArtView({
         return (
           <section key={zone.id}>
             <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-[0.08em] text-t1">{zone.label}</h3>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            <div className={rows[0] && isLandscape(rows[0].card) ? "grid grid-cols-2 gap-2" : "grid grid-cols-3 gap-2 sm:grid-cols-4"}>
               {rows.map((row) => (
                 <div key={`${row.entry.zone}:${row.entry.cardId}`} className="group relative animate-card-in">
                   <button
