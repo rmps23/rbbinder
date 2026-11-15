@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchRiftboundCatalog } from "@/lib/riftboundCatalog";
-import { missingRunes } from "@/lib/extraCards";
+import { missingPromos, missingRunes } from "@/lib/extraCards";
 import { getExistingCardIds, upsertCardsAndSets } from "@/lib/repo";
 import type { CardsSyncResult } from "@/lib/types";
 
@@ -13,8 +13,20 @@ export async function POST() {
     const catalog = await fetchRiftboundCatalog();
     // Rune printings Riot's gallery doesn't list (best effort - never blocks the sync).
     const extra = await missingRunes(catalog.cards, catalog.sets).catch(() => ({ cards: [], sets: [] }));
-    const cards = [...catalog.cards, ...extra.cards];
-    const sets = [...catalog.sets.map((s) => ({ ...s, cardCount: s.cardCount + extra.cards.filter((c) => c.set.id === s.id).length })), ...extra.sets];
+    // Promo printings (event, judge and bundle promos) - also best effort.
+    const promos = await missingPromos([...catalog.cards, ...extra.cards]).catch(() => ({ cards: [], sets: [] }));
+    const extraCards = [...extra.cards, ...promos.cards];
+    const cards = [...catalog.cards, ...extraCards];
+    const extraSets = [...extra.sets];
+    for (const s of promos.sets) {
+      const cur = extraSets.find((x) => x.id === s.id);
+      if (cur) cur.cardCount += s.cardCount;
+      else extraSets.push(s);
+    }
+    const sets = [
+      ...catalog.sets.map((s) => ({ ...s, cardCount: s.cardCount + extraCards.filter((c) => c.set.id === s.id).length })),
+      ...extraSets.filter((s) => !catalog.sets.some((c) => c.id === s.id)),
+    ];
     const existingIds = await getExistingCardIds();
     await upsertCardsAndSets(cards, sets);
 

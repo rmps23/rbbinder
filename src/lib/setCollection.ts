@@ -6,7 +6,13 @@ import type { RiftCard } from "./types";
 // without a plain "SET-n/total" code. Collecting a set = owning one of each.
 const BASE_CODE = /^[A-Z0-9]+-(\d+)\/(\d+)$/;
 
+// Sets made only of promo printings, added from TCGplayer (see extraCards.ts).
+// They are not part of the "one of each card" collection goal, but a binder
+// for one of these sets lists all of its printings.
+export const PROMO_SET_IDS = new Set(["OPP", "PR", "JDG", "RWB", "SGN", "T12025", "RXKDA"]);
+
 export function isBaseCard(card: RiftCard): boolean {
+  if (PROMO_SET_IDS.has(card.set.id)) return false;
   const m = card.publicCode.match(BASE_CODE);
   if (!m) return false;
   if (Number(m[1]) > Number(m[2])) return false;
@@ -14,6 +20,7 @@ export function isBaseCard(card: RiftCard): boolean {
 }
 
 export function baseCardsOf(cards: RiftCard[], setId: string): RiftCard[] {
+  if (PROMO_SET_IDS.has(setId)) return cards.filter((c) => c.set.id === setId);
   return cards.filter((c) => c.set.id === setId && isBaseCard(c));
 }
 
@@ -32,6 +39,7 @@ export type PrintingKind = "regular" | "alt" | "overnumbered" | "signature" | "s
 const RUNE_CODE = /^[A-Z0-9]+-R\d+([a-z]*)$/;
 
 export function printingKind(card: RiftCard): PrintingKind {
+  if (PROMO_SET_IDS.has(card.set.id)) return card.rarity?.id === "showcase" ? "showcase" : "promo";
   if (card.publicCode.includes("*")) return "signature";
   const rune = card.publicCode.match(RUNE_CODE); // e.g. SFD-R01, SFD-R01a
   if (rune) return rune[1] ? "alt" : "regular";

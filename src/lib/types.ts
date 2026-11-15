@@ -18,6 +18,8 @@ export type RiftCard = {
   illustrator: string | null;
   abilityText: string;
   image: { url: string | null; width: number | null; height: number | null; alt: string };
+  // TCGplayer product, for printings added from TCGplayer (promos): several can share a number.
+  tcgplayerId?: number;
 };
 
 export type SetInfo = { id: string; name: string; cardCount: number };

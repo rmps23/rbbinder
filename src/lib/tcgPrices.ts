@@ -95,8 +95,10 @@ async function build(): Promise<PricesResponse> {
   setFinishData(finishData);
 
   const idByCode = new Map(cards.map((c) => [c.publicCode, c.id]));
+  // promo printings carry their TCGplayer product (several can share a number)
+  const idByProduct = new Map(cards.filter((c) => c.tcgplayerId).map((c) => [c.tcgplayerId!, c.id]));
   const setIds = new Set(cards.map((c) => c.set.id));
-  const groups = groupsRes.results.filter((g) => setIds.has(g.abbreviation));
+  const groups = groupsRes.results.filter((g) => setIds.has(g.abbreviation) || setIds.has(g.abbreviation.replace(/[^A-Za-z0-9]/g, "")));
   const euro = (usd: number) => Math.round(usd * fx.rate * 100) / 100;
   const prices: Record<string, CardPrices> = {};
 
@@ -111,7 +113,7 @@ async function build(): Promise<PricesResponse> {
 
       for (const product of products.results) {
         const number = product.extendedData?.find((e) => e.name === "Number")?.value;
-        const id = number ? idByCode.get(`${group.abbreviation}-${number}`) : undefined;
+        const id = idByProduct.get(product.productId) ?? (number ? idByCode.get(`${group.abbreviation}-${number}`) : undefined);
         if (!id) continue;
         for (const row of rowsOf.get(product.productId) ?? []) {
           const usd = row.marketPrice ?? row.midPrice ?? row.lowPrice;
