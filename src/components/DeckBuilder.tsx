@@ -395,7 +395,7 @@ export function DeckBuilder({ id }: { id: string }) {
             <Ring pct={progress} />
             <span className="num absolute inset-0 flex items-center justify-center text-[10px] font-bold leading-none tracking-tight text-t1">{progress}%</span>
           </div>
-          <div className="min-w-0 flex-1 basis-56">
+          <div className="min-w-0 flex-1 basis-40">
             <input
               value={name}
               onChange={(e) => {
@@ -438,9 +438,9 @@ export function DeckBuilder({ id }: { id: string }) {
         ))}
       </SlideGroup>
 
-      <div className="grid gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(400px,1fr)]">
+      <div className="grid grid-cols-1 gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(400px,1fr)]">
         {/* ---- pool ---- */}
-        <section className={`${mobile === "pool" ? "" : "hidden"} lg:block lg:h-full lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-scroll lg:pr-3`}>
+        <section className={`${mobile === "pool" ? "" : "hidden"} min-w-0 lg:block lg:h-full lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-scroll lg:pr-3`}>
           {/* tabs + filters stay put while the card grid scrolls under them */}
           <div className="mb-4 lg:sticky lg:top-0 lg:z-20 lg:mb-0 lg:bg-ink lg:pb-3">
           <div className="rounded-xl border border-line bg-panel">
@@ -449,7 +449,7 @@ export function DeckBuilder({ id }: { id: string }) {
               const z0 = tgt(z);
               const on = poolZone === z;
               return (
-                <button key={z} type="button" data-active={on} onClick={() => setPoolZone(z)} className={`flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-1.5 text-xs font-semibold transition ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`}>
+                <button key={z} type="button" data-active={on} onClick={() => setPoolZone(z)} className={`flex min-h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-3 text-xs font-semibold transition lg:min-w-0 lg:flex-1 lg:shrink lg:px-1.5 ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`}>
                   {z0.label}
                   <span className={`num text-[11px] font-medium ${on ? "text-on-accent/75" : "text-t3"}`}>
                     {z === "main" ? mainTotal : countOf(z)}
@@ -645,7 +645,7 @@ export function DeckBuilder({ id }: { id: string }) {
 
         {/* ---- workspace ---- */}
         <section
-          className={`${mobile === "deck" ? "" : "hidden"} rounded-xl border border-line bg-panel p-3 sm:p-4 lg:block lg:h-full lg:min-h-0 lg:overflow-y-scroll`}
+          className={`${mobile === "deck" ? "" : "hidden"} min-w-0 rounded-xl border border-line bg-panel p-3 sm:p-4 lg:block lg:h-full lg:min-h-0 lg:overflow-y-scroll`}
         >
           <SlideGroup className="mb-4 flex gap-1 rounded-lg border border-line bg-ink p-1">
             {VIEWS.map((v) => (

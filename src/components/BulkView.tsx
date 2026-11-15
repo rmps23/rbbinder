@@ -116,6 +116,8 @@ export function BulkView() {
   const [typeId, setTypeId] = useState("");
   const [altArt, setAltArt] = useState<AltArt>("all");
   const [onlyOwned, setOnlyOwned] = useState(true);
+  // phones: the selects and switch fold away behind a "Filters" button
+  const [showFilters, setShowFilters] = useState(false);
   const [visible, setVisible] = useState(ROWS_PER_PAGE);
   const [inspect, setInspect] = useState<RiftCard | null>(null);
 
@@ -216,7 +218,7 @@ export function BulkView() {
 
         {/* expansions + result count */}
         <div className="flex items-center gap-4 border-t border-line px-3 py-2 sm:px-4">
-          <SlideGroup role="tablist" aria-label="Expansion" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+          <SlideGroup role="tablist" aria-label="Expansion" className="no-scrollbar flex min-w-0 flex-1 gap-1 overflow-x-auto">
             <button type="button" role="tab" data-active={!setId} aria-selected={!setId} className={tab(!setId)} onClick={() => setSetId("")}>
               <span className="font-display text-sm font-semibold uppercase tracking-wider">All sets</span>
               <span className={`num text-[11px] font-medium ${!setId ? "text-on-accent/75" : "text-t3"}`}>{prices ? formatEur(stats.total.value) : "…"}</span>
@@ -244,7 +246,7 @@ export function BulkView() {
 
         {/* filters */}
         <div className="flex flex-wrap items-center gap-2 border-t border-line p-3 sm:px-4">
-          <div className="relative min-w-[220px] flex-1">
+          <div className="relative min-w-0 flex-1 sm:min-w-[220px]">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-t3">
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-3.5-3.5" />
@@ -263,16 +265,32 @@ export function BulkView() {
               </button>
             )}
           </div>
-          <div className="w-36">
+          <button
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+            aria-expanded={showFilters}
+            className={`flex h-11 shrink-0 items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold transition md:hidden ${
+              showFilters ? "border-brand-gold text-t1" : "border-line text-t2"
+            }`}
+          >
+            Filters
+            {[domainId, rarityId, typeId].filter(Boolean).length + (altArt !== "all" ? 1 : 0) + (onlyOwned ? 0 : 1) > 0 && (
+              <span className="num flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-gold px-1 text-[11px] font-bold text-on-accent">
+                {[domainId, rarityId, typeId].filter(Boolean).length + (altArt !== "all" ? 1 : 0) + (onlyOwned ? 0 : 1)}
+              </span>
+            )}
+          </button>
+          <div className={`${showFilters ? "grid" : "hidden"} w-full grid-cols-2 gap-2 md:contents`}>
+          <div className="md:w-36">
             <Select value={domainId} onChange={setDomainId} searchable={false} ariaLabel="Domain" className="h-11 text-sm" menuMinWidth={160} options={[{ value: "", label: "All domains" }, ...DOMAIN_OPTIONS.map((d) => ({ value: d.id, label: d.label }))]} />
           </div>
-          <div className="w-36">
+          <div className="md:w-36">
             <Select value={rarityId} onChange={setRarityId} searchable={false} ariaLabel="Rarity" className="h-11 text-sm" menuMinWidth={160} options={[{ value: "", label: "All rarities" }, ...RARITY_OPTIONS.map((r) => ({ value: r.id, label: r.label }))]} />
           </div>
-          <div className="w-36">
+          <div className="md:w-36">
             <Select value={typeId} onChange={setTypeId} searchable={false} ariaLabel="Type" className="h-11 text-sm" menuMinWidth={160} options={[{ value: "", label: "All types" }, ...TYPE_OPTIONS.map((t) => ({ value: t.id, label: t.label }))]} />
           </div>
-          <div className="w-36">
+          <div className="md:w-36">
             <Select value={altArt} onChange={(v) => setAltArt(v as AltArt)} searchable={false} ariaLabel="Art" className="h-11 text-sm" menuMinWidth={160} options={ART_OPTIONS} />
           </div>
           <button
@@ -280,13 +298,22 @@ export function BulkView() {
             role="switch"
             aria-checked={onlyOwned}
             onClick={() => setOnlyOwned((v) => !v)}
-            className="flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
+            className="col-span-2 flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
           >
             <span className={`relative h-5 w-9 rounded-full transition-colors ${onlyOwned ? "bg-brand-gold" : "bg-cavity"}`}>
               <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${onlyOwned ? "left-[18px]" : "left-0.5"}`} />
             </span>
             Only my bulk
           </button>
+          </div>
+          <p className="num flex w-full items-center justify-between text-xs text-t3 md:hidden">
+            {filtered.length} card{filtered.length === 1 ? "" : "s"}
+            {filtersOn && (
+              <button type="button" onClick={clearFilters} className="font-semibold text-brand-gold">
+                Clear filters
+              </button>
+            )}
+          </p>
         </div>
       </section>
 

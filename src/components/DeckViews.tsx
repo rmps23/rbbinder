@@ -412,7 +412,7 @@ export function ListView({
   return (
     <div className="flex flex-col gap-5">
       {legend && champion && (
-        <div className="grid grid-cols-2 items-start gap-3">
+        <div className="grid grid-cols-1 items-start gap-3 min-[440px]:grid-cols-2">
           {renderSection(legend, false)}
           {renderSection(champion, false)}
         </div>

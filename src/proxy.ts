@@ -9,7 +9,8 @@ export const config = {
      * - /api/login (the endpoint that sets the session cookie)
      * - Next.js internals and static files
      */
-    "/((?!login|api/login|_next/static|_next/image|favicon.ico|data/).*)",
+    // Static files (logo, icons, manifest) must load on the login page too.
+    "/((?!login|api/login|_next/static|_next/image|favicon.ico|data/|icons/|.*\\.(?:svg|png|jpg|jpeg|webp|ico|webmanifest)$).*)",
   ],
 };
 

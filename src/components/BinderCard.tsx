@@ -109,7 +109,7 @@ export function BinderCard({
           onClick={onDelete}
           title="Delete binder"
           aria-label={`Delete ${binder.name}`}
-          className="absolute -right-2 -top-2 z-10 flex h-11 w-11 items-center justify-center rounded-md border border-line bg-panel2 text-t2 transition hover:bg-bad hover:text-on-accent md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
+          className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-md text-t3 transition hover:bg-bad hover:text-on-accent md:-right-2 md:-top-2 md:h-11 md:w-11 md:border md:border-line md:bg-panel2 md:text-t2 md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
         >
           ✕
         </button>
