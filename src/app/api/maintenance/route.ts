@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/session";
 import { getUpdatedAt } from "@/lib/overrides";
 import { refreshPrices, updateCardmarketLinks, updateDomainFixes, updateFinishes } from "@/lib/maintenance";
 
@@ -14,10 +15,14 @@ const TASKS: Record<string, () => Promise<string>> = {
 
 // When each piece of generated data was last refreshed.
 export async function GET() {
+  const user = await requireUser({ admin: true });
+  if (user instanceof NextResponse) return user;
   return NextResponse.json(await getUpdatedAt());
 }
 
 export async function POST(req: NextRequest) {
+  const user = await requireUser({ admin: true });
+  if (user instanceof NextResponse) return user;
   const body = await req.json().catch(() => null);
   const task = TASKS[body?.task];
   if (!task) return NextResponse.json({ error: "Unknown task" }, { status: 400 });

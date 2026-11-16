@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/session";
 import { deleteBinder, getBinder, updateBinder } from "@/lib/repo";
 import type { BinderLayout } from "@/lib/types";
 
@@ -13,9 +14,11 @@ function friendly(message: string) {
 
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
   const { id } = await params;
   try {
-    const binder = await getBinder(id);
+    const binder = await getBinder(user.id, id);
     if (!binder) return NextResponse.json({ error: "Binder not found" }, { status: 404 });
     return NextResponse.json(binder);
   } catch (err) {
@@ -24,6 +27,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
   const { id } = await params;
   const body = await req.json().catch(() => null);
   const patch: { name?: string; layout?: BinderLayout; pageCount?: number; sortOrder?: number; setId?: string | null } = {};
@@ -62,7 +67,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   try {
-    const binder = await updateBinder(id, patch);
+    const binder = await updateBinder(user.id, id, patch);
     if (!binder) return NextResponse.json({ error: "Binder not found" }, { status: 404 });
     return NextResponse.json(binder);
   } catch (err) {
@@ -74,9 +79,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
   const { id } = await params;
   try {
-    await deleteBinder(id);
+    await deleteBinder(user.id, id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json(

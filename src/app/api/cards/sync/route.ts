@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/session";
 import { fetchRiftboundCatalog } from "@/lib/riftboundCatalog";
 import { missingPromos, missingRunes } from "@/lib/extraCards";
 import { getExistingCardIds, upsertCardsAndSets } from "@/lib/repo";
@@ -9,6 +10,8 @@ import type { CardsSyncResult } from "@/lib/types";
 export const maxDuration = 60;
 
 export async function POST() {
+  const user = await requireUser({ admin: true });
+  if (user instanceof NextResponse) return user;
   try {
     const catalog = await fetchRiftboundCatalog();
     // Rune printings Riot's gallery doesn't list (best effort - never blocks the sync).

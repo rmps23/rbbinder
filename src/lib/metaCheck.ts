@@ -42,8 +42,8 @@ export type MetaOption = {
 // Cards you can play: everything in the bulk AND in your binders, but only
 // regular printings - alternate arts, overnumbered, signature and showcase
 // copies are collection pieces and never leave the binder.
-async function loadOwned() {
-  const [{ cards }, bulk, binders] = await Promise.all([getCardsAndSets(), getBulk(), listBinders()]);
+async function loadOwned(userId: string) {
+  const [{ cards }, bulk, binders] = await Promise.all([getCardsAndSets(), getBulk(userId), listBinders(userId)]);
   const copies = new Map<string, number>(); // card id -> copies
   for (const [id, e] of Object.entries(bulk)) copies.set(id, (copies.get(id) ?? 0) + (e.normal ?? 0) + (e.foil ?? 0));
   for (const b of binders) for (const [id, q] of Object.entries(b.contents ?? {})) copies.set(id, (copies.get(id) ?? 0) + q);
@@ -97,8 +97,8 @@ function coverage(meta: MetaDeck, o: Owned, cardById: Map<string, RiftCard>) {
   return { have, total, missing };
 }
 
-export async function metaOptions(refresh = false) {
-  const o = await loadOwned();
+export async function metaOptions(userId: string, refresh = false) {
+  const o = await loadOwned(userId);
   const cache = await getMetaDecks(o.cards, refresh);
   // Community lists fill the gaps: they may fail without hiding Riot's lists.
   const community = await getCommunityDecks(o.cards, refresh).catch(() => ({ decks: [] as MetaDeck[] }));

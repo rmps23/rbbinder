@@ -109,6 +109,18 @@ create table if not exists public.app_data (
   updated_at timestamptz not null default now()
 );
 
+-- Accounts (Supabase Auth): binders, bulk and decks belong to a user; binder
+-- slots belong to their binder. Cards, sets and app_data are shared. Upgrading
+-- an existing database? Run supabase/migrations/001_multi_user.sql (it also
+-- makes a backup), deploy, then 002_after_deploy.sql.
+alter table public.binders add column if not exists user_id uuid references auth.users(id) on delete cascade;
+alter table public.decks add column if not exists user_id uuid references auth.users(id) on delete cascade;
+alter table public.bulk add column if not exists user_id uuid references auth.users(id) on delete cascade;
+alter table public.bulk add column if not exists id uuid not null default gen_random_uuid();
+create index if not exists binders_user_idx on public.binders (user_id);
+create index if not exists decks_user_idx on public.decks (user_id);
+create unique index if not exists bulk_user_card_key on public.bulk (user_id, card_id);
+
 -- Row Level Security is enabled with no policies: only the server-side
 -- service role key (used in the Next.js API routes) can read/write these
 -- tables. The browser never talks to Supabase directly.

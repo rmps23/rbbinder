@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/session";
 import { getBulk, setBulkQty } from "@/lib/repo";
 
 export async function GET() {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
   try {
-    return NextResponse.json(await getBulk());
+    return NextResponse.json(await getBulk(user.id));
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to load bulk" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
   const body = await req.json().catch(() => null);
   const cardId = body?.cardId;
   const variant = body?.variant;
@@ -28,7 +33,7 @@ export async function PATCH(req: NextRequest) {
   const safeQty = Math.min(Math.floor(qty), 9999);
 
   try {
-    await setBulkQty(cardId, variant, safeQty);
+    await setBulkQty(user.id, cardId, variant, safeQty);
     return NextResponse.json({ ok: true, cardId, variant, qty: safeQty });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to update bulk" }, { status: 500 });

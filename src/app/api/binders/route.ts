@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/session";
 import { createBinder, listBinders } from "@/lib/repo";
 import type { BinderLayout } from "@/lib/types";
 
@@ -13,8 +14,10 @@ function friendly(message: string) {
 
 
 export async function GET() {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
   try {
-    return NextResponse.json(await listBinders());
+    return NextResponse.json(await listBinders(user.id));
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to load binders" },
@@ -24,6 +27,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
   const body = await req.json().catch(() => null);
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const layout = body?.layout;
@@ -35,7 +40,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const binder = await createBinder(name, layout, setId);
+    const binder = await createBinder(user.id, name, layout, setId);
     return NextResponse.json(binder, { status: 201 });
   } catch (err) {
     return NextResponse.json(

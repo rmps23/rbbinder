@@ -4,6 +4,10 @@
 // created/used entirely locally for testing, no Supabase account needed.
 // Deploying to Vercel requires the real Supabase env vars - its filesystem
 // is ephemeral so the local fallback would lose data between requests.
+//
+// Binders, bulk and decks belong to a user: every function for them takes the
+// signed-in user's id (see session.ts) and only touches that user's rows. The
+// local file has a single user, so there the id is ignored.
 
 import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "./supabaseAdmin";
@@ -13,6 +17,17 @@ import { getDomainFixes } from "./overrides";
 import type { Deck, DeckEntry, Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo } from "./types";
 
 const CHUNK_SIZE = 200;
+
+// The single user of the password-only mode (no accounts, see session.ts). With
+// Supabase behind it, that mode works on every row like before accounts existed.
+export const LOCAL_USER = "local";
+
+// Only this user's rows (every row for the password-only user).
+function mine<Q>(query: Q, userId: string): Q {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return userId === LOCAL_USER ? query : (query as any).eq("user_id", userId);
+}
+const owner = (userId: string) => (userId === LOCAL_USER ? {} : { user_id: userId });
 
 function hasSupabaseConfig(): boolean {
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -145,10 +160,10 @@ export async function upsertCardsAndSets(cards: RiftCard[], sets: SetInfo[]): Pr
 
 // ---------- bulk ----------
 
-export async function getBulk(): Promise<BulkMap> {
+export async function getBulk(userId: string): Promise<BulkMap> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.from("bulk").select("card_id, normal_qty, foil_qty");
+    const { data, error } = await mine(supabase.from("bulk").select("card_id, normal_qty, foil_qty"), userId);
     if (error) throw new Error(error.message);
     const map: BulkMap = {};
     for (const row of data ?? []) map[row.card_id] = { normal: row.normal_qty ?? 0, foil: row.foil_qty ?? 0 };
@@ -160,7 +175,7 @@ export async function getBulk(): Promise<BulkMap> {
   return map;
 }
 
-export async function setBulkQty(cardId: string, variant: BulkVariant, qty: number): Promise<void> {
+export async function setBulkQty(userId: string, cardId: string, variant: BulkVariant, qty: number): Promise<void> {
   const now = new Date().toISOString();
   const column = variant === "normal" ? "normal_qty" : "foil_qty";
 
@@ -170,7 +185,10 @@ export async function setBulkQty(cardId: string, variant: BulkVariant, qty: numb
     // existing row (Postgres ON CONFLICT DO UPDATE only sets what's listed).
     const { error } = await supabase
       .from("bulk")
-      .upsert({ card_id: cardId, [column]: qty, updated_at: now }, { onConflict: "card_id" });
+      .upsert(
+        { ...owner(userId), card_id: cardId, [column]: qty, updated_at: now },
+        { onConflict: userId === LOCAL_USER ? "card_id" : "user_id,card_id" }
+      );
     if (error) throw new Error(error.message);
     return;
   }
@@ -193,22 +211,26 @@ export async function setBulkQty(cardId: string, variant: BulkVariant, qty: numb
 
 // ---------- binders ----------
 
-export async function listBinders(): Promise<Binder[]> {
+export async function listBinders(userId: string): Promise<Binder[]> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
-    const [{ data: binders, error: bindersError }, qtyRows] = await Promise.all([
-      supabase.from("binders").select("*").order("sort_order").order("created_at"),
-      selectAll((from, to) =>
-        supabase
-          .from("binder_cards")
-          .select("binder_id, card_id, qty")
-          .gt("qty", 0)
-          .order("binder_id")
-          .order("position")
-          .range(from, to)
-      ),
-    ]);
+    const { data: binders, error: bindersError } = await mine(supabase.from("binders").select("*"), userId)
+      .order("sort_order")
+      .order("created_at");
     if (bindersError) throw new Error(bindersError.message);
+    const ids = (binders ?? []).map((b) => b.id);
+    const qtyRows = ids.length
+      ? await selectAll((from, to) =>
+          supabase
+            .from("binder_cards")
+            .select("binder_id, card_id, qty")
+            .in("binder_id", ids)
+            .gt("qty", 0)
+            .order("binder_id")
+            .order("position")
+            .range(from, to)
+        )
+      : [];
 
     const stats = accumulateStats(qtyRows.map((r) => ({ binderId: r.binder_id, cardId: r.card_id, qty: r.qty })));
     return (binders ?? []).map((b) =>
@@ -228,12 +250,12 @@ export async function listBinders(): Promise<Binder[]> {
 
 const DEFAULT_PAGE_COUNT = 2;
 
-export async function createBinder(name: string, layout: BinderLayout, setId: string | null = null): Promise<Binder> {
+export async function createBinder(userId: string, name: string, layout: BinderLayout, setId: string | null = null): Promise<Binder> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("binders")
-      .insert({ name, layout, page_count: DEFAULT_PAGE_COUNT, ...(setId ? { set_id: setId } : {}) })
+      .insert({ ...owner(userId), name, layout, page_count: DEFAULT_PAGE_COUNT, ...(setId ? { set_id: setId } : {}) })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
@@ -268,11 +290,11 @@ export async function createBinder(name: string, layout: BinderLayout, setId: st
   return toBinder(binder, { uniqueCount: 0, totalQty: 0 });
 }
 
-export async function getBinder(id: string): Promise<Binder | null> {
+export async function getBinder(userId: string, id: string): Promise<Binder | null> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
     const [{ data: binder, error: binderError }, { data: qtyRows, error: qtyError }] = await Promise.all([
-      supabase.from("binders").select("*").eq("id", id).maybeSingle(),
+      mine(supabase.from("binders").select("*").eq("id", id), userId).maybeSingle(),
       supabase.from("binder_cards").select("card_id, qty").eq("binder_id", id).gt("qty", 0),
     ]);
     if (binderError) throw new Error(binderError.message);
@@ -301,6 +323,7 @@ export async function getBinder(id: string): Promise<Binder | null> {
 }
 
 export async function updateBinder(
+  userId: string,
   id: string,
   patch: { name?: string; layout?: BinderLayout; pageCount?: number; sortOrder?: number; setId?: string | null }
 ): Promise<Binder | null> {
@@ -314,7 +337,7 @@ export async function updateBinder(
     if (patch.pageCount !== undefined) update.page_count = patch.pageCount;
     if (patch.sortOrder !== undefined) update.sort_order = patch.sortOrder;
     if (patch.setId !== undefined) update.set_id = patch.setId;
-    const { data, error } = await supabase.from("binders").update(update).eq("id", id).select("*").maybeSingle();
+    const { data, error } = await mine(supabase.from("binders").update(update).eq("id", id), userId).select("*").maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return null;
     return toBinder(
@@ -345,10 +368,10 @@ export async function updateBinder(
   });
 }
 
-export async function deleteBinder(id: string): Promise<void> {
+export async function deleteBinder(userId: string, id: string): Promise<void> {
   if (hasSupabaseConfig()) {
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from("binders").delete().eq("id", id);
+    const { error } = await mine(supabase.from("binders").delete().eq("id", id), userId);
     if (error) throw new Error(error.message);
     return;
   }
@@ -360,8 +383,16 @@ export async function deleteBinder(id: string): Promise<void> {
 
 // ---------- binder slots ----------
 
-export async function getBinderSlots(binderId: string): Promise<BinderSlots> {
+// binder_cards has no owner column: a binder's slots belong to the binder's owner.
+async function ownsBinder(userId: string, binderId: string): Promise<boolean> {
+  const { data, error } = await mine(getSupabaseAdmin().from("binders").select("id").eq("id", binderId), userId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return Boolean(data);
+}
+
+export async function getBinderSlots(userId: string, binderId: string): Promise<BinderSlots> {
   if (hasSupabaseConfig()) {
+    if (!(await ownsBinder(userId, binderId))) return {};
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("binder_cards")
@@ -379,10 +410,17 @@ export async function getBinderSlots(binderId: string): Promise<BinderSlots> {
 }
 
 // qty <= 0 clears the slot (cardId is then ignored).
-export async function setBinderSlot(binderId: string, position: number, cardId: string | null, qty: number): Promise<void> {
+export async function setBinderSlot(
+  userId: string,
+  binderId: string,
+  position: number,
+  cardId: string | null,
+  qty: number
+): Promise<void> {
   const now = new Date().toISOString();
 
   if (hasSupabaseConfig()) {
+    if (!(await ownsBinder(userId, binderId))) throw new Error("Binder not found");
     const supabase = getSupabaseAdmin();
     if (qty <= 0 || !cardId) {
       const { error } = await supabase.from("binder_cards").delete().eq("binder_id", binderId).eq("position", position);
@@ -437,9 +475,9 @@ function fromRow(r: DeckRow): Deck {
   };
 }
 
-export async function listDecks(): Promise<Deck[]> {
+export async function listDecks(userId: string): Promise<Deck[]> {
   if (hasSupabaseConfig()) {
-    const { data, error } = await getSupabaseAdmin().from("decks").select("*").order("updated_at", { ascending: false });
+    const { data, error } = await mine(getSupabaseAdmin().from("decks").select("*"), userId).order("updated_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (data as DeckRow[]).map(fromRow);
   }
@@ -447,9 +485,9 @@ export async function listDecks(): Promise<Deck[]> {
   return [...db.decks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export async function getDeck(id: string): Promise<Deck | null> {
+export async function getDeck(userId: string, id: string): Promise<Deck | null> {
   if (hasSupabaseConfig()) {
-    const { data, error } = await getSupabaseAdmin().from("decks").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await mine(getSupabaseAdmin().from("decks").select("*").eq("id", id), userId).maybeSingle();
     if (error) throw new Error(error.message);
     return data ? fromRow(data as DeckRow) : null;
   }
@@ -457,10 +495,10 @@ export async function getDeck(id: string): Promise<Deck | null> {
   return db.decks.find((d) => d.id === id) ?? null;
 }
 
-export async function createDeck(name: string, entries: unknown): Promise<Deck> {
+export async function createDeck(userId: string, name: string, entries: unknown): Promise<Deck> {
   const clean = cleanEntries(entries);
   if (hasSupabaseConfig()) {
-    const { data, error } = await getSupabaseAdmin().from("decks").insert({ name, payload: { entries: clean } }).select("*").single();
+    const { data, error } = await getSupabaseAdmin().from("decks").insert({ ...owner(userId), name, payload: { entries: clean } }).select("*").single();
     if (error) throw new Error(error.message);
     return fromRow(data as DeckRow);
   }
@@ -472,13 +510,13 @@ export async function createDeck(name: string, entries: unknown): Promise<Deck> 
   return deck;
 }
 
-export async function updateDeck(id: string, patch: { name?: string; entries?: unknown }): Promise<void> {
+export async function updateDeck(userId: string, id: string, patch: { name?: string; entries?: unknown }): Promise<void> {
   const now = new Date().toISOString();
   if (hasSupabaseConfig()) {
     const update: Record<string, unknown> = { updated_at: now };
     if (patch.name !== undefined) update.name = patch.name;
     if (patch.entries !== undefined) update.payload = { entries: cleanEntries(patch.entries) };
-    const { error } = await getSupabaseAdmin().from("decks").update(update).eq("id", id);
+    const { error } = await mine(getSupabaseAdmin().from("decks").update(update).eq("id", id), userId);
     if (error) throw new Error(error.message);
     return;
   }
@@ -491,9 +529,9 @@ export async function updateDeck(id: string, patch: { name?: string; entries?: u
   });
 }
 
-export async function deleteDeck(id: string): Promise<void> {
+export async function deleteDeck(userId: string, id: string): Promise<void> {
   if (hasSupabaseConfig()) {
-    const { error } = await getSupabaseAdmin().from("decks").delete().eq("id", id);
+    const { error } = await mine(getSupabaseAdmin().from("decks").delete().eq("id", id), userId);
     if (error) throw new Error(error.message);
     return;
   }

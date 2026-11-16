@@ -35,3 +35,13 @@ export async function cacheSet(key: string, value: unknown): Promise<void> {
     // not cached
   }
 }
+
+// Forget everything cached (on sign out, so the next person doesn't see it).
+export async function cacheClear(): Promise<void> {
+  try {
+    const db = await open();
+    db.transaction(STORE, "readwrite").objectStore(STORE).clear();
+  } catch {
+    // nothing cached
+  }
+}

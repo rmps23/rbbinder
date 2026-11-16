@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { cacheClear } from "@/lib/clientCache";
 import { usePathname, useRouter } from "next/navigation";
 import { useHeaderToolbar } from "@/components/HeaderToolbarContext";
 
@@ -63,9 +65,19 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { toolbar } = useHeaderToolbar();
+  // Who's signed in: their email under the menu, and the admin-only Data page.
+  const [me, setMe] = useState<{ email: string | null; isAdmin: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setMe)
+      .catch(() => setMe(null));
+  }, []);
 
   async function logout() {
     await fetch("/api/logout", { method: "POST" });
+    await cacheClear(); // the next person on this browser mustn't see this collection
     router.push("/login");
     router.refresh();
   }
@@ -97,6 +109,8 @@ export function Header() {
               </Link>
             );
           })}
+          {me?.isAdmin && (
+          <>
           <p className="label px-3 pb-1 pt-5">System</p>
           <Link href="/maintenance" aria-current={pathname.startsWith("/maintenance") ? "page" : undefined} className={linkCls(pathname.startsWith("/maintenance"))}>
             <svg viewBox="0 0 24 24" {...ICON} className="h-5 w-5 shrink-0">
@@ -105,8 +119,15 @@ export function Header() {
             </svg>
             Data &amp; updates
           </Link>
+          </>
+          )}
         </nav>
         <div className="border-t border-line p-3">
+          {me?.email && (
+            <p className="truncate px-3 pb-2 text-xs text-t3" title={me.email}>
+              {me.email}
+            </p>
+          )}
           <button onClick={logout} className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-semibold text-t2 transition hover:bg-bad/10 hover:text-bad">
             <svg viewBox="0 0 24 24" {...ICON} className="h-5 w-5 shrink-0" aria-hidden="true">
               <path d="M15 12H3m0 0 3-3m-3 3 3 3M9 5V4a1 1 0 0 1 1-1h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8a1 1 0 0 1-1-1v-1" />
@@ -143,6 +164,7 @@ export function Header() {
             </Link>
           );
         })}
+        {me?.isAdmin && (
         <Link
           href="/maintenance"
           aria-label="Data and updates"
@@ -155,6 +177,7 @@ export function Header() {
           </svg>
           Data
         </Link>
+        )}
         <button onClick={logout} aria-label="Sign out" className="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-t2">
           <svg viewBox="0 0 24 24" {...ICON} className="h-5 w-5" aria-hidden="true">
             <path d="M15 12H3m0 0 3-3m-3 3 3 3M9 5V4a1 1 0 0 1 1-1h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8a1 1 0 0 1-1-1v-1" />

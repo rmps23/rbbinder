@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/session";
 import { getBinderSlots, setBinderSlot } from "@/lib/repo";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
   const { id } = await params;
   try {
-    return NextResponse.json(await getBinderSlots(id));
+    return NextResponse.json(await getBinderSlots(user.id, id));
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to load binder slots" },
@@ -14,6 +17,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
   const { id } = await params;
   const body = await req.json().catch(() => null);
   const position = body?.position;
@@ -33,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const safeQty = Math.min(Math.floor(qty), 9999);
 
   try {
-    await setBinderSlot(id, position, cardId, safeQty);
+    await setBinderSlot(user.id, id, position, cardId, safeQty);
     return NextResponse.json({ ok: true, position, cardId: safeQty > 0 ? cardId : null, qty: safeQty });
   } catch (err) {
     return NextResponse.json(
