@@ -18,10 +18,20 @@ const LABELS: Record<string, string> = {
 };
 
 // `domainFixes`: domains of unreleased cards from TCGplayer (Maintenance page).
-export function applyCardFixes(cards: RiftCard[], domainFixes: Record<string, string[]>): RiftCard[] {
+// `typeFixes`: card types (unit, spell, gear...) Riot has wrong, also from TCGplayer.
+export function applyCardFixes(
+  cards: RiftCard[],
+  domainFixes: Record<string, string[]>,
+  typeFixes: Record<string, string[]> = {}
+): RiftCard[] {
   return cards.map((card) => {
     const ids = MANUAL[card.id] ?? domainFixes[card.id];
-    if (!ids) return card;
-    return { ...card, domains: ids.map((id) => ({ id, label: LABELS[id] ?? id })) };
+    const types = typeFixes[card.id];
+    if (!ids && !types) return card;
+    return {
+      ...card,
+      ...(ids ? { domains: ids.map((id) => ({ id, label: LABELS[id] ?? id })) } : {}),
+      ...(types ? { types } : {}),
+    };
   });
 }

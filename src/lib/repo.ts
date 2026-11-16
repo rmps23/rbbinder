@@ -13,7 +13,7 @@ import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "./supabaseAdmin";
 import { readLocalDb, withLocalDb } from "./localDb";
 import { applyCardFixes } from "./cardFixes";
-import { getDomainFixes } from "./overrides";
+import { getDomainFixes, getTypeFixes } from "./overrides";
 import type { Deck, DeckEntry, Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo } from "./types";
 
 const CHUNK_SIZE = 200;
@@ -104,13 +104,13 @@ export async function getCardsAndSets(): Promise<{ cards: RiftCard[]; sets: SetI
     if (setsError) throw new Error(setsError.message);
     const cards = cardRows.map((r) => r.payload as RiftCard);
     const sets = (setRows ?? []).map((r) => ({ id: r.id, name: r.name, cardCount: r.card_count }));
-    return sortCardsAndSets(applyCardFixes(cards, await getDomainFixes()), sets);
+    return sortCardsAndSets(applyCardFixes(cards, await getDomainFixes(), await getTypeFixes()), sets);
   }
 
   const db = await readLocalDb();
   const cards = db.cards.map((c) => c.payload);
   const sets = db.sets.map((s) => ({ id: s.id, name: s.name, cardCount: s.cardCount }));
-  return sortCardsAndSets(applyCardFixes(cards, await getDomainFixes()), sets);
+  return sortCardsAndSets(applyCardFixes(cards, await getDomainFixes(), await getTypeFixes()), sets);
 }
 
 export async function getExistingCardIds(): Promise<Set<string>> {

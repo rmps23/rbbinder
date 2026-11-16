@@ -5,6 +5,7 @@ import { getAppData } from "./appData";
 import type { FinishData } from "./cardFinish";
 import bundledDomains from "./cardDomainFixes.json";
 import bundledFinishes from "./cardFinishes.json";
+import bundledTypes from "./cardTypeFixes.json";
 import bundledMap from "./cardmarketMap.json";
 
 export async function getFinishData(): Promise<FinishData> {
@@ -16,6 +17,12 @@ export async function getDomainFixes(): Promise<Record<string, string[]>> {
   // because its set was released while Riot's data is still wrong) must not drop them.
   const saved = (await getAppData<Record<string, string[]>>("domainFixes"))?.value;
   return { ...(bundledDomains as Record<string, string[]>), ...saved };
+}
+
+// Same idea for card types (unit / spell / gear...), which Riot also gets wrong for new sets.
+export async function getTypeFixes(): Promise<Record<string, string[]>> {
+  const saved = (await getAppData<Record<string, string[]>>("typeFixes"))?.value;
+  return { ...(bundledTypes as Record<string, string[]>), ...saved };
 }
 
 export async function getCardmarketMap(): Promise<Record<string, number>> {

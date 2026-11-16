@@ -26,7 +26,7 @@ async function getJson<T>(url: string): Promise<T> {
 
 // ---------- TCGplayer (through TCGCSV), matched by printed collector number ----------
 
-type TcgInfo = { released: boolean; recent: boolean; finishes: Set<"normal" | "foil">; usd: number | null; domain: string | null };
+type TcgInfo = { released: boolean; recent: boolean; type: string | null; finishes: Set<"normal" | "foil">; usd: number | null; domain: string | null };
 
 async function loadTcg(cards: Pick<RiftCard, "id" | "publicCode" | "set">[]): Promise<Map<string, TcgInfo>> {
   const byCode = new Map(cards.map((c) => [c.publicCode, c.id]));
@@ -61,7 +61,7 @@ async function loadTcg(cards: Pick<RiftCard, "id" | "publicCode" | "set">[]): Pr
           const v = r.marketPrice ?? r.midPrice ?? r.lowPrice;
           if (v !== null && v !== undefined) usd = Math.max(usd ?? 0, v);
         }
-        out.set(id, { released, recent, finishes, usd, domain: ext.Domain && ext.Domain !== "None" ? ext.Domain : null });
+        out.set(id, { released, recent, type: ext["Card Type"] ?? null, finishes, usd, domain: ext.Domain && ext.Domain !== "None" ? ext.Domain : null });
       }
     })
   );
@@ -110,7 +110,22 @@ export async function updateDomainFixes() {
     if (domains.join() !== card.domains.map((d) => d.id).join()) fixes[card.id] = domains;
   }
   await setAppData("domainFixes", fixes);
-  return `${Object.keys(fixes).length} cards from new sets (unreleased or released in the last ${RECENT_DAYS} days) have their domains corrected from TCGplayer.`;
+
+  // Card types: Riot also mislabels some new cards (e.g. a spell listed as a unit).
+  const KNOWN = ["unit", "spell", "gear", "legend", "battlefield", "rune"];
+  const typeFixes: Record<string, string[]> = {};
+  for (const card of cards) {
+    const info = tcg.get(card.id);
+    if (!info || !info.recent || !info.type) continue;
+    const types = info.type
+      .toLowerCase()
+      .split(/[;\s]+/)
+      .filter((t) => KNOWN.includes(t))
+      .sort();
+    if (types.length && types.join() !== [...card.types].sort().join()) typeFixes[card.id] = types;
+  }
+  await setAppData("typeFixes", typeFixes);
+  return `${Object.keys(fixes).length} domains and ${Object.keys(typeFixes).length} card types from new sets (unreleased or released in the last ${RECENT_DAYS} days) corrected from TCGplayer.`;
 }
 
 // ---------- Cardmarket links ----------
