@@ -83,6 +83,7 @@ export function DeckBuilder({ id }: { id: string }) {
   const [search, setSearch] = useState("");
   const [domainIds, setDomainIds] = useState<string[]>([]);
   const [setId, setSetId] = useState("");
+  const [typeId, setTypeId] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [onlyBulk, setOnlyBulk] = useState(true);
   const [visible, setVisible] = useState(STEP);
@@ -339,6 +340,8 @@ export function DeckBuilder({ id }: { id: string }) {
   // Once a legend is chosen the pool is already limited to its domains, so the domain filter is only
   // needed while picking the legend itself (or before one exists).
   const showDomainFilter = !legend || poolZone === "legend";
+  // Main deck and sideboard mix units, spells and gear; the other zones hold one type.
+  const showTypeFilter = poolZone === "main" || poolZone === "sideboard";
 
   const pool = useMemo(() => {
     const q = search.trim();
@@ -351,6 +354,7 @@ export function DeckBuilder({ id }: { id: string }) {
       // every ticked domain must be on the card (with two ticked, only cards that have both)
       if (showDomainFilter && domainIds.length && !domainIds.every((id) => rep.domains.some((d) => d.id === id))) continue;
       if (setId && !(index.byKey.get(key) ?? []).some((c) => c.set.id === setId)) continue;
+      if (showTypeFilter && typeId && !rep.types.includes(typeId)) continue;
       if (onlyBulk && !ownedByKey.has(key)) continue;
       if (hideBanned && isBanned(rep)) continue;
       out.push(rep);
@@ -359,9 +363,9 @@ export function DeckBuilder({ id }: { id: string }) {
       owned: (c) => ownedByKey.get(cardKey(c)) ?? 0,
       setOrder: (c) => sets.findIndex((s) => s.id === c.set.id),
     }, ownedFirst);
-  }, [index, zoneCards, searchIndex, search, keywords, domainIds, showDomainFilter, setId, onlyBulk, hideBanned, ownedByKey, sortBy, sortDir, ownedFirst, sets]);
+  }, [index, zoneCards, searchIndex, search, keywords, domainIds, showDomainFilter, setId, showTypeFilter, typeId, onlyBulk, hideBanned, ownedByKey, sortBy, sortDir, ownedFirst, sets]);
 
-  useEffect(() => setVisible(STEP), [poolZone, search, domainIds, setId, onlyBulk, hideBanned, keywords, sortBy, sortDir, ownedFirst]);
+  useEffect(() => setVisible(STEP), [poolZone, search, domainIds, setId, typeId, onlyBulk, hideBanned, keywords, sortBy, sortDir, ownedFirst]);
 
   const inZone = useMemo(() => {
     const m = new Map<string, number>();
@@ -480,6 +484,24 @@ export function DeckBuilder({ id }: { id: string }) {
                   options={[{ value: "", label: "All sets" }, ...sets.map((s) => ({ value: s.id, label: s.name }))]}
                 />
               </div>
+              {showTypeFilter && (
+                <div className="w-32 shrink-0">
+                  <Select
+                    value={typeId}
+                    onChange={setTypeId}
+                    searchable={false}
+                    ariaLabel="Card type"
+                    className="h-9 text-sm"
+                    menuMinWidth={160}
+                    options={[
+                      { value: "", label: "All types" },
+                      { value: "unit", label: "Units" },
+                      { value: "spell", label: "Spells" },
+                      { value: "gear", label: "Gear" },
+                    ]}
+                  />
+                </div>
+              )}
               {keywordOptions.length > 0 && (
                 <div className="w-44 shrink-0">
                   <MultiSelect
