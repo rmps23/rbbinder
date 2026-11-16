@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { PromoMark } from "@/components/PromoMark";
 import { useState } from "react";
 import type { RiftCard } from "@/lib/types";
 import { typicalFinish } from "@/lib/cardFinish";
@@ -168,6 +169,7 @@ export function BinderSlotTile({
       ) : (
         <div className="flex h-full items-center justify-center p-2 text-center text-xs text-t3">{card.name}</div>
       )}
+      <PromoMark card={card} />
 
       {dropZone === "before" && <span className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-brand-gold" />}
       {dropZone === "after" && <span className="pointer-events-none absolute inset-y-0 right-0 w-1.5 bg-brand-gold" />}

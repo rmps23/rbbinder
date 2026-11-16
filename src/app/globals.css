@@ -83,3 +83,14 @@ select:focus-visible {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* holographic sheen for the PROMO tag (PromoMark) */
+.promo-foil {
+  background: linear-gradient(115deg, #ffd6e8, #fff3b0, #c3f7e0, #b8dcff, #e3c8ff, #ffd6e8);
+  background-size: 300% 100%;
+  animation: promo-foil 5s linear infinite;
+}
+@keyframes promo-foil {
+  from { background-position: 0% 50%; }
+  to { background-position: 300% 50%; }
+}

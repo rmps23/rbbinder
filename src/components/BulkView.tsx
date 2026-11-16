@@ -1,6 +1,7 @@
 "use client";
 
 import { SlideGroup } from "@/components/SlideGroup";
+import { PromoMark } from "@/components/PromoMark";
 import { BulkSkeleton } from "@/components/Skeletons";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
@@ -68,6 +69,7 @@ function CardTile({
             className={`object-cover transition duration-200 ${owned ? "" : "opacity-50 hover:opacity-90"}`}
           />
         )}
+        <PromoMark card={card} />
       </button>
 
       <div className="flex flex-1 flex-col gap-2 p-2.5">

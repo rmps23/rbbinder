@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { PromoMark } from "./PromoMark";
 import { useCallback, useRef, useState, useSyncExternalStore, type PointerEvent } from "react";
 import { displayName } from "@/lib/deck";
 import { formatEur } from "@/lib/format";
@@ -20,6 +21,7 @@ export function CardArt({ card, sizes, className = "", quality }: { card: RiftCa
       ) : (
         <span className="flex h-full items-center justify-center p-1 text-center text-[10px] text-t3">{card.name}</span>
       )}
+      <PromoMark card={card} />
     </div>
   );
 }

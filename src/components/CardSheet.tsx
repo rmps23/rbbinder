@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { PromoMark } from "@/components/PromoMark";
 import { BottomSheet } from "@/components/BottomSheet";
 import { useAppData } from "@/components/AppDataProvider";
 import { availableFinishes } from "@/lib/cardFinish";
@@ -36,6 +37,7 @@ export function CardSheet({
           {card.image.url && (
             <Image src={card.image.url} alt={card.image.alt} fill sizes="128px" className="object-cover" />
           )}
+          <PromoMark card={card} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-display text-xl font-semibold leading-tight text-t1">{card.name}</p>

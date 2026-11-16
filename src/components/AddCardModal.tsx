@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { PromoMark } from "@/components/PromoMark";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Filters, FilterState } from "./Filters";
 import { PAGE_SIZE } from "@/lib/constants";
@@ -185,6 +186,7 @@ export function AddCardModal({
                           {card.name}
                         </div>
                       )}
+                      <PromoMark card={card} />
                     </div>
                     <div className="p-1.5">
                       <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-t1">{card.name}</p>

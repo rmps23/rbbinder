@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { PromoMark } from "@/components/PromoMark";
 import { useEffect, useRef } from "react";
 import { CardText, SlantTag } from "@/components/CardText";
 import { useAppData } from "@/components/AppDataProvider";
@@ -99,6 +100,7 @@ export function CardDetailModal({
             ) : (
               <span className="flex h-full items-center justify-center bg-ink p-4 text-center text-t3">{card.name}</span>
             )}
+            <PromoMark card={card} size="md" />
           </div>
         </div>
 
