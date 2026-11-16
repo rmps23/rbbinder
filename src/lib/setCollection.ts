@@ -11,7 +11,12 @@ const BASE_CODE = /^[A-Z0-9]+-(\d+)\/(\d+)$/;
 // for one of these sets lists all of its printings.
 export const PROMO_SET_IDS = new Set(["OPP", "PR", "JDG", "RWB", "SGN", "T12025", "RXKDA"]);
 
+// Sets left out of every set list and of the collection goal: Proving Grounds
+// is a starter product whose cards are reprints of Origins.
+export const HIDDEN_SET_IDS = new Set(["OGS"]);
+
 export function isBaseCard(card: RiftCard): boolean {
+  if (HIDDEN_SET_IDS.has(card.set.id)) return false;
   if (PROMO_SET_IDS.has(card.set.id)) return false;
   const m = card.publicCode.match(BASE_CODE);
   if (!m) return false;

@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { HIDDEN_SET_IDS } from "@/lib/setCollection";
 import { cacheGet, cacheSet } from "@/lib/clientCache";
 import { setFinishData, type Finish } from "@/lib/cardFinish";
 import { setChampionNames } from "@/lib/deckRules";
@@ -175,8 +176,11 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     [flush]
   );
 
+  // Set lists everywhere (dashboard, bulk tabs, set pickers) skip the hidden sets.
+  const visibleSets = useMemo(() => sets.filter((s) => !HIDDEN_SET_IDS.has(s.id)), [sets]);
+
   return (
-    <Ctx.Provider value={{ cards, sets, bulk, loading, prices, priceOf, setBulkQty, reloadCards, reloadPrices, priceMode, setPriceMode }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ cards, sets: visibleSets, bulk, loading, prices, priceOf, setBulkQty, reloadCards, reloadPrices, priceMode, setPriceMode }}>{children}</Ctx.Provider>
   );
 }
 
