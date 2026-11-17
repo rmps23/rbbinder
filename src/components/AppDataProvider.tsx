@@ -5,6 +5,7 @@ import { HIDDEN_SET_IDS } from "@/lib/setCollection";
 import { cacheGet, cacheSet } from "@/lib/clientCache";
 import { setFinishData, type Finish } from "@/lib/cardFinish";
 import { setChampionNames } from "@/lib/deckRules";
+import imageFixes from "@/lib/cardImageFixes.json";
 import type { BulkMap, BulkVariant, PriceMode, PricesResponse, RiftCard, SetInfo } from "@/lib/types";
 
 type AppData = {
@@ -26,6 +27,11 @@ type AppData = {
 };
 
 const Ctx = createContext<AppData | null>(null);
+
+// Pictures TCGplayer doesn't have (its CDN answers 403), taken from Riftcodex by card code / TCGplayer id.
+const IMAGE_FIXES = imageFixes as Record<string, string>;
+const withImageFixes = (cards: RiftCard[]): RiftCard[] =>
+  cards.map((c) => (IMAGE_FIXES[c.id] ? { ...c, image: { ...c.image, url: IMAGE_FIXES[c.id] } } : c));
 
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [cards, setCards] = useState<RiftCard[]>([]);
@@ -69,7 +75,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       finishesRef.current = snap.finishes;
       if (snap.finishes) setFinishData(snap.finishes as Parameters<typeof setFinishData>[0]);
       setChampionNames(snap.cards ?? []);
-      setCards(snap.cards ?? []);
+      setCards(withImageFixes(snap.cards ?? []));
       setSets(snap.sets ?? []);
       setBulk(snap.bulk ?? {});
       setLoading(false);
@@ -91,7 +97,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       gotFresh.current = true;
       setChampionNames(cardsJson.cards ?? []);
-      setCards(cardsJson.cards ?? []);
+      setCards(withImageFixes(cardsJson.cards ?? []));
       setSets(cardsJson.sets ?? []);
       setBulk(bulkJson);
       setLoading(false);
