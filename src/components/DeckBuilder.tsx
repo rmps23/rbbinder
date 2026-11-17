@@ -76,6 +76,7 @@ export function DeckBuilder({ id }: { id: string }) {
   const [modal, setModal] = useState<null | "import" | "export">(null);
   const [includeRunes, setIncludeRunes] = useState(false);
   const [includeSideboard, setIncludeSideboard] = useState(false);
+  const [bulkOnly, setBulkOnly] = useState(false);
   const [wantsOpen, setWantsOpen] = useState(false);
   const [printingRow, setPrintingRow] = useState<Row | null>(null);
 
@@ -262,8 +263,8 @@ export function DeckBuilder({ id }: { id: string }) {
   const rules = useMemo(() => checkDeck({ entries, cardById }), [entries, cardById]);
   const ruleData = useMemo(() => hasRuleData(cards), [cards]);
 
-  // Copies you own: bulk + binders, regular printings only.
-  const { ownedByKey } = useCollection();
+  // Copies you own: bulk + binders (or the bulk alone), regular printings only.
+  const { ownedByKey } = useCollection({ bulkOnly });
   const ownedOf = useCallback((card: RiftCard) => ownedByKey.get(cardKey(card)) ?? 0, [ownedByKey]);
   // Copies of each card the whole deck uses (all zones), to colour the badges.
   const deckNeeds = useMemo(() => neededByKey(entries, cardById), [entries, cardById]);
@@ -711,6 +712,8 @@ export function DeckBuilder({ id }: { id: string }) {
               onIncludeRunes={setIncludeRunes}
               includeSideboard={includeSideboard}
               onIncludeSideboard={setIncludeSideboard}
+              bulkOnly={bulkOnly}
+              onBulkOnly={setBulkOnly}
               onWants={() => setWantsOpen(true)}
               preview={preview}
               onInspect={setInspectCard}

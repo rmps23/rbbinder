@@ -526,6 +526,8 @@ export function BulkView({
   onIncludeRunes,
   includeSideboard,
   onIncludeSideboard,
+  bulkOnly,
+  onBulkOnly,
   onWants,
   preview,
   onInspect,
@@ -536,6 +538,8 @@ export function BulkView({
   onIncludeRunes: (v: boolean) => void;
   includeSideboard: boolean;
   onIncludeSideboard: (v: boolean) => void;
+  bulkOnly: boolean;
+  onBulkOnly: (v: boolean) => void;
   onWants: () => void;
   preview: PreviewBind;
   onInspect: (card: RiftCard) => void;
@@ -580,7 +584,7 @@ export function BulkView({
         <div className="mt-3 h-2 overflow-hidden rounded-sm bg-cavity">
           <div className={`h-full rounded-sm transition-all duration-700 ${complete ? "bg-ok" : "bg-brand-gold"}`} style={{ width: `${pct}%` }} />
         </div>
-        <p className="mt-2 text-xs text-t3">Cards from bulk and binders, regular versions.</p>
+        <p className="mt-2 text-xs text-t3">{bulkOnly ? "Cards from your bulk only" : "Cards from bulk and binders"}, regular versions.</p>
 
         {compare.missing.length > 0 && (
           <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-line bg-panel2 px-3.5 py-3">
@@ -598,6 +602,7 @@ export function BulkView({
         <div className="mt-4 flex flex-wrap gap-2">
           <Toggle on={includeRunes} onChange={onIncludeRunes} label="Include runes" />
           <Toggle on={includeSideboard} onChange={onIncludeSideboard} label="Include sideboard" />
+          <Toggle on={bulkOnly} onChange={onBulkOnly} label="Only my bulk" />
         </div>
 
         {compare.missing.length > 0 && (
