@@ -1,6 +1,8 @@
 "use client";
 
-import Image from "next/image";
+import { isFoilOnly } from "@/lib/cardFinish";
+import { FoilSheen } from "@/components/FoilSheen";
+import { CardImage } from "@/components/CardImage";
 import { PromoMark } from "@/components/PromoMark";
 import { useEffect, useRef } from "react";
 import { CardText, SlantTag } from "@/components/CardText";
@@ -96,10 +98,11 @@ export function CardDetailModal({
             }`}
           >
             {card.image.url ? (
-              <Image src={card.image.url} alt={card.image.alt} fill sizes="(min-width: 768px) 480px, 60vw" quality={95} priority className="object-cover" />
+              <CardImage card={card} fill sizes="(min-width: 768px) 480px, 60vw" quality={95} priority className="object-cover" />
             ) : (
               <span className="flex h-full items-center justify-center bg-ink p-4 text-center text-t3">{card.name}</span>
             )}
+            {isFoilOnly(card) && <FoilSheen />}
             <PromoMark card={card} size="md" />
           </div>
         </div>

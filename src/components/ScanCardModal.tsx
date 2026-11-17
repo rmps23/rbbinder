@@ -1,7 +1,7 @@
 "use client";
 
 import { SlideGroup } from "@/components/SlideGroup";
-import Image from "next/image";
+import { CardImage } from "@/components/CardImage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { matchScan, targetPosition, type ScanMatch } from "@/lib/cardScan";
 import { loadThumbIndex, THUMB_MARGIN_X, THUMB_MARGIN_Y } from "@/lib/cardImageIndex";
@@ -457,7 +457,7 @@ export function ScanCardModal({
           <>
             <div className="flex gap-3">
               <div className="relative aspect-[744/1039] w-20 shrink-0 overflow-hidden rounded-md bg-black">
-                {chosen.image.url && <Image src={chosen.image.url} alt={chosen.image.alt} fill sizes="80px" className="object-cover" />}
+                {chosen.image.url && <CardImage card={chosen} fill sizes="80px" className="object-cover" />}
               </div>
               <div className="min-w-0 text-sm">
                 <p className="font-semibold text-t1">

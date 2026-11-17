@@ -1,10 +1,11 @@
 "use client";
 
-import { SlideGroup } from "@/components/SlideGroup";
 import { useState } from "react";
+import { SlideGroup } from "@/components/SlideGroup";
+import { Select } from "@/components/Select";
 import type { SetInfo } from "@/lib/types";
 import { DOMAIN_OPTIONS, RARITY_OPTIONS, TYPE_OPTIONS } from "@/lib/constants";
-import { domainColor, rarityColor } from "@/lib/style";
+import { domainColor } from "@/lib/style";
 
 export type AltArtFilter = "all" | "hide" | "only";
 
@@ -18,51 +19,11 @@ export type FilterState = {
   onlyOwned: boolean;
 };
 
-const TYPE_ICON: Record<string, string> = { unit: "⚔", spell: "✦", gear: "⚙", legend: "♛", battlefield: "⛰", rune: "◈" };
-
-// A small round/square button that lights up when selected.
-function Orb({
-  on,
-  onClick,
-  label,
-  color,
-  children,
-}: {
-  on: boolean;
-  onClick: () => void;
-  label: string;
-  color: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      aria-pressed={on}
-      onClick={onClick}
-      className={`flex h-9 w-9 items-center justify-center rounded-md border-2 transition duration-150 hover:-translate-y-0.5 active:scale-90 ${
-        on ? "scale-110" : "border-transparent opacity-60 hover:opacity-100"
-      }`}
-      style={on ? { borderColor: color, background: `${color}26` } : undefined}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Group({ label, children, slide = false }: { label: string; children: React.ReactNode; slide?: boolean }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="font-display text-[9px] font-semibold uppercase tracking-[0.22em] text-t3">{label}</span>
-      {slide ? (
-        <SlideGroup className="flex items-center gap-0.5 rounded-md bg-panel2 p-0.5" indicatorClassName="bg-brand-gold">{children}</SlideGroup>
-      ) : (
-        <div className="flex items-center gap-0.5 rounded-md bg-panel2 p-0.5">{children}</div>
-      )}
-    </div>
-  );
-}
+const ART: [AltArtFilter, string][] = [
+  ["all", "All"],
+  ["hide", "Regular"],
+  ["only", "Alt art"],
+];
 
 export function Filters({
   sets,
@@ -80,169 +41,145 @@ export function Filters({
   function set<K extends keyof FilterState>(key: K, value: FilterState[K]) {
     onChange({ ...state, [key]: value });
   }
-  const toggle = <K extends "typeId" | "rarityId" | "domainId">(key: K, value: string) =>
-    set(key, (state[key] === value ? "" : value) as FilterState[K]);
 
   const active =
-    (state.typeId ? 1 : 0) + (state.rarityId ? 1 : 0) + (state.domainId ? 1 : 0) + (state.altArt !== "all" ? 1 : 0);
-
-  const tab = (on: boolean) =>
-    `shrink-0 whitespace-nowrap rounded-md px-4 py-2 font-display text-xs font-semibold uppercase tracking-wider transition active:scale-95 ${
-      on
-        ? "text-on-accent"
-        : "text-t2 hover:text-t1"
-    }`;
+    (state.setId ? 1 : 0) +
+    (state.typeId ? 1 : 0) +
+    (state.rarityId ? 1 : 0) +
+    (state.domainId ? 1 : 0) +
+    (state.altArt !== "all" ? 1 : 0) +
+    (state.search ? 1 : 0);
+  const secondary = (state.typeId ? 1 : 0) + (state.rarityId ? 1 : 0) + (state.domainId ? 1 : 0) + (state.altArt !== "all" ? 1 : 0);
 
   return (
-    <div className="mb-5 flex flex-col gap-3">
-      {/* sets as tabs */}
-      <SlideGroup className="flex gap-1 overflow-x-auto rounded-md border border-line bg-panel/80 p-1">
-        <button type="button" data-active={!state.setId} className={tab(!state.setId)} onClick={() => set("setId", "")}>
-          All sets
+    <div className="mb-5 rounded-xl border border-line bg-panel p-3">
+      {/* search + set */}
+      <div className="flex flex-wrap gap-2">
+        <div className="relative min-w-[200px] flex-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-t3">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            type="text"
+            aria-label="Search by name or code"
+            placeholder="Search by name or code…"
+            value={state.search}
+            onChange={(e) => set("search", e.target.value)}
+            className="h-11 w-full rounded-lg border border-line bg-ink pl-10 pr-10 text-sm text-t1 placeholder:text-t3"
+          />
+          {state.search && (
+            <button type="button" aria-label="Clear search" onClick={() => set("search", "")} className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-t3 hover:bg-cavity hover:text-t1">
+              ✕
+            </button>
+          )}
+        </div>
+        <div className="w-48 shrink-0">
+          <Select
+            value={state.setId}
+            onChange={(v) => set("setId", v)}
+            ariaLabel="Set"
+            searchPlaceholder="Search sets…"
+            className="h-11 text-sm"
+            menuMinWidth={260}
+            options={[{ value: "", label: "All sets" }, ...sets.map((s) => ({ value: s.id, label: s.name, hint: s.id }))]}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className={`flex h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold transition md:hidden ${secondary ? "border-brand-gold/60 text-brand-gold" : "border-line text-t2"}`}
+        >
+          Filters
+          {secondary > 0 && <span className="num rounded bg-brand-gold px-1.5 text-[11px] font-bold text-on-accent">{secondary}</span>}
         </button>
-        {sets.map((s) => (
-          <button key={s.id} type="button" data-active={state.setId === s.id} title={s.name} className={tab(state.setId === s.id)} onClick={() => set("setId", state.setId === s.id ? "" : s.id)}>
-            {s.id}
-          </button>
-        ))}
-      </SlideGroup>
+      </div>
 
-      <div className="relative rounded-2xl border border-line bg-panel/70 p-3 ">
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-          <div className="relative min-w-[200px] flex-1 self-end">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-t3"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search by name or code…"
-              value={state.search}
-              onChange={(e) => set("search", e.target.value)}
-              className="h-11 w-full rounded-md border border-line bg-ink pl-10 pr-10 text-sm text-t1 outline-none transition focus:border-brand-gold focus:"
-            />
-            {state.search && (
+      {/* the rest: always visible on larger screens, behind the Filters button on phones */}
+      <div className={`${open ? "flex" : "hidden"} mt-3 flex-col gap-3 border-t border-line pt-3 md:flex`}>
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Domain">
+          {DOMAIN_OPTIONS.map((d) => {
+            const on = state.domainId === d.id;
+            return (
               <button
+                key={d.id}
                 type="button"
-                aria-label="Clear search"
-                onClick={() => set("search", "")}
-                className="absolute right-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-t3 hover:bg-cavity hover:text-t1"
+                aria-pressed={on}
+                onClick={() => set("domainId", on ? "" : d.id)}
+                className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition ${on ? "border-line2 bg-cavity text-t1" : "border-line text-t2 hover:border-line2 hover:text-t1"}`}
+                style={on ? { boxShadow: `inset 0 -2px 0 ${domainColor(d.id)}` } : undefined}
               >
-                ✕
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: domainColor(d.id) }} aria-hidden="true" />
+                {d.label}
               </button>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className={`flex h-11 items-center gap-2 rounded-md border px-4 text-xs font-semibold transition active:scale-95 md:hidden ${
-              active ? "border-brand-gold/50 text-brand-gold" : "border-line text-t2"
-            }`}
-          >
-            Filters
-            {active > 0 && <span className="rounded-md bg-brand-gold px-1.5 text-[10px] text-ink">{active}</span>}
-          </button>
-
-          <div className={`${open ? "flex" : "hidden"} w-full flex-wrap items-end gap-x-4 gap-y-3 md:flex md:w-auto`}>
-            <Group label="Domain">
-              {DOMAIN_OPTIONS.map((d) => (
-                <Orb key={d.id} on={state.domainId === d.id} onClick={() => toggle("domainId", d.id)} label={d.label} color={domainColor(d.id)}>
-                  <span className="h-3.5 w-3.5 rounded-full ring-1 ring-black/40" style={{ background: domainColor(d.id) }} />
-                </Orb>
-              ))}
-            </Group>
-            <Group label="Rarity">
-              {RARITY_OPTIONS.map((r) => (
-                <Orb key={r.id} on={state.rarityId === r.id} onClick={() => toggle("rarityId", r.id)} label={r.label} color={rarityColor(r.id)}>
-                  <span className="h-3 w-3 rotate-45 rounded-[3px] ring-1 ring-black/40" style={{ background: rarityColor(r.id) }} />
-                </Orb>
-              ))}
-            </Group>
-            <Group label="Type">
-              {TYPE_OPTIONS.map((t) => (
-                <Orb key={t.id} on={state.typeId === t.id} onClick={() => toggle("typeId", t.id)} label={t.label} color="rgb(var(--accent))">
-                  <span className="text-sm text-t1">{TYPE_ICON[t.id] ?? "•"}</span>
-                </Orb>
-              ))}
-            </Group>
-            <Group label="Art" slide>
-              {(
-                [
-                  ["all", "All"],
-                  ["hide", "Regular"],
-                  ["only", "Alt art"],
-                ] as [AltArtFilter, string][]
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  data-active={state.altArt === id}
-                  onClick={() => set("altArt", id)}
-                  className={`h-9 rounded-md px-3 text-[11px] font-semibold transition active:scale-95 ${
-                    state.altArt === id ? "text-on-accent" : "text-t2 hover:text-t1"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </Group>
-            {onlyOwnedLabel && (
-              <button
-                type="button"
-                role="switch"
-                aria-checked={state.onlyOwned}
-                onClick={() => set("onlyOwned", !state.onlyOwned)}
-                className="flex h-11 items-center gap-2.5 rounded-md border border-line bg-panel2 px-4 text-xs font-semibold text-t2 transition hover:border-line2 active:scale-95"
-              >
-                <span className={`relative h-5 w-9 rounded-full transition-colors ${state.onlyOwned ? "bg-brand-gold" : "bg-cavity"}`}>
-                  <span
-                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
-                      state.onlyOwned ? "left-[18px]" : "left-0.5"
-                    }`}
-                  />
-                </span>
-                {onlyOwnedLabel}
-              </button>
-            )}
-          </div>
+            );
+          })}
         </div>
 
-        {active > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-3">
-            {state.domainId && <Pill onClear={() => set("domainId", "")}>{DOMAIN_OPTIONS.find((d) => d.id === state.domainId)?.label}</Pill>}
-            {state.rarityId && <Pill onClear={() => set("rarityId", "")}>{RARITY_OPTIONS.find((r) => r.id === state.rarityId)?.label}</Pill>}
-            {state.typeId && <Pill onClear={() => set("typeId", "")}>{TYPE_OPTIONS.find((t) => t.id === state.typeId)?.label}</Pill>}
-            {state.altArt !== "all" && <Pill onClear={() => set("altArt", "all")}>{state.altArt === "only" ? "Alt art" : "Regular art"}</Pill>}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-40">
+            <Select
+              value={state.rarityId}
+              onChange={(v) => set("rarityId", v)}
+              searchable={false}
+              ariaLabel="Rarity"
+              className="h-11 text-sm"
+              menuMinWidth={170}
+              options={[{ value: "", label: "All rarities" }, ...RARITY_OPTIONS.map((r) => ({ value: r.id, label: r.label }))]}
+            />
+          </div>
+          <div className="w-40">
+            <Select
+              value={state.typeId}
+              onChange={(v) => set("typeId", v)}
+              searchable={false}
+              ariaLabel="Type"
+              className="h-11 text-sm"
+              menuMinWidth={170}
+              options={[{ value: "", label: "All types" }, ...TYPE_OPTIONS.map((t) => ({ value: t.id, label: t.label }))]}
+            />
+          </div>
+          <SlideGroup role="radiogroup" aria-label="Art" className="flex h-11 items-stretch gap-1 rounded-lg border border-line bg-ink p-1">
+            {ART.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={state.altArt === id}
+                data-active={state.altArt === id}
+                onClick={() => set("altArt", id)}
+                className={`rounded-md px-3.5 text-sm font-semibold transition ${state.altArt === id ? "text-on-accent" : "text-t2 hover:text-t1"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </SlideGroup>
+          {onlyOwnedLabel && (
             <button
               type="button"
-              onClick={() => onChange({ ...state, typeId: "", rarityId: "", domainId: "", altArt: "all" })}
-              className="ml-auto text-xs font-semibold text-brand-red hover:underline"
+              role="switch"
+              aria-checked={state.onlyOwned}
+              onClick={() => set("onlyOwned", !state.onlyOwned)}
+              className="flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
             >
-              Clear all
+              <span className={`relative h-5 w-9 rounded-full transition-colors ${state.onlyOwned ? "bg-brand-gold" : "bg-cavity"}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${state.onlyOwned ? "left-[18px]" : "left-0.5"}`} />
+              </span>
+              {onlyOwnedLabel}
             </button>
-          </div>
-        )}
+          )}
+          {active > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...state, search: "", setId: "", typeId: "", rarityId: "", domainId: "", altArt: "all" })}
+              className="ml-auto h-11 rounded-lg px-3 text-sm font-semibold text-brand-gold transition hover:bg-brand-gold/10"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
       </div>
     </div>
-  );
-}
-
-function Pill({ children, onClear }: { children: React.ReactNode; onClear: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClear}
-      className="flex items-center gap-1.5 rounded-md bg-brand-gold/15 px-3 py-1 text-xs font-semibold text-brand-gold transition hover:bg-brand-gold/25 active:scale-95"
-    >
-      {children} <span className="text-[10px]">✕</span>
-    </button>
   );
 }

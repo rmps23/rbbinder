@@ -1,6 +1,8 @@
 "use client";
 
-import Image from "next/image";
+import { isFoilOnly } from "@/lib/cardFinish";
+import { FoilSheen } from "@/components/FoilSheen";
+import { CardImage } from "@/components/CardImage";
 import { PromoMark } from "@/components/PromoMark";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Filters, FilterState } from "./Filters";
@@ -174,9 +176,8 @@ export function AddCardModal({
                   >
                     <div className="relative aspect-[744/1039] w-full bg-[#0a0c10]">
                       {card.image.url ? (
-                        <Image
-                          src={card.image.url}
-                          alt={card.image.alt}
+                        <CardImage
+                          card={card}
                           fill
                           sizes="(max-width: 640px) 30vw, 16vw"
                           className="object-cover"
@@ -186,6 +187,7 @@ export function AddCardModal({
                           {card.name}
                         </div>
                       )}
+                      {isFoilOnly(card) && <FoilSheen />}
                       <PromoMark card={card} />
                     </div>
                     <div className="p-1.5">

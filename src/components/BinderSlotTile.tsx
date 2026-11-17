@@ -1,6 +1,8 @@
 "use client";
 
-import Image from "next/image";
+import { isFoilOnly } from "@/lib/cardFinish";
+import { FoilSheen } from "@/components/FoilSheen";
+import { CardImage } from "@/components/CardImage";
 import { PromoMark } from "@/components/PromoMark";
 import { useState } from "react";
 import type { RiftCard } from "@/lib/types";
@@ -155,9 +157,8 @@ export function BinderSlotTile({
       }`}
     >
       {card.image.url && !imgError ? (
-        <Image
-          src={card.image.url}
-          alt={card.image.alt}
+        <CardImage
+          card={card}
           fill
           sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 16vw"
           loading="eager"
@@ -169,6 +170,7 @@ export function BinderSlotTile({
       ) : (
         <div className="flex h-full items-center justify-center p-2 text-center text-xs text-t3">{card.name}</div>
       )}
+      {isFoilOnly(card) && <FoilSheen />}
       <PromoMark card={card} />
 
       {dropZone === "before" && <span className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-brand-gold" />}

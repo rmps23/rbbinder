@@ -15,6 +15,8 @@ type AppData = {
   // English-market prices in euros; null until they've loaded (or if unavailable).
   prices: PricesResponse | null;
   priceOf: (card: Pick<RiftCard, "id">, finish: Finish) => number | null;
+  // Picture to use when a card's own one is missing (same card, regular printing), or null.
+  imageFallbackOf: (card: Pick<RiftCard, "id">) => string | null;
   setBulkQty: (cardId: string, variant: BulkVariant, qty: number) => void;
   reloadCards: () => void;
   reloadPrices: () => void;
@@ -137,6 +139,29 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     [prices, priceMode]
   );
 
+  // For cards whose picture comes from TCGplayer (and can be missing there): the Riot picture of the same card.
+  const imageFallbacks = useMemo(() => {
+    const norm = (c: RiftCard) => `${c.name} ${c.subtitle ?? ""}`.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const riot = new Map<string, string>();
+    for (const c of cards) {
+      const url = c.image.url;
+      if (!url || url.includes("tcgplayer")) continue;
+      const k = norm(c);
+      // prefer the plain numbered printing over alternates
+      if (!riot.has(k) || (/^[A-Z0-9]+-\d+\/\d+$/.test(c.publicCode) && !riot.has(k + "!"))) {
+        riot.set(k, url);
+        if (/^[A-Z0-9]+-\d+\/\d+$/.test(c.publicCode)) riot.set(k + "!", "1");
+      }
+    }
+    const out = new Map<string, string>();
+    for (const c of cards) if (c.image.url?.includes("tcgplayer")) {
+      const u = riot.get(norm(c));
+      if (u) out.set(c.id, u);
+    }
+    return out;
+  }, [cards]);
+  const imageFallbackOf = useCallback((card: Pick<RiftCard, "id">) => imageFallbacks.get(card.id) ?? null, [imageFallbacks]);
+
   const reloadCards = useCallback(() => setCardsVersion((v) => v + 1), []);
   const reloadPrices = useCallback(() => setPricesVersion((v) => v + 1), []);
 
@@ -180,7 +205,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const visibleSets = useMemo(() => sets.filter((s) => !HIDDEN_SET_IDS.has(s.id)), [sets]);
 
   return (
-    <Ctx.Provider value={{ cards, sets: visibleSets, bulk, loading, prices, priceOf, setBulkQty, reloadCards, reloadPrices, priceMode, setPriceMode }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ cards, sets: visibleSets, bulk, loading, prices, priceOf, imageFallbackOf, setBulkQty, reloadCards, reloadPrices, priceMode, setPriceMode }}>{children}</Ctx.Provider>
   );
 }
 

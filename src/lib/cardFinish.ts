@@ -40,6 +40,12 @@ export function availableFinishes(card: FinishCard): Finishes {
   return { normal: true, foil: true };
 }
 
+// Cards that only exist as foil (rare/epic/showcase, signatures, ...): they always get the foil look.
+export function isFoilOnly(card: FinishCard): boolean {
+  const f = availableFinishes(card);
+  return f.foil && !f.normal;
+}
+
 // The finish to use when `preferred` isn't possible for this card.
 export function resolveFinish(card: FinishCard, preferred: Finish): Finish {
   const available = availableFinishes(card);

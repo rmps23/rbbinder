@@ -1,9 +1,11 @@
 "use client";
 
+import { isFoilOnly } from "@/lib/cardFinish";
+import { FoilSheen } from "@/components/FoilSheen";
 import { SlideGroup } from "@/components/SlideGroup";
 import { PromoMark } from "@/components/PromoMark";
 import { BulkSkeleton } from "@/components/Skeletons";
-import Image from "next/image";
+import { CardImage } from "@/components/CardImage";
 import { useEffect, useMemo, useState } from "react";
 import { useAppData } from "@/components/AppDataProvider";
 import { BulkScanner } from "@/components/BulkScanner";
@@ -60,8 +62,8 @@ function CardTile({
         className="relative block aspect-[744/1039] w-full bg-ink"
       >
         {card.image.url && (
-          <Image
-            src={card.image.url}
+          <CardImage
+            card={card}
             alt=""
             fill
             sizes="(max-width: 640px) 46vw, (max-width: 1280px) 22vw, 15vw"
@@ -69,6 +71,7 @@ function CardTile({
             className={`object-cover transition duration-200 ${owned ? "" : "opacity-50 hover:opacity-90"}`}
           />
         )}
+        {(foilQty > 0 || isFoilOnly(card)) && <FoilSheen />}
         <PromoMark card={card} />
       </button>
 

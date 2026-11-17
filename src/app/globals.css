@@ -94,3 +94,24 @@ select:focus-visible {
   from { background-position: 0% 50%; }
   to { background-position: 300% 50%; }
 }
+
+/* Foil look for foil cards: a soft rainbow sheen that drifts across the art. Sits on top of the card picture. */
+.foil-sheen {
+  background:
+    linear-gradient(115deg, transparent 18%, rgba(255, 170, 220, 0.34) 32%, rgba(170, 230, 255, 0.38) 44%, rgba(255, 245, 170, 0.34) 56%, rgba(200, 170, 255, 0.34) 68%, transparent 82%);
+  background-size: 280% 100%;
+  mix-blend-mode: soft-light;
+  opacity: 0.9;
+  animation: foil-drift 7s ease-in-out infinite alternate;
+}
+.foil-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 7px);
+  mix-blend-mode: overlay;
+}
+@keyframes foil-drift {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}

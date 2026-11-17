@@ -1,6 +1,8 @@
 "use client";
 
-import Image from "next/image";
+import { isFoilOnly } from "@/lib/cardFinish";
+import { FoilSheen } from "./FoilSheen";
+import { CardImage } from "@/components/CardImage";
 import { PromoMark } from "./PromoMark";
 import { useCallback, useRef, useState, useSyncExternalStore, type PointerEvent } from "react";
 import { displayName } from "@/lib/deck";
@@ -11,16 +13,17 @@ import type { DeckEntry, DeckZone, RiftCard } from "@/lib/types";
 
 export type Row = { entry: DeckEntry; card: RiftCard };
 
-export function CardArt({ card, sizes, className = "", quality }: { card: RiftCard; sizes: string; className?: string; quality?: number }) {
+export function CardArt({ card, sizes, className = "", quality, foil }: { card: RiftCard; sizes: string; className?: string; quality?: number; foil?: boolean }) {
   return (
     <div
       className={`relative overflow-hidden bg-[#0a0c10] ring-1 ring-line2 ${isLandscape(card) ? "aspect-[1039/744]" : "aspect-[744/1039]"} ${className}`}
     >
       {card.image.url ? (
-        <Image src={card.image.url} alt={card.image.alt} fill sizes={sizes} quality={quality} className="object-cover" />
+        <CardImage card={card} fill sizes={sizes} quality={quality} className="object-cover" />
       ) : (
         <span className="flex h-full items-center justify-center p-1 text-center text-[10px] text-t3">{card.name}</span>
       )}
+      {(foil ?? isFoilOnly(card)) && <FoilSheen />}
       <PromoMark card={card} />
     </div>
   );
@@ -81,7 +84,7 @@ function PreviewLayer({ store }: { store: PreviewStore }) {
       aria-hidden
     >
       {card.image.url ? (
-        <Image src={card.image.url} alt="" fill sizes={`${PREVIEW_W}px`} className="bg-[#0a0c10] object-cover" priority />
+        <CardImage card={card} alt="" fill sizes={`${PREVIEW_W}px`} className="bg-[#0a0c10] object-cover" priority />
       ) : (
         <span className="flex h-full items-center justify-center bg-panel p-4 text-center text-sm text-t2">{displayName(card)}</span>
       )}

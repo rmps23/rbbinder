@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { CardImage } from "@/components/CardImage";
 import { PromoMark } from "@/components/PromoMark";
 import { BottomSheet } from "@/components/BottomSheet";
 import { useAppData } from "@/components/AppDataProvider";
@@ -35,7 +35,7 @@ export function CardSheet({
       <div className="flex gap-4">
         <div className="relative aspect-[744/1039] w-32 shrink-0 overflow-hidden rounded-lg border border-line bg-black">
           {card.image.url && (
-            <Image src={card.image.url} alt={card.image.alt} fill sizes="128px" className="object-cover" />
+            <CardImage card={card} fill sizes="128px" className="object-cover" />
           )}
           <PromoMark card={card} />
         </div>

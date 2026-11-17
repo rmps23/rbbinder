@@ -43,16 +43,20 @@ export type PrintingKind = "regular" | "alt" | "overnumbered" | "signature" | "s
 // plain version by default.
 const RUNE_CODE = /^[A-Z0-9]+-R\d+([a-z]*)$/;
 
+// "Promo" means the card's rarity is Promo (the printed rarity letter is P) - nothing else. Special showcase
+// cards (RAD-SP1, VEN-SP3...), tokens and the alternate printings Organized Play lists are not promos.
 export function printingKind(card: RiftCard): PrintingKind {
-  if (PROMO_SET_IDS.has(card.set.id)) return card.rarity?.id === "showcase" ? "showcase" : "promo";
+  const rarity = card.rarity?.id;
+  if (rarity === "promo") return "promo";
+  if (PROMO_SET_IDS.has(card.set.id)) return rarity === "showcase" ? "showcase" : "alt";
   if (card.publicCode.includes("*")) return "signature";
   const rune = card.publicCode.match(RUNE_CODE); // e.g. SFD-R01, SFD-R01a
   if (rune) return rune[1] ? "alt" : "regular";
   if (/-\d+[a-zA-Z]+\//.test(card.publicCode)) return "alt";
   const m = card.publicCode.match(BASE_CODE);
-  if (!m) return "promo"; // SP…, OGS starter codes, etc.
+  if (!m) return rarity === "showcase" ? "showcase" : "regular"; // SP specials are showcase; tokens, starter codes...
   if (Number(m[1]) > Number(m[2])) return "overnumbered";
-  if (card.rarity?.id === "showcase") return "showcase";
+  if (rarity === "showcase") return "showcase";
   return "regular";
 }
 

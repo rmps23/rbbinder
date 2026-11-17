@@ -4,6 +4,8 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_SHA: (process.env.VERCEL_GIT_COMMIT_SHA ?? "local").slice(0, 7),
   },
   images: {
+    // Next 16 only serves the qualities listed here (default: 75 only), so 90/95 used to fall back to 75.
+    qualities: [75, 90, 95],
     remotePatterns: [
       {
         protocol: "https",

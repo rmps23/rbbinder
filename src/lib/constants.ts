@@ -13,6 +13,7 @@ export const RARITY_OPTIONS = [
   { id: "rare", label: "Rare" },
   { id: "epic", label: "Epic" },
   { id: "showcase", label: "Showcase" },
+  { id: "promo", label: "Promo" },
 ];
 
 export const DOMAIN_OPTIONS = [
