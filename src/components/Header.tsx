@@ -1,5 +1,6 @@
 "use client";
 
+import { NotificationsBell } from "@/components/NotificationsBell";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cacheClear } from "@/lib/clientCache";
@@ -91,13 +92,16 @@ export function Header() {
     <>
       {/* Desktop: fixed 240px sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-panel md:flex">
-        <Link href="/" aria-label="RBBinder home" className="flex items-center gap-2.5 px-4 py-5">
+        <div className="flex items-center justify-between gap-2 pr-3">
+        <Link href="/" aria-label="RBBinder home" className="flex min-w-0 items-center gap-2.5 px-4 py-5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="" width={36} height={36} className="h-9 w-9 shrink-0" />
           <span className="font-logo text-[15px] font-medium uppercase tracking-[0.28em] text-t1">
             <b className="font-bold text-brand-gold">RB</b>Binder
           </span>
         </Link>
+          <NotificationsBell />
+        </div>
         <nav aria-label="Main" className="flex flex-1 flex-col gap-1 px-3">
           <p className="label px-3 pb-1 pt-2">Collection</p>
           {LINKS.map((l) => {
@@ -178,6 +182,9 @@ export function Header() {
           Data
         </Link>
         )}
+        <div className="flex min-h-14 flex-1 items-center justify-center">
+          <NotificationsBell className="border-transparent" />
+        </div>
         <button onClick={logout} aria-label="Sign out" className="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-t2">
           <svg viewBox="0 0 24 24" {...ICON} className="h-5 w-5" aria-hidden="true">
             <path d="M15 12H3m0 0 3-3m-3 3 3 3M9 5V4a1 1 0 0 1 1-1h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8a1 1 0 0 1-1-1v-1" />

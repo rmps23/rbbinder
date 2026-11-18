@@ -1,5 +1,6 @@
 "use client";
 
+import { PROMO_SET_IDS } from "@/lib/setCollection";
 import { isFoilOnly } from "@/lib/cardFinish";
 import { FoilSheen } from "@/components/FoilSheen";
 import { SlideGroup } from "@/components/SlideGroup";
@@ -23,6 +24,9 @@ import type { RiftCard } from "@/lib/types";
 
 // Proving Grounds isn't tracked for bulk/trades.
 const EXCLUDED_SETS = new Set(["OGS"]);
+// Booster sets get their own tab; promo and bundle sets (OPP, PR, JDG, RWB, SGN, T12025, RXKDA, ARC...) go under "Others".
+const OTHERS = "__others";
+const isMainSet = (id: string) => !PROMO_SET_IDS.has(id) && id !== "ARC";
 const ROWS_PER_PAGE = 60;
 
 type AltArt = "all" | "hide" | "only";
@@ -127,7 +131,7 @@ export function BulkView() {
   const [inspect, setInspect] = useState<RiftCard | null>(null);
 
   const availableCards = useMemo(() => cards.filter((c) => !EXCLUDED_SETS.has(c.set.id)), [cards]);
-  const availableSets = useMemo(() => sets.filter((s) => !EXCLUDED_SETS.has(s.id)), [sets]);
+  const availableSets = useMemo(() => sets.filter((s) => !EXCLUDED_SETS.has(s.id) && isMainSet(s.id)), [sets]);
 
   const stats = useMemo(() => {
     const { total, bySet } = valueBulk(cards, bulk, priceOf);
@@ -137,7 +141,14 @@ export function BulkView() {
       normal += e.normal ?? 0;
       foil += e.foil ?? 0;
     }
-    return { total, bySet, normal, foil };
+    // value and copies of everything outside the booster sets
+    let othersValue = 0;
+    let othersCopies = 0;
+    for (const [sid, v] of bySet) if (!isMainSet(sid) && !EXCLUDED_SETS.has(sid)) {
+      othersValue += v.value;
+      othersCopies += v.copies;
+    }
+    return { total, bySet, normal, foil, othersValue, othersCopies };
   }, [cards, bulk, priceOf]);
 
   useEffect(() => {
@@ -148,7 +159,7 @@ export function BulkView() {
     const q = search.trim().toLowerCase();
     return availableCards.filter((c) => {
       if (q && !c.name.toLowerCase().includes(q) && !c.publicCode.toLowerCase().includes(q)) return false;
-      if (setId && c.set.id !== setId) return false;
+      if (setId === OTHERS ? isMainSet(c.set.id) : setId && c.set.id !== setId) return false;
       if (typeId && !c.types.includes(typeId)) return false;
       if (rarityId && c.rarity?.id !== rarityId) return false;
       if (domainId && !c.domains.some((d) => d.id === domainId)) return false;
@@ -238,6 +249,10 @@ export function BulkView() {
                 </button>
               );
             })}
+            <button type="button" role="tab" data-active={setId === OTHERS} aria-selected={setId === OTHERS} title="Promos, bundles and other sets" className={tab(setId === OTHERS)} onClick={() => setSetId(setId === OTHERS ? "" : OTHERS)}>
+              <span className="font-display text-sm font-semibold tracking-wider">Others</span>
+              <span className={`num text-[11px] font-medium ${setId === OTHERS ? "text-on-accent/75" : "text-t3"}`}>{stats.othersCopies ? formatEur(stats.othersValue) : "–"}</span>
+            </button>
           </SlideGroup>
           <p className="num hidden shrink-0 items-center gap-3 text-sm text-t3 md:flex">
             {filtered.length} card{filtered.length === 1 ? "" : "s"}

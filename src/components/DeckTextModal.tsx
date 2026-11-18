@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BottomSheet } from "./BottomSheet";
+import { Modal } from "./Modal";
 
 // Shared by the deck list (import into a new deck) and the builder (import
 // into / export from the open deck).
@@ -41,11 +41,46 @@ export function DeckTextModal({
     URL.revokeObjectURL(url);
   }
 
-  const button = "rounded-md px-5 py-2 font-display text-xs font-semibold uppercase tracking-wide";
+  const ghost =
+    "inline-flex h-11 items-center justify-center rounded-lg border border-line px-5 text-sm font-semibold text-t1 transition hover:border-line2 hover:bg-panel2 disabled:cursor-not-allowed disabled:opacity-40";
+  const primary = "btn-3d h-11 rounded-lg px-6 font-display text-xs font-semibold uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-40";
 
   return (
-    <BottomSheet title={mode === "import" ? "Import deck" : "Export deck"} onClose={onClose}>
-      <p className="mb-2 text-xs text-t3">
+    <Modal
+      title={mode === "import" ? "Import deck" : "Export deck"}
+      onClose={onClose}
+      footer={
+        <div className="flex flex-wrap items-center gap-2">
+          {mode === "import" ? (
+            <button
+              type="button"
+              disabled={!text.trim()}
+              onClick={() => {
+                const msg = onImport?.(text) ?? null;
+                if (msg) setMessage(msg);
+                else onClose();
+              }}
+              className={primary}
+            >
+              Import
+            </button>
+          ) : (
+            <>
+              <button type="button" onClick={copy} className={primary}>
+                {copied ? "✓ Copied" : "Copy"}
+              </button>
+              <button type="button" onClick={download} className={ghost}>
+                Download .txt
+              </button>
+            </>
+          )}
+          <button type="button" onClick={onClose} className={`${ghost} text-t2`}>
+            Close
+          </button>
+        </div>
+      }
+    >
+      <p className="text-sm text-t2">
         {mode === "import"
           ? "Paste a deck list (Legend / Champion / MainDeck / Battlefields / Runes / Sideboard, one “3 Card name” per line)."
           : "Copy this list or download it as a .txt file."}
@@ -54,40 +89,12 @@ export function DeckTextModal({
         value={text}
         onChange={(e) => setText(e.target.value)}
         readOnly={mode === "export"}
-        autoFocus
         spellCheck={false}
+        aria-label={mode === "import" ? "Deck list to import" : "Deck list"}
         placeholder={"Legend:\n1 …\n\nMainDeck:\n3 …"}
-        className="h-64 w-full resize-none rounded-lg border border-line bg-ink p-3 font-mono text-xs text-t1 outline-none focus:border-brand-gold"
+        className="h-72 w-full resize-none rounded-lg border border-line bg-ink p-3 font-mono text-xs leading-relaxed text-t1"
       />
-      {message && <p className="mt-2 whitespace-pre-line text-xs text-brand-goldSoft">{message}</p>}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {mode === "import" ? (
-          <button
-            type="button"
-            disabled={!text.trim()}
-            onClick={() => {
-              const msg = onImport?.(text) ?? null;
-              if (msg) setMessage(msg);
-              else onClose();
-            }}
-            className={`${button} bg-brand-gold text-ink hover:bg-brand-goldSoft disabled:opacity-50`}
-          >
-            Import
-          </button>
-        ) : (
-          <>
-            <button type="button" onClick={copy} className={`${button} bg-brand-gold text-ink hover:bg-brand-goldSoft`}>
-              {copied ? "Copied" : "Copy"}
-            </button>
-            <button type="button" onClick={download} className={`${button} border border-brand-gold text-brand-gold`}>
-              Download .txt
-            </button>
-          </>
-        )}
-        <button type="button" onClick={onClose} className={`${button} border border-line text-t2`}>
-          Close
-        </button>
-      </div>
-    </BottomSheet>
+      {message && <p className="whitespace-pre-line rounded-lg bg-warn/10 px-3 py-2 text-sm text-warn">⚠ {message}</p>}
+    </Modal>
   );
 }

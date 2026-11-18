@@ -288,7 +288,7 @@ export function ListView({
     const versions = versionsOf(card);
     const art = (
       <div className={`relative shrink-0 ${isLandscape(card) ? (compact ? "w-24" : "w-28") : compact ? "w-[72px]" : "w-16"}`}>
-        <button type="button" onClick={() => onInspect(card)} title={`${displayName(card)} - open details`} className="block w-full">
+        <button type="button" onClick={() => onInspect(card)} {...preview(card)} title={`${displayName(card)} - open details`} className="block w-full">
           <CardArt card={card} sizes="160px" quality={90} className="rounded-md" />
         </button>
         {versions > 1 && (
@@ -313,7 +313,6 @@ export function ListView({
     );
     const actions = (
       <span className={`flex items-center gap-1.5 ${compact ? "flex-wrap" : ""}`}>
-                              <EyeButton card={card} preview={preview} onInspect={onInspect} />
                               {entry.zone === "main" && card.types.includes("unit") && canChampion(card) && (
                                 <RowButton tone="gold" onClick={() => onMove(row, "champion")} title="Use as your chosen champion">
                                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5L2.6 9.8l6.5-.9L12 3Z" /></svg>

@@ -1,5 +1,7 @@
 "use client";
 
+import { cardKey } from "@/lib/deck";
+import { CardArt } from "@/components/DeckViews";
 import { BinderSkeleton } from "@/components/Skeletons";
 import Link from "next/link";
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
@@ -203,8 +205,14 @@ export default function BinderDetailPage() {
   const [skipBulk, setSkipBulk] = useState(true);
   const missingForSet = useMemo(() => {
     if (!binder?.setId) return [];
-    return baseCardsOf(cards, binder.setId).filter((c) => !binderStats.cardIds.has(c.id));
-  }, [binder?.setId, cards, binderStats.cardIds]);
+    // A card counts as present when ANY printing of it is in the binder (e.g. an event promo you swapped in for the regular one).
+    const keys = new Set<string>();
+    for (const id of binderStats.cardIds) {
+      const c = cardById.get(id);
+      if (c) keys.add(cardKey(c));
+    }
+    return baseCardsOf(cards, binder.setId).filter((c) => !binderStats.cardIds.has(c.id) && !keys.has(cardKey(c)));
+  }, [binder?.setId, cards, binderStats.cardIds, cardById]);
   const inBulk = (id: string) => (bulk[id]?.normal ?? 0) + (bulk[id]?.foil ?? 0) > 0;
 
   const setName = binder?.setId ? (sets.find((s) => s.id === binder.setId)?.name ?? binder.setId) : null;
@@ -880,7 +888,7 @@ export default function BinderDetailPage() {
           fileName={`${binder.name} - missing`}
           intro={
             binder.setId
-              ? `${missingForSet.length} regular card${missingForSet.length === 1 ? "" : "s"} of ${setName} aren't in this binder (no alt arts, overnumbered or foil needed).`
+              ? `${missingForSet.length} regular card${missingForSet.length === 1 ? "" : "s"} of ${setName} aren't in this binder (no alt arts, overnumbered or foil needed). A promo or alt art of a card in the binder counts as having it.`
               : "Choose the set this binder collects first (next to the layout buttons, or in the binder menu on a phone)."
           }
           text={cardmarketWants(
@@ -890,10 +898,49 @@ export default function BinderDetailPage() {
           onClose={() => setWantsOpen(false)}
         >
           {binder.setId && (
-            <label className="mb-2 flex items-center gap-2 text-xs text-t2">
-              <input type="checkbox" checked={skipBulk} onChange={(e) => setSkipBulk(e.target.checked)} />
-              Leave out cards I already have in my bulk ({missingForSet.filter((c) => inBulk(c.id)).length})
-            </label>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={skipBulk}
+              onClick={() => setSkipBulk((v) => !v)}
+              title="Cards that are missing from the binder but that you already have in your bulk"
+              className="flex h-11 items-center justify-between gap-3 rounded-lg border border-line bg-ink px-4 text-left text-sm font-semibold text-t2 transition hover:border-line2"
+            >
+              <span>
+                Leave out cards I already have in my bulk{" "}
+                <span className="num text-t3">({missingForSet.filter((c) => inBulk(c.id)).length})</span>
+              </span>
+              <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${skipBulk ? "bg-brand-gold" : "bg-cavity"}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${skipBulk ? "left-[18px]" : "left-0.5"}`} />
+              </span>
+            </button>
+          )}
+          {binder.setId && missingForSet.some((c) => inBulk(c.id)) && (
+            <section aria-label="In your bulk but not in this binder" className="rounded-lg border border-brand-gold/40 bg-brand-gold/5 p-3">
+              <p className="mb-2 text-sm font-semibold text-t1">
+                In your bulk, not in this binder{" "}
+                <span className="num text-t3">({missingForSet.filter((c) => inBulk(c.id)).length})</span>
+              </p>
+              <p className="mb-3 text-xs text-t2">You already own these: move them to the binder instead of buying them.</p>
+              <ul className="flex flex-col gap-2">
+                {missingForSet
+                  .filter((c) => inBulk(c.id))
+                  .map((c) => (
+                    <li key={c.id} className="flex items-center gap-3 rounded-lg border border-line bg-ink p-2">
+                      <CardArt card={c} sizes="64px" className="w-10 shrink-0 rounded-md" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-t1">{c.subtitle ? `${c.name}, ${c.subtitle}` : c.name}</span>
+                        <span className="num text-xs text-t3">{c.publicCode}</span>
+                      </span>
+                      <span className="num shrink-0 text-xs text-t2">
+                        {(bulk[c.id]?.normal ?? 0) > 0 && <>×{bulk[c.id]?.normal} normal</>}
+                        {(bulk[c.id]?.normal ?? 0) > 0 && (bulk[c.id]?.foil ?? 0) > 0 && " · "}
+                        {(bulk[c.id]?.foil ?? 0) > 0 && <>✦ ×{bulk[c.id]?.foil} foil</>}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            </section>
           )}
         </WantsModal>
       )}
