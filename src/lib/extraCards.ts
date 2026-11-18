@@ -161,3 +161,110 @@ export async function missingPromos(cards: RiftCard[]): Promise<{ cards: RiftCar
   }));
   return { cards: added, sets };
 }
+
+
+// ---------- printings missing from both Riot and TCGplayer (dotgg.gg) ----------
+
+// dotgg.gg (the database behind riftbound.gg) lists every printing, including ones TCGplayer doesn't sell:
+// Chinese and Korean promos, Metal regional-championship cards, Vendetta/Radiance promos, token variants...
+// A row is added when the catalog has no card with its code and none with its TCGplayer id.
+const DOTGG = "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed";
+const SKIP_SETS = new Set(["OGS", "ARC"]); // Proving Grounds is hidden everywhere; ARC is the Chinese Arcane box set
+// English printings only: Chinese/Korean/Japanese editions and promos are left out.
+const isNonEnglish = (id: string, name: string) => /(^|-)(cn|kr|jp|zh|tw)(-|$)/i.test(id) || /\b(chinese|korean|japanese|simplified|traditional)\b/i.test(name);
+const SET_ALIAS: Record<string, string> = { T1A: "T12025", T1S: "T12025" };
+
+type DotggRow = Record<string, unknown>;
+const str = (v: unknown) => (typeof v === "string" ? v : v == null ? "" : String(v));
+const num = (v: unknown) => {
+  const n = Number(str(v));
+  return str(v).trim() !== "" && Number.isFinite(n) ? n : null;
+};
+const plain = (html: string) =>
+  html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&gt;/gi, ">")
+    .replace(/&lt;/gi, "<")
+    .replace(/&amp;/gi, "&")
+    .replace(/&#0?39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .trim();
+// signed cards are "SFD-227*/221" for us and "SFD-227-STAR" at dotgg
+const codeKey = (code: string) => code.replace(/\s*\(.*?\)/g, "").replace(/\/\d+/g, "").replace(/\*/g, "-star").toLowerCase();
+
+export async function missingFromDotgg(cards: RiftCard[], sets: SetInfo[]): Promise<{ cards: RiftCard[]; sets: SetInfo[] }> {
+  const data = await getJson<{ names: string[]; data: unknown[][] }>(DOTGG);
+  const rows: DotggRow[] = data.data.map((r) => Object.fromEntries(data.names.map((n, i) => [n, r[i]])));
+
+  const haveCodes = new Set(cards.map((c) => codeKey(c.publicCode)));
+  const haveIds = new Set(cards.map((c) => c.id));
+  const haveTcg = new Set<string>();
+  for (const c of cards) {
+    const m = c.image.url?.match(/product\/(\d+)_/);
+    if (m) haveTcg.add(m[1]);
+    if (c.tcgplayerId) haveTcg.add(String(c.tcgplayerId));
+  }
+  // the regular printing of a card by name, for its rules text and stats
+  const baseByName = new Map<string, RiftCard>();
+  for (const c of cards) {
+    const k = norm(c.subtitle ? `${c.name}, ${c.subtitle}` : c.name);
+    const cur = baseByName.get(k);
+    if (!cur || (/^[A-Z0-9]+-\d+\/\d+$/.test(c.publicCode) && !/^[A-Z0-9]+-\d+\/\d+$/.test(cur.publicCode))) baseByName.set(k, c);
+  }
+  const setName = new Map(sets.map((s) => [s.id, s.name]));
+
+  const added: RiftCard[] = [];
+  const newSets = new Map<string, SetInfo>();
+  for (const r of rows) {
+    const rawId = str(r.id);
+    const prefix = rawId.split("-")[0].toUpperCase();
+    if (!rawId || SKIP_SETS.has(prefix) || isNonEnglish(rawId, str(r.name))) continue;
+    if (haveCodes.has(codeKey(rawId)) || haveCodes.has(codeKey(rawId.replace(/-p$/i, "")))) continue;
+    if (str(r.marketIds) && haveTcg.has(str(r.marketIds))) continue;
+    const id = slug(rawId);
+    if (haveIds.has(id)) continue;
+    haveIds.add(id);
+
+    const fullName = str(r.name);
+    const variant = fullName.match(/\(([^)]*)\)\s*$/)?.[1] ?? "";
+    const title = fullName.replace(/\s*\([^)]*\)\s*$/, "").trim();
+    const [name, ...rest] = title.split(" - ");
+    const subtitle = rest.length ? rest.join(" - ") : null;
+    const base = baseByName.get(norm(subtitle ? `${name}, ${subtitle}` : name));
+
+    const setId = SET_ALIAS[prefix] ?? prefix;
+    const setLabel = setName.get(setId) ?? str(r.set_name) ?? setId;
+    if (!setName.has(setId) && !newSets.has(setId)) newSets.set(setId, { id: setId, name: setLabel, cardCount: 0 });
+    const rawRarity = str(r.rarity).toLowerCase() || "common";
+    // "Promo" means the printing is called a promo; Metal/Korean/regional showcase cards keep their own rarity
+    const rarity = str(r.promo) === "1" && /promo/i.test(variant) ? "promo" : rawRarity;
+    const colors = Array.isArray(r.color) ? (r.color as string[]) : [];
+    const types = (Array.isArray(r.type) ? (r.type as string[]) : []).map((t) => t.toLowerCase());
+    const superType = str(r.supertype).toLowerCase();
+
+    added.push({
+      id,
+      name: base?.name ?? name,
+      subtitle: base ? base.subtitle : subtitle,
+      publicCode: variant ? `${rawId} (${variant})` : rawId,
+      collectorNumber: Number(rawId.match(/(\d+)/)?.[1] ?? 0),
+      set: { id: setId, name: setLabel },
+      types: base?.types ?? types,
+      superTypes: base?.superTypes ?? (superType ? [superType] : []),
+      rarity: { id: rarity, label: rarity.charAt(0).toUpperCase() + rarity.slice(1) },
+      domains: base?.domains ?? colors.map((c) => ({ id: c.toLowerCase(), label: c })),
+      energy: base?.energy ?? num(r.cost),
+      might: base?.might ?? num(r.might),
+      mightBonus: base?.mightBonus ?? num(r.mightBonus),
+      power: base?.power ?? num(r.power),
+      tags: base?.tags ?? (Array.isArray(r.tags) ? (r.tags as string[]) : []),
+      illustrator: base?.illustrator ?? null,
+      abilityText: base?.abilityText ?? plain(str(r.effect)),
+      image: { url: str(r.image) || null, width: null, height: null, alt: fullName },
+    });
+    const s = newSets.get(setId);
+    if (s) s.cardCount += 1;
+  }
+  return { cards: added, sets: [...newSets.values()] };
+}

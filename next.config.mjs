@@ -13,6 +13,12 @@ const nextConfig = {
         pathname: "/**",
       },
       {
+        // pictures of promo printings TCGplayer has no image for (see cardImageFixes.json)
+        protocol: "https",
+        hostname: "static.dotgg.gg",
+        pathname: "/riftbound/**",
+      },
+      {
         // runes Riot's gallery doesn't list come from TCGplayer (see extraCards.ts)
         protocol: "https",
         hostname: "tcgplayer-cdn.tcgplayer.com",
