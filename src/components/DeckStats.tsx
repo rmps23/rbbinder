@@ -7,6 +7,7 @@ import { typicalFinish } from "@/lib/cardFinish";
 import { computeStats, scoreDeck, type DeckStatsData, type Kind, type StatRow } from "@/lib/deckStats";
 import { formatEur } from "@/lib/format";
 import { domainColor, rarityColor, titleCase } from "@/lib/style";
+import { deckLabels, deckOptions } from "@/lib/deckVersions";
 import type { Deck, RiftCard } from "@/lib/types";
 
 const KIND_COLOR: Record<Kind, string> = { unit: "rgb(var(--accent))", spell: "#c08be8", gear: "rgb(var(--warn))" };
@@ -112,7 +113,7 @@ export function DeckStats({
   useEffect(() => {
     fetch("/api/decks")
       .then((r) => (r.ok ? r.json() : []))
-      .then((d: Deck[]) => setDecks(d.filter((x) => x.id !== deckId)))
+      .then((d: Deck[]) => setDecks(d))
       .catch(() => {});
   }, [deckId]);
   const other = useMemo(() => {
@@ -124,7 +125,7 @@ export function DeckStats({
       if (card) orows.push({ entry, card });
     }
     const st = computeStats(orows);
-    return { name: d.name, s: st, score: scoreDeck(st) };
+    return { name: deckLabels(decks).get(d.id) ?? d.name, s: st, score: scoreDeck(st) };
   }, [decks, otherId, cardById]);
 
   // ---- derived -----------------------------------------------------------------------------------------------
@@ -197,7 +198,7 @@ export function DeckStats({
       </div>
 
       {/* compare control */}
-      {decks.length > 0 && (
+      {decks.length > 1 && (
         <Panel title="Compare">
           <Select
             value={otherId}
@@ -205,7 +206,7 @@ export function DeckStats({
             ariaLabel="Compare with another deck"
             searchPlaceholder="Search decks…"
             className="h-11 text-sm"
-            options={[{ value: "", label: "No comparison" }, ...decks.map((d) => ({ value: d.id, label: d.name }))]}
+            options={[{ value: "", label: "No comparison" }, ...deckOptions(decks).filter((o) => o.value !== deckId)]}
             searchable={decks.length > 6}
             menuMinWidth={240}
           />

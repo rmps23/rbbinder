@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
   const name = typeof body?.name === "string" ? body.name.trim().slice(0, 80) : "";
   if (!name) return NextResponse.json({ error: "name is required" }, { status: 400 });
   try {
-    return NextResponse.json(await createDeck(user.id, name, body?.entries ?? []), { status: 201 });
+    const versionOf = typeof body?.versionOf === "string" ? body.versionOf : undefined;
+    const deck = await createDeck(user.id, name, body?.entries ?? [], versionOf);
+    if (!deck) return NextResponse.json({ error: "The deck this is a version of doesn't exist" }, { status: 404 });
+    return NextResponse.json(deck, { status: 201 });
   } catch (err) {
     return fail(err, "Failed to create deck");
   }

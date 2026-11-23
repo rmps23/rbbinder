@@ -11,10 +11,10 @@
 
 import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "./supabaseAdmin";
-import { readLocalDb, withLocalDb } from "./localDb";
+import { readLocalDb, withLocalDb, type LocalDeck } from "./localDb";
 import { applyCardFixes } from "./cardFixes";
 import { getDomainFixes, getTypeFixes } from "./overrides";
-import type { Deck, DeckEntry, Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo } from "./types";
+import type { Deck, DeckEntry, Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo, Match, MatchResult, MatchSummary } from "./types";
 
 const CHUNK_SIZE = 200;
 
@@ -455,7 +455,7 @@ export async function setBinderSlot(
 
 // ---------- decks ----------
 
-type DeckRow = { id: string; name: string; payload: { entries?: DeckEntry[] } | null; created_at: string; updated_at: string };
+type DeckRow = { id: string; name: string; payload: { entries?: DeckEntry[]; familyId?: string; version?: number } | null; created_at: string; updated_at: string };
 
 function cleanEntries(entries: unknown): DeckEntry[] {
   if (!Array.isArray(entries)) return [];
@@ -470,10 +470,14 @@ function fromRow(r: DeckRow): Deck {
     id: r.id,
     name: r.name,
     entries: cleanEntries(r.payload?.entries),
+    familyId: r.payload?.familyId ?? r.id,
+    version: r.payload?.version ?? 1,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
 }
+
+const fromLocal = (d: LocalDeck): Deck => ({ ...d, familyId: d.familyId ?? d.id, version: d.version ?? 1 });
 
 export async function listDecks(userId: string): Promise<Deck[]> {
   if (hasSupabaseConfig()) {
@@ -482,7 +486,7 @@ export async function listDecks(userId: string): Promise<Deck[]> {
     return (data as DeckRow[]).map(fromRow);
   }
   const db = await readLocalDb();
-  return [...db.decks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return db.decks.map(fromLocal).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export async function getDeck(userId: string, id: string): Promise<Deck | null> {
@@ -492,38 +496,60 @@ export async function getDeck(userId: string, id: string): Promise<Deck | null> 
     return data ? fromRow(data as DeckRow) : null;
   }
   const db = await readLocalDb();
-  return db.decks.find((d) => d.id === id) ?? null;
+  const deck = db.decks.find((d) => d.id === id);
+  return deck ? fromLocal(deck) : null;
 }
 
-export async function createDeck(userId: string, name: string, entries: unknown): Promise<Deck> {
+// `versionOf`: an existing deck this one is the next version of (it takes its name).
+// null = that deck doesn't exist.
+export async function createDeck(userId: string, name: string, entries: unknown, versionOf?: string): Promise<Deck | null> {
   const clean = cleanEntries(entries);
+  let family: { familyId: string; version: number } | undefined;
+  if (versionOf) {
+    const decks = await listDecks(userId);
+    const base = decks.find((d) => d.id === versionOf);
+    if (!base) return null;
+    const versions = decks.filter((d) => d.familyId === base.familyId);
+    family = { familyId: base.familyId, version: Math.max(...versions.map((d) => d.version)) + 1 };
+    name = base.name;
+  }
   if (hasSupabaseConfig()) {
-    const { data, error } = await getSupabaseAdmin().from("decks").insert({ ...owner(userId), name, payload: { entries: clean } }).select("*").single();
+    const { data, error } = await getSupabaseAdmin().from("decks").insert({ ...owner(userId), name, payload: { entries: clean, ...family } }).select("*").single();
     if (error) throw new Error(error.message);
     return fromRow(data as DeckRow);
   }
   const now = new Date().toISOString();
-  const deck: Deck = { id: randomUUID(), name, entries: clean, createdAt: now, updatedAt: now };
+  const deck: LocalDeck = { id: randomUUID(), name, entries: clean, ...family, createdAt: now, updatedAt: now };
   await withLocalDb((db) => {
     db.decks.push(deck);
   });
-  return deck;
+  return fromLocal(deck);
 }
 
 export async function updateDeck(userId: string, id: string, patch: { name?: string; entries?: unknown }): Promise<void> {
   const now = new Date().toISOString();
+  const decks = await listDecks(userId);
+  const current = decks.find((d) => d.id === id);
+  if (!current) return;
+  // A deck's versions share its name.
+  const renamed = patch.name !== undefined && patch.name !== current.name ? decks.filter((d) => d.familyId === current.familyId).map((d) => d.id) : [];
   if (hasSupabaseConfig()) {
     const update: Record<string, unknown> = { updated_at: now };
-    if (patch.name !== undefined) update.name = patch.name;
-    if (patch.entries !== undefined) update.payload = { entries: cleanEntries(patch.entries) };
+    // the payload is replaced whole: keep which version it is
+    const version = current.familyId !== current.id ? { familyId: current.familyId, version: current.version } : {};
+    if (patch.entries !== undefined) update.payload = { entries: cleanEntries(patch.entries), ...version };
     const { error } = await mine(getSupabaseAdmin().from("decks").update(update).eq("id", id), userId);
     if (error) throw new Error(error.message);
+    if (renamed.length) {
+      const { error: nameError } = await mine(getSupabaseAdmin().from("decks").update({ name: patch.name }).in("id", renamed), userId);
+      if (nameError) throw new Error(nameError.message);
+    }
     return;
   }
   await withLocalDb((db) => {
     const deck = db.decks.find((d) => d.id === id);
     if (!deck) return;
-    if (patch.name !== undefined) deck.name = patch.name;
+    for (const d of db.decks) if (patch.name !== undefined && renamed.includes(d.id)) d.name = patch.name;
     if (patch.entries !== undefined) deck.entries = cleanEntries(patch.entries);
     deck.updatedAt = now;
   });
@@ -537,5 +563,110 @@ export async function deleteDeck(userId: string, id: string): Promise<void> {
   }
   await withLocalDb((db) => {
     db.decks = db.decks.filter((d) => d.id !== id);
+  });
+}
+
+// ---------- match history ----------
+
+type MatchRow = { id: string; deck_id: string | null; played_at: string; summary: MatchSummary; notes: string | null };
+
+function toMatch(r: MatchRow): Match {
+  // The first imports saved "ROOM:series start"; the start alone is what a series shares.
+  const summary = { ...r.summary, seriesId: r.summary.seriesId.replace(/^w+:(?=d+$)/, "") };
+  return { id: r.id, deckId: r.deck_id, playedAt: r.played_at, result: r.summary.result, notes: r.notes ?? "", summary };
+}
+
+export async function listMatches(userId: string): Promise<Match[]> {
+  if (hasSupabaseConfig()) {
+    const supabase = getSupabaseAdmin();
+    const rows = await selectAll<MatchRow>((from, to) =>
+      mine(supabase.from("matches").select("id, deck_id, played_at, summary, notes"), userId)
+        .order("played_at", { ascending: false })
+        .order("id")
+        .range(from, to)
+    );
+    return rows.map(toMatch);
+  }
+  const db = await readLocalDb();
+  return db.matches
+    .map((m) => toMatch({ id: m.id, deck_id: m.deckId, played_at: m.playedAt, summary: m.summary, notes: m.notes }))
+    .sort((a, b) => b.playedAt.localeCompare(a.playedAt));
+}
+
+// Saves the games that aren't there yet; returns how many were new.
+export async function addMatches(userId: string, items: { summary: MatchSummary; deckId: string | null }[]): Promise<number> {
+  const known = new Set((await listMatches(userId)).map((m) => m.summary.replayId));
+  const fresh = [...new Map(items.map((i) => [i.summary.replayId, i])).values()].filter((i) => !known.has(i.summary.replayId));
+  if (!fresh.length) return 0;
+
+  if (hasSupabaseConfig()) {
+    const { error } = await getSupabaseAdmin()
+      .from("matches")
+      .insert(
+        fresh.map((i) => ({
+          ...owner(userId),
+          replay_id: i.summary.replayId,
+          deck_id: i.deckId,
+          played_at: i.summary.playedAt,
+          summary: i.summary,
+        }))
+      );
+    if (error) throw new Error(error.message);
+    return fresh.length;
+  }
+  await withLocalDb((db) => {
+    for (const i of fresh) {
+      db.matches.push({
+        id: randomUUID(),
+        replayId: i.summary.replayId,
+        deckId: i.deckId,
+        playedAt: i.summary.playedAt,
+        summary: i.summary,
+        notes: "",
+      });
+    }
+  });
+  return fresh.length;
+}
+
+// Setting the result by hand settles a guessed one.
+const withResult = (summary: MatchSummary, result: MatchResult): MatchSummary => ({ ...summary, result, inferred: false });
+
+export async function updateMatch(
+  userId: string,
+  id: string,
+  patch: { deckId?: string | null; notes?: string; result?: MatchResult }
+): Promise<void> {
+  if (hasSupabaseConfig()) {
+    const update: Record<string, unknown> = {};
+    if (patch.result !== undefined) {
+      const { data, error } = await mine(getSupabaseAdmin().from("matches").select("summary").eq("id", id), userId).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) return;
+      update.summary = withResult(data.summary as MatchSummary, patch.result);
+    }
+    if (patch.deckId !== undefined) update.deck_id = patch.deckId;
+    if (patch.notes !== undefined) update.notes = patch.notes;
+    const { error } = await mine(getSupabaseAdmin().from("matches").update(update).eq("id", id), userId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  await withLocalDb((db) => {
+    const m = db.matches.find((x) => x.id === id);
+    if (!m) return;
+    if (patch.result !== undefined) m.summary = withResult(m.summary, patch.result);
+    if (patch.deckId !== undefined) m.deckId = patch.deckId;
+    if (patch.notes !== undefined) m.notes = patch.notes;
+  });
+}
+
+export async function deleteMatch(userId: string, id: string): Promise<void> {
+  if (hasSupabaseConfig()) {
+    const { error } = await mine(getSupabaseAdmin().from("matches").delete().eq("id", id), userId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  await withLocalDb((db) => {
+    db.matches = db.matches.filter((x) => x.id !== id);
   });
 }

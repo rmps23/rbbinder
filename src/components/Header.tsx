@@ -60,6 +60,18 @@ const LINKS = [
       </svg>
     ),
   },
+  {
+    href: "/matches",
+    label: "Match history",
+    short: "Matches",
+    match: (p: string) => p.startsWith("/matches"),
+    icon: (
+      <svg viewBox="0 0 24 24" {...ICON} className="h-5 w-5 shrink-0">
+        <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" />
+        <path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M10 17h4v3h-4z" />
+      </svg>
+    ),
+  },
 ];
 
 export function Header() {

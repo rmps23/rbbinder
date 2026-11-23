@@ -87,6 +87,55 @@ export type Deck = {
   id: string;
   name: string;
   entries: DeckEntry[];
+  // Versions of one deck share a family; a deck starts as version 1 of its own.
+  familyId: string;
+  version: number;
   createdAt: string;
   updatedAt: string;
+};
+
+// ---------- match history ----------
+
+export type MatchResult = "win" | "loss" | "draw";
+
+// One player's side of a game.
+export type MatchSide = {
+  name: string;
+  legend: string; // "Shen, Eye of Twilight"
+  champion: string;
+  battlefield: string;
+  deckText: string; // the list they played, as text
+  score: number;
+  mulligan: number | null; // cards sent back
+  played: string[]; // cards played from hand at least once
+};
+
+// What's kept of a RiftAtlas replay (see riftAtlas.ts).
+export type MatchSummary = {
+  replayId: string;
+  seriesId: string; // games of one best-of-three share it
+  gameNumber: number;
+  format: string; // "bo1", "bo3"
+  playedAt: string;
+  durationMs: number | null;
+  result: MatchResult;
+  // The replay names no winner (e.g. both moved on to the next game of a Bo3):
+  // the result is a guess from the score until you set it.
+  inferred?: boolean;
+  reason: string; // "score", "concession"...
+  turns: number;
+  wentFirst: boolean | null;
+  scores: { turn: number; me: number; opp: number }[];
+  me: MatchSide;
+  opp: MatchSide;
+  players: { id: string; name: string }[]; // me, opponent
+};
+
+export type Match = {
+  id: string;
+  deckId: string | null;
+  playedAt: string;
+  result: MatchResult;
+  notes: string;
+  summary: MatchSummary;
 };

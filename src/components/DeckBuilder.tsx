@@ -5,6 +5,7 @@ import { ListSkeleton } from "@/components/Skeletons";
 import { Select } from "@/components/Select";
 import { MultiSelect } from "@/components/MultiSelect";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppData } from "./AppDataProvider";
 import { DeckTextModal } from "./DeckTextModal";
@@ -24,6 +25,7 @@ import { domainColor } from "@/lib/style";
 import { matchesSearch, searchInfo } from "@/lib/cardSearch";
 import { sortCards, type SortDir, type SortKey } from "@/lib/cardSort";
 import SortMenu from "./SortMenu";
+import { deckFamilies } from "@/lib/deckVersions";
 import type { Deck, DeckEntry, DeckZone, RiftCard } from "@/lib/types";
 
 const STEP = 48;
@@ -43,18 +45,18 @@ const chipSlide = (on: boolean) =>
   `rounded-md px-3 text-sm font-semibold transition ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`;
 
 function Ring({ pct }: { pct: number }) {
-  const r = 20;
+  const r = 22;
   const c = 2 * Math.PI * r;
   return (
-    <svg viewBox="0 0 48 48" className="h-11 w-11 -rotate-90 shrink-0">
-      <circle cx="24" cy="24" r={r} fill="none" className="stroke-cavity" strokeWidth="4" />
+    <svg viewBox="0 0 48 48" className="h-[52px] w-[52px] -rotate-90 shrink-0">
+      <circle cx="24" cy="24" r={r} fill="none" className="stroke-cavity" strokeWidth="3" />
       <circle
         cx="24"
         cy="24"
         r={r}
         fill="none"
         className={pct >= 100 ? "stroke-ok" : "stroke-brand-gold"}
-        strokeWidth="4"
+        strokeWidth="3"
         strokeLinecap="round"
         strokeDasharray={c}
         strokeDashoffset={c * (1 - Math.min(1, pct / 100))}
@@ -68,6 +70,8 @@ export function DeckBuilder({ id }: { id: string }) {
   const { cards, sets, bulk, loading, priceOf } = useAppData();
   const [deck, setDeck] = useState<Deck | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const router = useRouter();
+  const [versions, setVersions] = useState<{ id: string; version: number }[]>([]);
   const [name, setName] = useState("");
   const [entries, setEntries] = useState<DeckEntry[]>([]);
   const [save, setSave] = useState<SaveState>("saved");
@@ -107,6 +111,7 @@ export function DeckBuilder({ id }: { id: string }) {
         if (cancelled) return;
         if (!res.ok) return setLoadError(data?.error ?? "Couldn't load the deck.");
         setDeck(data);
+        setVersions(data.versions ?? []);
         setName(data.name);
         setEntries(data.entries);
         // Start where the deck needs work.
@@ -118,6 +123,30 @@ export function DeckBuilder({ id }: { id: string }) {
       cancelled = true;
     };
   }, [id]);
+
+  const headers = { "content-type": "application/json" };
+
+  // Sends what the autosave hasn't yet: it'd be lost on leaving for another version.
+  async function flush(): Promise<boolean> {
+    if (!dirty.current || save === "saved") return true;
+    const res = await fetch(`/api/decks/${id}`, { method: "PUT", headers, body: JSON.stringify({ name, entries }) }).catch(() => null);
+    setSave(res?.ok ? "saved" : "error");
+    return !!res?.ok;
+  }
+
+  // The imported list becomes a new version; this one stays as it is.
+  async function addVersion(list: DeckEntry[]): Promise<string | null> {
+    if (!(await flush())) return "Couldn't save this version, so nothing was imported.";
+    try {
+      const res = await fetch("/api/decks", { method: "POST", headers, body: JSON.stringify({ name: name.trim() || "New deck", entries: list, versionOf: id }) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) return data?.error ?? "Couldn't save the new version.";
+      router.push(`/decks/${data.id}`);
+      return null;
+    } catch {
+      return "Couldn't save the new version.";
+    }
+  }
 
   // Autosave shortly after the last change.
   useEffect(() => {
@@ -417,6 +446,22 @@ export function DeckBuilder({ id }: { id: string }) {
               <span><b className="text-t1">{countOf("rune")}</b>/12 runes</span>
             </p>
           </div>
+          {versions.length > 1 && (
+            <div className="w-24 shrink-0">
+              <Select
+                value={id}
+                onChange={async (v) => {
+                  if (v !== id && (await flush())) router.push(`/decks/${v}`);
+                }}
+                searchable={false}
+                ariaLabel="Version of this deck"
+                title="Version of this deck"
+                className="h-9 text-sm"
+                menuMinWidth={150}
+                options={versions.map((v) => ({ value: v.id, label: `v${v.version}` }))}
+              />
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <span className={`inline-flex h-7 items-center rounded-md px-2.5 text-xs font-semibold ${rules.legal ? "bg-ok/15 text-ok" : "bg-cavity text-t2"}`}>
               {rules.legal ? "✓ Legal deck" : "Not legal yet"}
@@ -796,12 +841,14 @@ export function DeckBuilder({ id }: { id: string }) {
       {modal === "import" && (
         <DeckTextModal
           mode="import"
+          families={deckFamilies([{ ...deck, name, version: Math.max(deck.version, ...versions.map((v) => v.version)) }])}
           onClose={() => setModal(null)}
-          onImport={(text) => {
+          onImport={(text, versionOf) => {
             const parsed = parseDeck(text, index);
             if (!parsed.entries.length) {
               return `No cards recognised.${parsed.unknown.length ? `\n${parsed.unknown.slice(0, 8).join("\n")}` : ""}`;
             }
+            if (versionOf) return addVersion(parsed.entries);
             if (entries.length && !confirm("Replace the current deck with the imported list?")) return "Import cancelled.";
             change(() => parsed.entries);
             if (parsed.unknown.length) {

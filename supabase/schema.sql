@@ -121,6 +121,25 @@ create index if not exists binders_user_idx on public.binders (user_id);
 create index if not exists decks_user_idx on public.decks (user_id);
 create unique index if not exists bulk_user_card_key on public.bulk (user_id, card_id);
 
+-- Match history: games imported from RiftAtlas replays.
+
+create table if not exists public.matches (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  replay_id text not null,
+  -- the deck of yours that was played; the list itself is kept in the summary
+  deck_id uuid references public.decks(id) on delete set null,
+  played_at timestamptz not null,
+  summary jsonb not null,
+  notes text not null default '',
+  created_at timestamptz not null default now()
+);
+
+-- A replay counts once per user, however often it's imported.
+create unique index if not exists matches_user_replay_key on public.matches (user_id, replay_id);
+create index if not exists matches_user_played_idx on public.matches (user_id, played_at desc);
+
+
 -- Row Level Security is enabled with no policies: only the server-side
 -- service role key (used in the Next.js API routes) can read/write these
 -- tables. The browser never talks to Supabase directly.
@@ -131,3 +150,4 @@ alter table public.binder_cards enable row level security;
 alter table public.bulk enable row level security;
 alter table public.decks enable row level security;
 alter table public.app_data enable row level security;
+alter table public.matches enable row level security;

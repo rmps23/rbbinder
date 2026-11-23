@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
-import { deleteDeck, getDeck, updateDeck } from "@/lib/repo";
+import { deleteDeck, getDeck, listDecks, updateDeck } from "@/lib/repo";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -14,7 +14,13 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const { id } = await params;
   try {
     const deck = await getDeck(user.id, id);
-    return deck ? NextResponse.json(deck) : NextResponse.json({ error: "Deck not found" }, { status: 404 });
+    if (!deck) return NextResponse.json({ error: "Deck not found" }, { status: 404 });
+    // it and its other versions, newest first
+    const versions = (await listDecks(user.id))
+      .filter((d) => d.familyId === deck.familyId)
+      .sort((a, b) => b.version - a.version)
+      .map((d) => ({ id: d.id, version: d.version }));
+    return NextResponse.json({ ...deck, versions });
   } catch (err) {
     return fail(err, "Failed to load deck");
   }

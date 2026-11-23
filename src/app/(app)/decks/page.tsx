@@ -9,6 +9,8 @@ import { MetaDecksModal } from "@/components/MetaDecksModal";
 import { DeckTextModal } from "@/components/DeckTextModal";
 import { CardArt } from "@/components/DeckViews";
 import { buildDeckIndex, displayName, parseDeck } from "@/lib/deck";
+import { deckFamilies, hasVersions, type DeckFamily } from "@/lib/deckVersions";
+import { closestDeck } from "@/lib/matchStats";
 import type { Deck } from "@/lib/types";
 
 export default function DecksPage() {
@@ -38,11 +40,13 @@ export default function DecksPage() {
     load();
   }, [load]);
 
-  async function create(deckName: string, entries: Deck["entries"] = []) {
+  const families = useMemo(() => deckFamilies(decks), [decks]);
+
+  async function create(deckName: string, entries: Deck["entries"] = [], versionOf: string | null = null) {
     const res = await fetch("/api/decks", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: deckName.trim() || "New deck", entries }),
+      body: JSON.stringify({ name: deckName.trim() || "New deck", entries, ...(versionOf ? { versionOf } : {}) }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) {
@@ -53,9 +57,11 @@ export default function DecksPage() {
     return true;
   }
 
-  async function remove(deck: Deck) {
-    if (!confirm(`Delete deck "${deck.name}"?`)) return;
-    await fetch(`/api/decks/${deck.id}`, { method: "DELETE" });
+  // The newest version; the one before takes its place.
+  async function remove(f: DeckFamily) {
+    const what = hasVersions(f) ? `version ${f.latest.version} of "${f.name}"? The other versions stay.` : `deck "${f.name}"?`;
+    if (!confirm(`Delete ${what}`)) return;
+    await fetch(`/api/decks/${f.latest.id}`, { method: "DELETE" });
     load();
   }
 
@@ -70,7 +76,7 @@ export default function DecksPage() {
         <div>
           <h1 className="font-display text-2xl font-semibold uppercase tracking-wide text-t1">Decks</h1>
           <p className="num mt-1 text-sm text-t3">
-            {decks.length} deck{decks.length === 1 ? "" : "s"} · see which cards you already have in bulk
+            {families.length} deck{families.length === 1 ? "" : "s"} · see which cards you already have in bulk
           </p>
         </div>
       </header>
@@ -114,16 +120,17 @@ export default function DecksPage() {
         </div>
       ) : (
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {decks.map((d) => {
+          {families.map((f) => {
+            const d = f.latest;
             const legend = d.entries.find((e) => e.zone === "legend");
             const legendCard = legend && cardById.get(legend.cardId);
             const count = d.entries.reduce((n, e) => n + (e.zone === "main" || e.zone === "champion" ? e.qty : 0), 0);
             const full = count >= 40;
             return (
-              <li key={d.id} className="group relative">
+              <li key={f.id} className="group relative flex flex-col overflow-hidden rounded-xl border border-line bg-panel transition hover:border-line2">
                 <Link
                   href={`/decks/${d.id}`}
-                  className="flex h-full items-center gap-4 rounded-xl border border-line bg-panel p-4 transition hover:border-line2 hover:bg-panel2"
+                  className="flex flex-1 items-center gap-4 p-4 transition hover:bg-panel2"
                 >
                   {legendCard ? (
                     <CardArt card={legendCard} sizes="120px" quality={90} className="w-20 shrink-0 rounded-lg" />
@@ -149,11 +156,28 @@ export default function DecksPage() {
                     </span>
                   </span>
                 </Link>
+                {hasVersions(f) && (
+                  <nav aria-label={`Versions of ${f.name}`} className="flex flex-wrap items-center gap-1.5 border-t border-line px-4 py-2">
+                    <span className="label mr-1">Versions</span>
+                    {f.versions.map((v, i) => (
+                      <Link
+                        key={v.id}
+                        href={`/decks/${v.id}`}
+                        title={new Date(v.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        className={`num inline-flex h-8 min-w-9 items-center justify-center rounded-md border px-2 text-xs font-semibold transition ${
+                          i === 0 ? "border-brand-gold text-t1" : "border-line text-t2 hover:border-line2 hover:text-t1"
+                        }`}
+                      >
+                        v{v.version}
+                      </Link>
+                    ))}
+                  </nav>
+                )}
                 <button
                   type="button"
-                  onClick={() => remove(d)}
-                  aria-label={`Delete ${d.name}`}
-                  title="Delete deck"
+                  onClick={() => remove(f)}
+                  aria-label={`Delete ${d.name}${hasVersions(f) ? ` v${d.version}` : ""}`}
+                  title={hasVersions(f) ? "Delete this version" : "Delete deck"}
                   className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-lg text-t3 transition hover:bg-bad/10 hover:text-bad md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true">
@@ -171,12 +195,14 @@ export default function DecksPage() {
       {importing && (
         <DeckTextModal
           mode="import"
+          families={families}
+          guess={(text) => closestDeck(text, decks, index, cardById)?.deck.id}
           onClose={() => setImporting(false)}
-          onImport={(text) => {
+          onImport={async (text, versionOf) => {
             const { entries, unknown } = parseDeck(text, index);
             if (!entries.length) return `No cards recognised.${unknown.length ? `\n${unknown.slice(0, 8).join("\n")}` : ""}`;
-            create(name || "Imported deck", entries);
-            return null;
+            const ok = await create(name || "Imported deck", entries, versionOf);
+            return ok ? null : "Couldn't save the deck.";
           }}
         />
       )}

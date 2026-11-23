@@ -14,6 +14,7 @@ import { formatEur } from "@/lib/format";
 import { isBaseCard } from "@/lib/setCollection";
 import { useBinders } from "@/lib/useBinders";
 import { valueBulk, valueContents } from "@/lib/valuation";
+import { deckFamilies, hasVersions } from "@/lib/deckVersions";
 import type { CardsSyncResult, Deck } from "@/lib/types";
 
 
@@ -61,6 +62,7 @@ export default function DashboardPage() {
   const { cards, sets, bulk, prices, priceOf, loading: appLoading, reloadCards } = useAppData();
   const { binders, loading: bindersLoading } = useBinders();
   const [decks, setDecks] = useState<Deck[]>([]);
+  const families = useMemo(() => deckFamilies(decks), [decks]);
 
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -218,7 +220,7 @@ export default function DashboardPage() {
               <span className="text-t3"> / {stats.baseTotal}</span>
             </p>
             <p className="num mt-2 text-xs text-t3">
-              {stats.copies} cards · {stats.owned} unique · {binders.length} binders · {decks.length} decks
+              {stats.copies} cards · {stats.owned} unique · {binders.length} binders · {families.length} decks
             </p>
           </div>
         </section>
@@ -311,7 +313,8 @@ export default function DashboardPage() {
             </p>
           ) : (
             <ul className="flex flex-1 flex-col justify-between gap-2">
-              {decks.slice(0, 4).map((d, idx) => {
+              {families.slice(0, 4).map((f, idx) => {
+                const d = f.latest;
                 const legend = d.entries.find((e) => e.zone === "legend");
                 const lc = legend && cardById.get(legend.cardId);
                 return (
@@ -326,7 +329,10 @@ export default function DashboardPage() {
                         <div className="aspect-[744/1039] w-9 shrink-0 rounded border border-dashed border-line" />
                       )}
                       <span className="min-w-0">
-                        <span className="block truncate font-display text-sm font-semibold text-t1">{d.name}</span>
+                        <span className="block truncate font-display text-sm font-semibold text-t1">
+                          {d.name}
+                          {hasVersions(f) && <span className="ml-1.5 text-t3">v{d.version}</span>}
+                        </span>
                         <span className="block truncate text-xs text-t3">{lc ? displayName(lc) : "No legend yet"}</span>
                       </span>
                     </Link>
