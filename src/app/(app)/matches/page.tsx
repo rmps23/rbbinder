@@ -5,13 +5,14 @@ import { useAppData } from "@/components/AppDataProvider";
 import { MatchImportModal } from "@/components/MatchImportModal";
 import { LegendFace, MatchRow, ResultDot, type MatchActions } from "@/components/MatchRow";
 import { Select } from "@/components/Select";
+import { SideboardReminder } from "@/components/SideboardReminder";
 import { ListSkeleton } from "@/components/Skeletons";
 import { SlideGroup } from "@/components/SlideGroup";
 import { WinRing } from "@/components/WinRing";
-import { buildDeckIndex, parseDeck } from "@/lib/deck";
+import { buildDeckIndex, cardKey, displayName, parseDeck } from "@/lib/deck";
 import { deckFamilies, deckLabels, hasVersions } from "@/lib/deckVersions";
 import { average, cardRows, groupBy, groupSeries, isSeries, pct, record, tally, winRate, type Row } from "@/lib/matchStats";
-import type { Deck, Match, MatchResult, MatchSide, RiftCard } from "@/lib/types";
+import type { Deck, DeckEntry, Match, MatchResult, MatchSide, RiftCard, SideCard } from "@/lib/types";
 
 const PERIODS = [
   { value: "", label: "All time" },
@@ -225,16 +226,43 @@ export default function MatchesPage() {
 
   const opponents = useMemo(() => [...new Set((matches ?? []).map((m) => m.summary.opp.legend))].sort(), [matches]);
 
-  async function patch(m: Match, change: { deckId?: string | null; notes?: string; result?: MatchResult }) {
-    const put = (next: Match) => setMatches((cur) => (cur ?? []).map((x) => (x.id === m.id ? next : x)));
-    put({ ...m, ...change, summary: change.result ? { ...m.summary, result: change.result, inferred: false } : m.summary });
+  // Cards by name with how many, whatever the printing.
+  const sideCards = useCallback(
+    (entries: DeckEntry[]) => {
+      const out = new Map<string, { name: string; qty: number; card: RiftCard }>();
+      for (const e of entries) {
+        const card = e.zone === "sideboard" ? cardById.get(e.cardId) : undefined;
+        if (!card) continue;
+        const had = out.get(cardKey(card));
+        if (had) had.qty += e.qty;
+        else out.set(cardKey(card), { name: displayName(card), qty: e.qty, card });
+      }
+      return [...out.values()];
+    },
+    [cardById]
+  );
+
+  async function patch(m: Match, change: { deckId?: string | null; notes?: string; result?: MatchResult; sideIn?: SideCard[] }) {
+    const { result, sideIn, ...rest } = change;
+    setMatches((cur) =>
+      (cur ?? []).map((x) =>
+        x.id !== m.id
+          ? x
+          : {
+              ...x,
+              ...rest,
+              ...(result ? { result } : {}),
+              summary: { ...x.summary, ...(result ? { result, inferred: false } : {}), ...(sideIn ? { sideIn } : {}) },
+            }
+      )
+    );
     const res = await fetch(`/api/matches/${m.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(change),
     }).catch(() => null);
     if (!res?.ok) {
-      put(m);
+      await load(); // back to what's saved
       setError("Couldn't save that change.");
     }
   }
@@ -271,6 +299,12 @@ export default function MatchesPage() {
     onDeck: (m, id) => patch(m, { deckId: id }),
     onNotes: (m, notes) => patch(m, { notes }),
     onResult: (m, result) => patch(m, { result }),
+    // the list of that game, or the saved deck's if it came without a sideboard
+    sideboard: (m) => {
+      const list = sideCards(parseDeck(m.summary.me.deckText, index).entries);
+      return list.length ? list : sideCards(decks.find((d) => d.id === m.deckId)?.entries ?? []);
+    },
+    onSideIn: (m, sideIn) => patch(m, { sideIn }),
     onDelete: remove,
     onSaveDeck: saveDeck,
   };
@@ -353,37 +387,48 @@ export default function MatchesPage() {
           </div>
 
           {/* summary */}
-          <section aria-label="Summary" className="flex flex-col gap-6 rounded-xl border border-line bg-panel p-5 sm:flex-row sm:items-center sm:gap-8 sm:p-6">
-            <div className="flex items-center gap-6">
-              <WinRing rate={winRate(stats.total)} size="lg" />
-              <div>
-                <p className="label">Win rate</p>
-                <p className="num mt-2 whitespace-nowrap font-display text-2xl font-bold leading-none">
-                  <span className="text-ok">{stats.total.wins}W</span> <span className="text-bad">{stats.total.losses}L</span>
-                  {stats.total.draws > 0 && <span className="text-t2"> {stats.total.draws}D</span>}
-                </p>
-                <p className="num mt-2 text-xs text-t3">
-                  {stats.total.games} {stats.total.games === 1 ? "game" : "games"}
-                </p>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <section aria-label="Summary" className="flex min-w-0 flex-col gap-6 rounded-xl border border-line bg-panel p-5 sm:flex-row sm:items-center sm:gap-8 sm:p-6">
+              <div className="flex items-center gap-6">
+                <WinRing rate={winRate(stats.total)} size="lg" />
+                <div>
+                  <p className="label">Win rate</p>
+                  <p className="num mt-2 whitespace-nowrap font-display text-2xl font-bold leading-none">
+                    <span className="text-ok">{stats.total.wins}W</span> <span className="text-bad">{stats.total.losses}L</span>
+                    {stats.total.draws > 0 && <span className="text-t2"> {stats.total.draws}D</span>}
+                  </p>
+                  <p className="num mt-2 text-xs text-t3">
+                    {stats.total.games} {stats.total.games === 1 ? "game" : "games"}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-5 border-line sm:border-l sm:pl-8">
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-5 xl:grid-cols-4">
-                <Fact label="Bo3 series" value={pct(winRate(seriesTotal))} sub={record(seriesTotal)} />
-                <Fact label="Going first" value={pct(winRate(stats.first))} sub={record(stats.first)} />
-                <Fact label="Going second" value={pct(winRate(stats.second))} sub={record(stats.second)} />
-                <Fact label="Average game" value={stats.turns === null ? "–" : `${stats.turns.toFixed(1)} turns`} sub={stats.ms === null ? undefined : `${Math.max(1, Math.round(stats.ms / 60000))} min`} />
-              </dl>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <span className="label">Latest</span>
-                <span className="flex flex-wrap gap-1">
-                  {shown.slice(0, LAST).map((m) => (
-                    <ResultDot key={m.id} result={m.result} title={`${m.summary.opp.legend} ${m.summary.me.score}–${m.summary.opp.score}`} />
-                  ))}
-                </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-5 border-line sm:border-l sm:pl-8">
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-5 xl:grid-cols-4">
+                  <Fact label="Bo3 series" value={pct(winRate(seriesTotal))} sub={record(seriesTotal)} />
+                  <Fact label="Going first" value={pct(winRate(stats.first))} sub={record(stats.first)} />
+                  <Fact label="Going second" value={pct(winRate(stats.second))} sub={record(stats.second)} />
+                  <Fact label="Average game" value={stats.turns === null ? "–" : `${stats.turns.toFixed(1)} turns`} sub={stats.ms === null ? undefined : `${Math.max(1, Math.round(stats.ms / 60000))} min`} />
+                </dl>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <span className="label">Latest</span>
+                  <span className="flex flex-wrap gap-1">
+                    {shown.slice(0, LAST).map((m) => (
+                      <ResultDot key={m.id} result={m.result} title={`${m.summary.opp.legend} ${m.summary.me.score}–${m.summary.opp.score}`} />
+                    ))}
+                  </span>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+            <SideboardReminder
+              matches={matches}
+              decks={decks}
+              deckId={deckId.startsWith(FAMILY) ? (families.find((f) => FAMILY + f.id === deckId)?.latest.id ?? "") : deckId === NO_DECK ? "" : deckId}
+              cards={cards}
+              index={index}
+              legendCard={legendCard}
+              sideCards={sideCards}
+            />
+          </div>
 
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
             {/* games */}

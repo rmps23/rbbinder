@@ -14,7 +14,7 @@ import { getSupabaseAdmin } from "./supabaseAdmin";
 import { readLocalDb, withLocalDb, type LocalDeck } from "./localDb";
 import { applyCardFixes } from "./cardFixes";
 import { getDomainFixes, getTypeFixes } from "./overrides";
-import type { Deck, DeckEntry, Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo, Match, MatchResult, MatchSummary } from "./types";
+import type { Deck, DeckEntry, Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo, Match, MatchResult, MatchSummary, SideCard } from "./types";
 
 const CHUNK_SIZE = 200;
 
@@ -572,7 +572,7 @@ type MatchRow = { id: string; deck_id: string | null; played_at: string; summary
 
 function toMatch(r: MatchRow): Match {
   // The first imports saved "ROOM:series start"; the start alone is what a series shares.
-  const summary = { ...r.summary, seriesId: r.summary.seriesId.replace(/^w+:(?=d+$)/, "") };
+  const summary = { ...r.summary, seriesId: r.summary.seriesId.replace(/^\w+:(?=\d+$)/, "") };
   return { id: r.id, deckId: r.deck_id, playedAt: r.played_at, result: r.summary.result, notes: r.notes ?? "", summary };
 }
 
@@ -629,21 +629,28 @@ export async function addMatches(userId: string, items: { summary: MatchSummary;
   return fresh.length;
 }
 
+type SummaryPatch = { result?: MatchResult; sideIn?: SideCard[] };
+
 // Setting the result by hand settles a guessed one.
-const withResult = (summary: MatchSummary, result: MatchResult): MatchSummary => ({ ...summary, result, inferred: false });
+const patchSummary = (summary: MatchSummary, { result, sideIn }: SummaryPatch): MatchSummary => ({
+  ...summary,
+  ...(result !== undefined ? { result, inferred: false } : {}),
+  ...(sideIn !== undefined ? { sideIn } : {}),
+});
 
 export async function updateMatch(
   userId: string,
   id: string,
-  patch: { deckId?: string | null; notes?: string; result?: MatchResult }
+  patch: { deckId?: string | null; notes?: string } & SummaryPatch
 ): Promise<void> {
+  const inSummary = patch.result !== undefined || patch.sideIn !== undefined;
   if (hasSupabaseConfig()) {
     const update: Record<string, unknown> = {};
-    if (patch.result !== undefined) {
+    if (inSummary) {
       const { data, error } = await mine(getSupabaseAdmin().from("matches").select("summary").eq("id", id), userId).maybeSingle();
       if (error) throw new Error(error.message);
       if (!data) return;
-      update.summary = withResult(data.summary as MatchSummary, patch.result);
+      update.summary = patchSummary(data.summary as MatchSummary, patch);
     }
     if (patch.deckId !== undefined) update.deck_id = patch.deckId;
     if (patch.notes !== undefined) update.notes = patch.notes;
@@ -654,7 +661,7 @@ export async function updateMatch(
   await withLocalDb((db) => {
     const m = db.matches.find((x) => x.id === id);
     if (!m) return;
-    if (patch.result !== undefined) m.summary = withResult(m.summary, patch.result);
+    if (inSummary) m.summary = patchSummary(m.summary, patch);
     if (patch.deckId !== undefined) m.deckId = patch.deckId;
     if (patch.notes !== undefined) m.notes = patch.notes;
   });

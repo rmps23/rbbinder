@@ -110,6 +110,9 @@ export type MatchSide = {
   played: string[]; // cards played from hand at least once
 };
 
+// A card that should have come in from the sideboard.
+export type SideCard = { name: string; qty: number };
+
 // What's kept of a RiftAtlas replay (see riftAtlas.ts).
 export type MatchSummary = {
   replayId: string;
@@ -129,6 +132,8 @@ export type MatchSummary = {
   me: MatchSide;
   opp: MatchSide;
   players: { id: string; name: string }[]; // me, opponent
+  // Added by you after the game: what you should have sided in. Not in the replay.
+  sideIn?: SideCard[];
 };
 
 export type Match = {

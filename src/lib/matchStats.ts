@@ -154,3 +154,21 @@ export function closestDeck(
   }
   return best;
 }
+
+// ---------- sideboard ----------
+
+export type Reminder = { name: string; qty: number; games: number };
+
+// The cards noted as "should have come in" over `matches` (newest first): the
+// most noted first, with the copies of the latest note.
+export function sideReminders(matches: Match[]): Reminder[] {
+  const out = new Map<string, Reminder>();
+  for (const m of matches) {
+    for (const c of m.summary.sideIn ?? []) {
+      const had = out.get(c.name);
+      if (had) had.games++;
+      else out.set(c.name, { ...c, games: 1 });
+    }
+  }
+  return [...out.values()].sort((a, b) => b.games - a.games || b.qty - a.qty || a.name.localeCompare(b.name));
+}
