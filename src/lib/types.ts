@@ -83,6 +83,11 @@ export type DeckZone = "legend" | "champion" | "main" | "battlefield" | "rune" |
 // One printing of a card in one zone of a deck. Which printing is just for the
 // picture - owning any printing (by name) counts as having the card.
 export type DeckEntry = { cardId: string; zone: DeckZone; qty: number };
+// Cards by name, so any printing counts.
+export type SideCard = { name: string; qty: number };
+export type SidePlan = { in: SideCard[]; out: SideCard[]; note: string };
+export type SideGuide = Record<string, SidePlan>;
+
 export type Deck = {
   id: string;
   name: string;
@@ -90,6 +95,8 @@ export type Deck = {
   // Versions of one deck share a family; a deck starts as version 1 of its own.
   familyId: string;
   version: number;
+  // How to sideboard, by the opponent's legend ("Vex, Gloomist").
+  guide: SideGuide;
   createdAt: string;
   updatedAt: string;
 };
@@ -110,9 +117,6 @@ export type MatchSide = {
   played: string[]; // cards played from hand at least once
 };
 
-// A card that should have come in from the sideboard.
-export type SideCard = { name: string; qty: number };
-
 // What's kept of a RiftAtlas replay (see riftAtlas.ts).
 export type MatchSummary = {
   replayId: string;
@@ -132,8 +136,6 @@ export type MatchSummary = {
   me: MatchSide;
   opp: MatchSide;
   players: { id: string; name: string }[]; // me, opponent
-  // Added by you after the game: what you should have sided in. Not in the replay.
-  sideIn?: SideCard[];
 };
 
 export type Match = {

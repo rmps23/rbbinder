@@ -1,7 +1,7 @@
 // The browser reads the replay, so the server checks the summary it sends:
 // right shape, bounded sizes, nothing extra stored.
 
-import type { MatchSide, MatchSummary, SideCard } from "./types";
+import type { MatchSide, MatchSummary } from "./types";
 
 type Json = Record<string, unknown>;
 const obj = (v: unknown): Json | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Json) : null);
@@ -23,18 +23,6 @@ function cleanSide(v: unknown): MatchSide | null {
     mulligan: int(s.mulligan, 20),
     played: (Array.isArray(s.played) ? s.played : []).slice(0, 120).map((c) => text(c, 120)).filter(Boolean),
   };
-}
-
-// null = not a list. A card counts once; 0 copies is the same as not being there.
-export function cleanSideIn(v: unknown): SideCard[] | null {
-  if (!Array.isArray(v)) return null;
-  const out = new Map<string, SideCard>();
-  for (const c of v.slice(0, 20)) {
-    const name = text(obj(c)?.name, 120);
-    const qty = int(obj(c)?.qty, 3);
-    if (name && qty) out.set(name, { name, qty });
-  }
-  return [...out.values()];
 }
 
 export function cleanSummary(v: unknown): MatchSummary | null {

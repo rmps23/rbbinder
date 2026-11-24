@@ -14,7 +14,7 @@ import { getSupabaseAdmin } from "./supabaseAdmin";
 import { readLocalDb, withLocalDb, type LocalDeck } from "./localDb";
 import { applyCardFixes } from "./cardFixes";
 import { getDomainFixes, getTypeFixes } from "./overrides";
-import type { Deck, DeckEntry, Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo, Match, MatchResult, MatchSummary, SideCard } from "./types";
+import type { Deck, DeckEntry, Binder, BinderLayout, BinderSlots, BulkMap, BulkVariant, RiftCard, SetInfo, Match, MatchResult, MatchSummary, SideGuide, SidePlan } from "./types";
 
 const CHUNK_SIZE = 200;
 
@@ -455,7 +455,7 @@ export async function setBinderSlot(
 
 // ---------- decks ----------
 
-type DeckRow = { id: string; name: string; payload: { entries?: DeckEntry[]; familyId?: string; version?: number } | null; created_at: string; updated_at: string };
+type DeckRow = { id: string; name: string; payload: { entries?: DeckEntry[]; familyId?: string; version?: number; guide?: SideGuide } | null; created_at: string; updated_at: string };
 
 function cleanEntries(entries: unknown): DeckEntry[] {
   if (!Array.isArray(entries)) return [];
@@ -472,12 +472,20 @@ function fromRow(r: DeckRow): Deck {
     entries: cleanEntries(r.payload?.entries),
     familyId: r.payload?.familyId ?? r.id,
     version: r.payload?.version ?? 1,
+    guide: r.payload?.guide ?? {},
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
 }
 
-const fromLocal = (d: LocalDeck): Deck => ({ ...d, familyId: d.familyId ?? d.id, version: d.version ?? 1 });
+// Saved whole on every change: the list, which version it is and its sideboard guide.
+const payloadOf = (d: Deck) => ({
+  entries: d.entries,
+  ...(d.familyId !== d.id ? { familyId: d.familyId, version: d.version } : {}),
+  ...(Object.keys(d.guide).length ? { guide: d.guide } : {}),
+});
+
+const fromLocal = (d: LocalDeck): Deck => ({ ...d, familyId: d.familyId ?? d.id, version: d.version ?? 1, guide: d.guide ?? {} });
 
 export async function listDecks(userId: string): Promise<Deck[]> {
   if (hasSupabaseConfig()) {
@@ -504,13 +512,13 @@ export async function getDeck(userId: string, id: string): Promise<Deck | null> 
 // null = that deck doesn't exist.
 export async function createDeck(userId: string, name: string, entries: unknown, versionOf?: string): Promise<Deck | null> {
   const clean = cleanEntries(entries);
-  let family: { familyId: string; version: number } | undefined;
+  let family: { familyId: string; version: number; guide: SideGuide } | undefined;
   if (versionOf) {
     const decks = await listDecks(userId);
     const base = decks.find((d) => d.id === versionOf);
     if (!base) return null;
     const versions = decks.filter((d) => d.familyId === base.familyId);
-    family = { familyId: base.familyId, version: Math.max(...versions.map((d) => d.version)) + 1 };
+    family = { familyId: base.familyId, version: Math.max(...versions.map((d) => d.version)) + 1, guide: base.guide };
     name = base.name;
   }
   if (hasSupabaseConfig()) {
@@ -535,9 +543,7 @@ export async function updateDeck(userId: string, id: string, patch: { name?: str
   const renamed = patch.name !== undefined && patch.name !== current.name ? decks.filter((d) => d.familyId === current.familyId).map((d) => d.id) : [];
   if (hasSupabaseConfig()) {
     const update: Record<string, unknown> = { updated_at: now };
-    // the payload is replaced whole: keep which version it is
-    const version = current.familyId !== current.id ? { familyId: current.familyId, version: current.version } : {};
-    if (patch.entries !== undefined) update.payload = { entries: cleanEntries(patch.entries), ...version };
+    if (patch.entries !== undefined) update.payload = payloadOf({ ...current, entries: cleanEntries(patch.entries) });
     const { error } = await mine(getSupabaseAdmin().from("decks").update(update).eq("id", id), userId);
     if (error) throw new Error(error.message);
     if (renamed.length) {
@@ -553,6 +559,25 @@ export async function updateDeck(userId: string, id: string, patch: { name?: str
     if (patch.entries !== undefined) deck.entries = cleanEntries(patch.entries);
     deck.updatedAt = now;
   });
+}
+
+// How to sideboard against one legend; an empty plan is removed.
+export async function setSidePlan(userId: string, id: string, legend: string, plan: SidePlan): Promise<boolean> {
+  const current = await getDeck(userId, id);
+  if (!current) return false;
+  const guide = { ...current.guide };
+  if (plan.in.length || plan.out.length || plan.note) guide[legend] = plan;
+  else delete guide[legend];
+  if (hasSupabaseConfig()) {
+    const { error } = await mine(getSupabaseAdmin().from("decks").update({ payload: payloadOf({ ...current, guide }) }).eq("id", id), userId);
+    if (error) throw new Error(error.message);
+    return true;
+  }
+  await withLocalDb((db) => {
+    const deck = db.decks.find((d) => d.id === id);
+    if (deck) deck.guide = guide;
+  });
+  return true;
 }
 
 export async function deleteDeck(userId: string, id: string): Promise<void> {
@@ -629,28 +654,21 @@ export async function addMatches(userId: string, items: { summary: MatchSummary;
   return fresh.length;
 }
 
-type SummaryPatch = { result?: MatchResult; sideIn?: SideCard[] };
-
 // Setting the result by hand settles a guessed one.
-const patchSummary = (summary: MatchSummary, { result, sideIn }: SummaryPatch): MatchSummary => ({
-  ...summary,
-  ...(result !== undefined ? { result, inferred: false } : {}),
-  ...(sideIn !== undefined ? { sideIn } : {}),
-});
+const withResult = (summary: MatchSummary, result: MatchResult): MatchSummary => ({ ...summary, result, inferred: false });
 
 export async function updateMatch(
   userId: string,
   id: string,
-  patch: { deckId?: string | null; notes?: string } & SummaryPatch
+  patch: { deckId?: string | null; notes?: string; result?: MatchResult }
 ): Promise<void> {
-  const inSummary = patch.result !== undefined || patch.sideIn !== undefined;
   if (hasSupabaseConfig()) {
     const update: Record<string, unknown> = {};
-    if (inSummary) {
+    if (patch.result !== undefined) {
       const { data, error } = await mine(getSupabaseAdmin().from("matches").select("summary").eq("id", id), userId).maybeSingle();
       if (error) throw new Error(error.message);
       if (!data) return;
-      update.summary = patchSummary(data.summary as MatchSummary, patch);
+      update.summary = withResult(data.summary as MatchSummary, patch.result);
     }
     if (patch.deckId !== undefined) update.deck_id = patch.deckId;
     if (patch.notes !== undefined) update.notes = patch.notes;
@@ -661,7 +679,7 @@ export async function updateMatch(
   await withLocalDb((db) => {
     const m = db.matches.find((x) => x.id === id);
     if (!m) return;
-    if (inSummary) m.summary = patchSummary(m.summary, patch);
+    if (patch.result !== undefined) m.summary = withResult(m.summary, patch.result);
     if (patch.deckId !== undefined) m.deckId = patch.deckId;
     if (patch.notes !== undefined) m.notes = patch.notes;
   });

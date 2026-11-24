@@ -5,14 +5,14 @@ import { useAppData } from "@/components/AppDataProvider";
 import { MatchImportModal } from "@/components/MatchImportModal";
 import { LegendFace, MatchRow, ResultDot, type MatchActions } from "@/components/MatchRow";
 import { Select } from "@/components/Select";
-import { SideboardReminder } from "@/components/SideboardReminder";
+import { SideboardGuide } from "@/components/SideboardGuide";
 import { ListSkeleton } from "@/components/Skeletons";
 import { SlideGroup } from "@/components/SlideGroup";
 import { WinRing } from "@/components/WinRing";
-import { buildDeckIndex, cardKey, displayName, parseDeck } from "@/lib/deck";
+import { buildDeckIndex, parseDeck } from "@/lib/deck";
 import { deckFamilies, deckLabels, hasVersions } from "@/lib/deckVersions";
 import { average, cardRows, groupBy, groupSeries, isSeries, pct, record, tally, winRate, type Row } from "@/lib/matchStats";
-import type { Deck, DeckEntry, Match, MatchResult, MatchSide, RiftCard, SideCard } from "@/lib/types";
+import type { Deck, Match, MatchResult, MatchSide, RiftCard, SidePlan } from "@/lib/types";
 
 const PERIODS = [
   { value: "", label: "All time" },
@@ -224,26 +224,20 @@ export default function MatchesPage() {
     [shown, inScope]
   );
 
+  // The sideboard guide: the filtered deck's, or the newest version of the last one played.
+  const guideDeck = useMemo(() => {
+    if (deckId === NO_DECK) return undefined;
+    const exact = decks.find((d) => d.id === deckId);
+    if (exact) return exact;
+    const last = matches?.find((m) => m.deckId && familyOf.has(m.deckId))?.deckId;
+    const family = deckId.startsWith(FAMILY) ? deckId.slice(FAMILY.length) : last ? familyOf.get(last) : undefined;
+    return (families.find((f) => f.id === family) ?? families[0])?.latest;
+  }, [deckId, decks, families, familyOf, matches]);
+
   const opponents = useMemo(() => [...new Set((matches ?? []).map((m) => m.summary.opp.legend))].sort(), [matches]);
 
-  // Cards by name with how many, whatever the printing.
-  const sideCards = useCallback(
-    (entries: DeckEntry[]) => {
-      const out = new Map<string, { name: string; qty: number; card: RiftCard }>();
-      for (const e of entries) {
-        const card = e.zone === "sideboard" ? cardById.get(e.cardId) : undefined;
-        if (!card) continue;
-        const had = out.get(cardKey(card));
-        if (had) had.qty += e.qty;
-        else out.set(cardKey(card), { name: displayName(card), qty: e.qty, card });
-      }
-      return [...out.values()];
-    },
-    [cardById]
-  );
-
-  async function patch(m: Match, change: { deckId?: string | null; notes?: string; result?: MatchResult; sideIn?: SideCard[] }) {
-    const { result, sideIn, ...rest } = change;
+  async function patch(m: Match, change: { deckId?: string | null; notes?: string; result?: MatchResult }) {
+    const { result, ...rest } = change;
     setMatches((cur) =>
       (cur ?? []).map((x) =>
         x.id !== m.id
@@ -251,8 +245,7 @@ export default function MatchesPage() {
           : {
               ...x,
               ...rest,
-              ...(result ? { result } : {}),
-              summary: { ...x.summary, ...(result ? { result, inferred: false } : {}), ...(sideIn ? { sideIn } : {}) },
+              ...(result ? { result, summary: { ...x.summary, result, inferred: false } } : {}),
             }
       )
     );
@@ -265,6 +258,17 @@ export default function MatchesPage() {
       await load(); // back to what's saved
       setError("Couldn't save that change.");
     }
+  }
+
+  async function savePlan(deck: Deck, legend: string, plan: SidePlan) {
+    setDecks((cur) => cur.map((d) => (d.id === deck.id ? { ...d, guide: { ...d.guide, [legend]: plan } } : d)));
+    const res = await fetch(`/api/decks/${deck.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ legend, plan }),
+      keepalive: true, // also when leaving the page
+    }).catch(() => null);
+    if (!res?.ok) setError("Couldn't save the sideboard plan.");
   }
 
   async function remove(m: Match) {
@@ -299,12 +303,6 @@ export default function MatchesPage() {
     onDeck: (m, id) => patch(m, { deckId: id }),
     onNotes: (m, notes) => patch(m, { notes }),
     onResult: (m, result) => patch(m, { result }),
-    // the list of that game, or the saved deck's if it came without a sideboard
-    sideboard: (m) => {
-      const list = sideCards(parseDeck(m.summary.me.deckText, index).entries);
-      return list.length ? list : sideCards(decks.find((d) => d.id === m.deckId)?.entries ?? []);
-    },
-    onSideIn: (m, sideIn) => patch(m, { sideIn }),
     onDelete: remove,
     onSaveDeck: saveDeck,
   };
@@ -387,99 +385,108 @@ export default function MatchesPage() {
           </div>
 
           {/* summary */}
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <section aria-label="Summary" className="flex min-w-0 flex-col gap-6 rounded-xl border border-line bg-panel p-5 sm:flex-row sm:items-center sm:gap-8 sm:p-6">
-              <div className="flex items-center gap-6">
-                <WinRing rate={winRate(stats.total)} size="lg" />
-                <div>
-                  <p className="label">Win rate</p>
-                  <p className="num mt-2 whitespace-nowrap font-display text-2xl font-bold leading-none">
-                    <span className="text-ok">{stats.total.wins}W</span> <span className="text-bad">{stats.total.losses}L</span>
-                    {stats.total.draws > 0 && <span className="text-t2"> {stats.total.draws}D</span>}
-                  </p>
-                  <p className="num mt-2 text-xs text-t3">
-                    {stats.total.games} {stats.total.games === 1 ? "game" : "games"}
-                  </p>
+          {/* A column per side, so neither stretches the other. On a phone: summary, guide, win rates, games. */}
+          <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+            <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
+              <section aria-label="Summary" className="order-1 flex min-w-0 flex-col gap-6 rounded-xl border border-line bg-panel p-5 sm:flex-row sm:items-center sm:gap-8 sm:p-6">
+                <div className="flex items-center gap-6">
+                  <WinRing rate={winRate(stats.total)} size="lg" />
+                  <div>
+                    <p className="label">Win rate</p>
+                    <p className="num mt-2 whitespace-nowrap font-display text-2xl font-bold leading-none">
+                      <span className="text-ok">{stats.total.wins}W</span> <span className="text-bad">{stats.total.losses}L</span>
+                      {stats.total.draws > 0 && <span className="text-t2"> {stats.total.draws}D</span>}
+                    </p>
+                    <p className="num mt-2 text-xs text-t3">
+                      {stats.total.games} {stats.total.games === 1 ? "game" : "games"}
+                    </p>
+                  </div>
                 </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-5 border-line sm:border-l sm:pl-8">
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-5 xl:grid-cols-4">
+                    <Fact label="Bo3 series" value={pct(winRate(seriesTotal))} sub={record(seriesTotal)} />
+                    <Fact label="Going first" value={pct(winRate(stats.first))} sub={record(stats.first)} />
+                    <Fact label="Going second" value={pct(winRate(stats.second))} sub={record(stats.second)} />
+                    <Fact label="Average game" value={stats.turns === null ? "–" : `${stats.turns.toFixed(1)} turns`} sub={stats.ms === null ? undefined : `${Math.max(1, Math.round(stats.ms / 60000))} min`} />
+                  </dl>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <span className="label">Latest</span>
+                    <span className="flex flex-wrap gap-1">
+                      {shown.slice(0, LAST).map((m) => (
+                        <ResultDot key={m.id} result={m.result} title={`${m.summary.opp.legend} ${m.summary.me.score}–${m.summary.opp.score}`} />
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              {/* games */}
+              <section aria-label="Games" className="order-4 flex min-w-0 flex-col gap-5">
+                {shown.length === 0 && <p className="rounded-xl border border-dashed border-line py-8 text-center text-sm text-t3">No games with these filters.</p>}
+                {days.map((d) => (
+                  <div key={d.label}>
+                    <h2 className="label mb-2">{d.label}</h2>
+                    <ul className="flex flex-col gap-2">
+                      {d.rows.map((r) =>
+                        isSeries(r) ? <MatchRow key={r.id} games={r.games} series={r} actions={actions} /> : <MatchRow key={r.id} games={[r]} actions={actions} />
+                      )}
+                    </ul>
+                  </div>
+                ))}
+                {rows.length > visible && (
+                  <button
+                    type="button"
+                    onClick={() => setVisible((v) => v + STEP)}
+                    className="h-11 w-full rounded-xl border border-line bg-panel text-sm font-semibold text-t2 transition hover:border-line2 hover:text-t1"
+                  >
+                    Show more ({rows.length - visible} left)
+                  </button>
+                )}
+              </section>
+            </div>
+
+            <div className="contents lg:flex lg:flex-col lg:gap-5 lg:self-stretch">
+              <div className="order-2">
+                <SideboardGuide
+                  key={guideDeck?.id ?? ""}
+                  deck={guideDeck}
+                  label={guideDeck ? (labels.get(guideDeck.id) ?? guideDeck.name) : ""}
+                  matches={matches}
+                  familyOf={familyOf}
+                  cards={cards}
+                  cardById={cardById}
+                  index={index}
+                  legendCard={legendCard}
+                  onSave={savePlan}
+                />
               </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-5 border-line sm:border-l sm:pl-8">
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-5 xl:grid-cols-4">
-                  <Fact label="Bo3 series" value={pct(winRate(seriesTotal))} sub={record(seriesTotal)} />
-                  <Fact label="Going first" value={pct(winRate(stats.first))} sub={record(stats.first)} />
-                  <Fact label="Going second" value={pct(winRate(stats.second))} sub={record(stats.second)} />
-                  <Fact label="Average game" value={stats.turns === null ? "–" : `${stats.turns.toFixed(1)} turns`} sub={stats.ms === null ? undefined : `${Math.max(1, Math.round(stats.ms / 60000))} min`} />
-                </dl>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <span className="label">Latest</span>
-                  <span className="flex flex-wrap gap-1">
-                    {shown.slice(0, LAST).map((m) => (
-                      <ResultDot key={m.id} result={m.result} title={`${m.summary.opp.legend} ${m.summary.me.score}–${m.summary.opp.score}`} />
+
+              {/* win rates */}
+              <section aria-label="Win rates" className="order-3 overflow-hidden rounded-xl border border-line bg-panel lg:sticky lg:top-4">
+                <div className="border-b border-line p-3">
+                  <SlideGroup role="tablist" aria-label="Win rate by" className="flex gap-1 rounded-lg border border-line bg-ink p-1">
+                    {TABS.map((x) => (
+                      <button
+                        key={x.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === x.id}
+                        data-active={tab === x.id}
+                        onClick={() => setTab(x.id)}
+                        className={`h-9 flex-1 rounded-md text-xs font-semibold transition ${tab === x.id ? "text-on-accent" : "text-t2 hover:text-t1"}`}
+                      >
+                        {x.label}
+                      </button>
                     ))}
-                  </span>
+                  </SlideGroup>
+                  <p className="mt-2.5 px-1 text-xs leading-snug text-t3">{HINT[tab]}</p>
                 </div>
-              </div>
-            </section>
-            <SideboardReminder
-              matches={matches}
-              decks={decks}
-              deckId={deckId.startsWith(FAMILY) ? (families.find((f) => FAMILY + f.id === deckId)?.latest.id ?? "") : deckId === NO_DECK ? "" : deckId}
-              cards={cards}
-              index={index}
-              legendCard={legendCard}
-              sideCards={sideCards}
-            />
-          </div>
-
-          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-            {/* games */}
-            <section aria-label="Games" className="flex min-w-0 flex-col gap-5">
-              {shown.length === 0 && <p className="rounded-xl border border-dashed border-line py-8 text-center text-sm text-t3">No games with these filters.</p>}
-              {days.map((d) => (
-                <div key={d.label}>
-                  <h2 className="label mb-2">{d.label}</h2>
-                  <ul className="flex flex-col gap-2">
-                    {d.rows.map((r) =>
-                      isSeries(r) ? <MatchRow key={r.id} games={r.games} series={r} actions={actions} /> : <MatchRow key={r.id} games={[r]} actions={actions} />
-                    )}
-                  </ul>
-                </div>
-              ))}
-              {rows.length > visible && (
-                <button
-                  type="button"
-                  onClick={() => setVisible((v) => v + STEP)}
-                  className="h-11 w-full rounded-xl border border-line bg-panel text-sm font-semibold text-t2 transition hover:border-line2 hover:text-t1"
-                >
-                  Show more ({rows.length - visible} left)
-                </button>
-              )}
-            </section>
-
-            {/* win rates */}
-            <section aria-label="Win rates" className="order-first overflow-hidden rounded-xl border border-line bg-panel lg:sticky lg:top-4 lg:order-none">
-              <div className="border-b border-line p-3">
-                <SlideGroup role="tablist" aria-label="Win rate by" className="flex gap-1 rounded-lg border border-line bg-ink p-1">
-                  {TABS.map((x) => (
-                    <button
-                      key={x.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={tab === x.id}
-                      data-active={tab === x.id}
-                      onClick={() => setTab(x.id)}
-                      className={`h-9 flex-1 rounded-md text-xs font-semibold transition ${tab === x.id ? "text-on-accent" : "text-t2 hover:text-t1"}`}
-                    >
-                      {x.label}
-                    </button>
-                  ))}
-                </SlideGroup>
-                <p className="mt-2.5 px-1 text-xs leading-snug text-t3">{HINT[tab]}</p>
-              </div>
-              {tab === "legends" && <Rates rows={stats.matchups} art={legendCard} onPick={toggle(setOpponent)} picked={opponent} />}
-              {tab === "decks" && <Rates rows={deckRows.rows} nested={deckRows.versions} onPick={toggle(setDeckId)} picked={deckId} />}
-              {tab === "battlefields" && <Rates rows={stats.battlefields} />}
-              {tab === "cards" && <Rates rows={stats.cards} />}
-            </section>
+                {tab === "legends" && <Rates rows={stats.matchups} art={legendCard} onPick={toggle(setOpponent)} picked={opponent} />}
+                {tab === "decks" && <Rates rows={deckRows.rows} nested={deckRows.versions} onPick={toggle(setDeckId)} picked={deckId} />}
+                {tab === "battlefields" && <Rates rows={stats.battlefields} />}
+                {tab === "cards" && <Rates rows={stats.cards} />}
+              </section>
+            </div>
           </div>
         </>
       )}

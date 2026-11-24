@@ -6,7 +6,7 @@
 
 import { promises as fs } from "fs";
 import path from "path";
-import type { DeckEntry, MatchSummary, RiftCard } from "./types";
+import type { DeckEntry, MatchSummary, RiftCard, SideGuide } from "./types";
 
 const DB_PATH = path.join(process.cwd(), ".data", "local-db.json");
 
@@ -23,7 +23,7 @@ export type LocalBinder = {
   updatedAt: string;
 };
 export type LocalBinderCard = { binderId: string; position: number; cardId: string; qty: number; updatedAt: string };
-export type LocalDeck = { id: string; name: string; entries: DeckEntry[]; familyId?: string; version?: number; createdAt: string; updatedAt: string };
+export type LocalDeck = { id: string; name: string; entries: DeckEntry[]; familyId?: string; version?: number; guide?: SideGuide; createdAt: string; updatedAt: string };
 export type LocalMatch = { id: string; replayId: string; deckId: string | null; playedAt: string; summary: MatchSummary; notes: string };
 export type LocalAppData = { key: string; value: unknown; updatedAt: string };
 export type LocalBulk = { cardId: string; normalQty: number; foilQty: number; updatedAt: string };

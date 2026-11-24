@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { CardImage } from "./CardImage";
 import { ScoreChart } from "./ScoreChart";
 import { Select } from "./Select";
 import { needsCheck, type Series } from "@/lib/matchStats";
 import { deckOptions } from "@/lib/deckVersions";
-import type { Deck, Match, MatchResult, MatchSide, RiftCard, SideCard } from "@/lib/types";
+import type { Deck, Match, MatchResult, MatchSide, RiftCard } from "@/lib/types";
 
 const RESULT: Record<MatchResult, { label: string; letter: string; cls: string; bar: string }> = {
   win: { label: "Win", letter: "W", cls: "bg-ok/15 text-ok", bar: "bg-ok" },
@@ -110,73 +110,6 @@ function Side({ side, face, onSaveDeck, saved }: { side: MatchSide; face?: RiftC
   );
 }
 
-// A card's picture, small and whole, next to its name.
-export function CardThumb({ card }: { card: RiftCard | undefined }) {
-  return (
-    <span className="relative block h-11 w-8 shrink-0 overflow-hidden rounded bg-cavity ring-1 ring-line2">
-      {card?.image.url && <CardImage card={card} alt="" fill sizes="64px" className="object-cover" />}
-    </span>
-  );
-}
-
-export type SideOption = SideCard & { card: RiftCard | undefined };
-
-// What you should have sided in, picked after the game from the sideboard you had.
-function SideboardPicker({ title, options, value, onChange }: { title: string; options: SideOption[]; value: SideCard[]; onChange: (cards: SideCard[]) => void }) {
-  const [picked, setPicked] = useState(() => new Map(value.map((c) => [c.name, c.qty])));
-  // A few clicks in a row are one save, sent even if the game is closed meanwhile.
-  const pending = useRef<(() => void) | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const flush = () => {
-    clearTimeout(timer.current);
-    pending.current?.();
-    pending.current = null;
-  };
-  useEffect(() => flush, []);
-
-  function set(name: string, qty: number) {
-    const next = new Map(picked);
-    if (qty > 0) next.set(name, qty);
-    else next.delete(name);
-    setPicked(next);
-    pending.current = () => onChange([...next].map(([n, q]) => ({ name: n, qty: q })));
-    clearTimeout(timer.current);
-    timer.current = setTimeout(flush, 500);
-  }
-
-  const step = "flex h-11 w-11 items-center justify-center rounded-md text-base text-t2 transition hover:bg-cavity hover:text-t1 disabled:opacity-30 sm:h-9 sm:w-9";
-  return (
-    <section aria-label={title} className="rounded-lg border border-line bg-panel p-4">
-      <h4 className="text-sm font-semibold text-t1">{title}</h4>
-      <p className="mt-0.5 text-xs text-t3">What should you have brought in? It comes up when you face this legend again.</p>
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {options.map((o) => {
-          const qty = picked.get(o.name) ?? 0;
-          return (
-            <li key={o.name} className={`flex items-center gap-2 rounded-lg border p-1.5 pr-1 transition ${qty ? "border-brand-gold bg-accentbg" : "border-line"}`}>
-              <button type="button" aria-pressed={qty > 0} onClick={() => set(o.name, qty ? 0 : o.qty)} className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 text-left">
-                <CardThumb card={o.card} />
-                <span className={`min-w-0 text-xs font-semibold leading-snug ${qty ? "text-t1" : "text-t2"}`}>{o.name}</span>
-              </button>
-              <span className="flex shrink-0 items-center">
-                <button type="button" aria-label={`One ${o.name} less`} disabled={!qty} onClick={() => set(o.name, qty - 1)} className={step}>
-                  −
-                </button>
-                <span className={`num w-8 text-center text-xs font-bold ${qty ? "text-brand-gold" : "text-t3"}`}>
-                  {qty}/{o.qty}
-                </span>
-                <button type="button" aria-label={`One ${o.name} more`} disabled={qty >= o.qty} onClick={() => set(o.name, qty + 1)} className={step}>
-                  +
-                </button>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
 export type MatchActions = {
   decks: Deck[];
   deckLabel: (id: string) => string | undefined;
@@ -184,19 +117,15 @@ export type MatchActions = {
   onDeck: (m: Match, deckId: string | null) => void;
   onNotes: (m: Match, notes: string) => void;
   onResult: (m: Match, result: MatchResult) => void;
-  /** the sideboard you had in a game */
-  sideboard: (m: Match) => SideOption[];
-  onSideIn: (m: Match, cards: SideCard[]) => void;
   onDelete: (m: Match) => void;
   onSaveDeck: (side: MatchSide) => Promise<boolean>;
 };
 
 // Everything about one game: score, both sides, deck, notes.
-function MatchDetail({ match, next, actions }: { match: Match; next: boolean; actions: MatchActions }) {
+function MatchDetail({ match, actions }: { match: Match; actions: MatchActions }) {
   const [notes, setNotes] = useState(match.notes);
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const s = match.summary;
-  const side = actions.sideboard(match);
   const facts = [
     s.wentFirst === null ? null : s.wentFirst ? "You went first" : "You went second",
     s.turns ? `${s.turns} turns` : null,
@@ -220,14 +149,6 @@ function MatchDetail({ match, next, actions }: { match: Match; next: boolean; ac
         <Side side={s.me} face={actions.legendCard(s.me.legend)} onSaveDeck={() => saveDeck("me")} saved={!!saved.me} />
         <Side side={s.opp} face={actions.legendCard(s.opp.legend)} onSaveDeck={() => saveDeck("opp")} saved={!!saved.opp} />
       </div>
-      {side.length > 0 && (
-        <SideboardPicker
-          title={next ? `Sideboard for game ${s.gameNumber + 1}` : "Sideboard for next time"}
-          options={side}
-          value={s.sideIn ?? []}
-          onChange={(cards) => actions.onSideIn(match, cards)}
-        />
-      )}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="sm:w-56">
           <Select
@@ -343,15 +264,7 @@ export function MatchRow({ games, series, actions }: { games: Match[]; series?: 
           </span>
         </button>
       )}
-      {open && (
-        <MatchDetail
-          key={open.id}
-          match={open}
-          // a best-of-three always has a second game
-          next={!!series && (open.summary.gameNumber === 1 || games.some((g) => g.summary.gameNumber > open.summary.gameNumber))}
-          actions={actions}
-        />
-      )}
+      {open && <MatchDetail key={open.id} match={open} actions={actions} />}
     </li>
   );
 }

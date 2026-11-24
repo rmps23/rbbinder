@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/session";
-import { deleteDeck, getDeck, listDecks, updateDeck } from "@/lib/repo";
+import { deleteDeck, getDeck, listDecks, setSidePlan, updateDeck } from "@/lib/repo";
+import { cleanSidePlan } from "@/lib/sidePlan";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -39,6 +40,23 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     return fail(err, "Failed to save deck");
+  }
+}
+
+// Body: { legend, plan } - how to sideboard against that legend.
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  const user = await requireUser();
+  if (user instanceof NextResponse) return user;
+  const { id } = await params;
+  const body = await req.json().catch(() => null);
+  const legend = typeof body?.legend === "string" ? body.legend.trim().slice(0, 120) : "";
+  const plan = cleanSidePlan(body?.plan);
+  if (!legend || !plan) return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  try {
+    if (!(await setSidePlan(user.id, id, legend, plan))) return NextResponse.json({ error: "Deck not found" }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return fail(err, "Failed to save the sideboard plan");
   }
 }
 
