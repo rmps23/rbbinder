@@ -392,7 +392,7 @@ export function ListView({
         {rows.length === 0 ? (
           <p className="rounded-lg border border-dashed border-line2 py-3 text-center text-xs text-t3">Nothing here yet</p>
         ) : (
-          <ul className={two ? "grid grid-cols-[repeat(auto-fill,minmax(min(100%,400px),1fr))] gap-1.5" : "flex flex-col gap-1.5"}>
+          <ul className={two ? "grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-1.5" : "flex flex-col gap-1.5"}>
             {rows.map((row) => renderRow(row, two || zone.id === "legend" || zone.id === "champion"))}
           </ul>
         )}
@@ -406,14 +406,14 @@ export function ListView({
   return (
     <div className="flex flex-col gap-5">
       {legend && champion && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,400px),1fr))] items-start gap-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] items-start gap-3">
           {renderSection(legend, false)}
           {renderSection(champion, false)}
         </div>
       )}
       {zones
         .filter((z) => !(legend && champion && (z.id === "legend" || z.id === "champion")))
-        .map((zone) => renderSection(zone, zone.id === "main"))}
+        .map((zone) => renderSection(zone, true))}
     </div>
   );
 }

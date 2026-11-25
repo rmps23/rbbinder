@@ -90,7 +90,7 @@ export function DeckBuilder({ id }: { id: string }) {
   const [setId, setSetId] = useState("");
   const [typeId, setTypeId] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
-  const [onlyBulk, setOnlyBulk] = useState(true);
+  const [onlyBulk, setOnlyBulk] = useState(false);
   const [visible, setVisible] = useState(STEP);
   const { bind: preview, node: previewNode } = useCardPreview();
   const [sortBy, setSortBy] = useState<SortKey>("energy");
@@ -602,7 +602,6 @@ export function DeckBuilder({ id }: { id: string }) {
               })}
             </div>
             )}
-            <span className="mx-1 hidden h-5 w-px bg-line sm:block" aria-hidden="true" />
               <button
                 type="button"
                 role="switch"
