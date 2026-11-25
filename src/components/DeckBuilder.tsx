@@ -492,14 +492,14 @@ export function DeckBuilder({ id }: { id: string }) {
         {/* ---- pool ---- */}
         <section className={`${mobile === "pool" ? "" : "hidden"} min-w-0 lg:block lg:h-full lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-scroll lg:pr-3`}>
           {/* tabs + filters stay put while the card grid scrolls under them */}
-          <div className="mb-4 lg:sticky lg:top-0 lg:z-20 lg:mb-0 lg:bg-ink lg:pb-3">
+          <div className="mb-4 lg:sticky lg:top-0 lg:z-20 lg:mb-0 lg:bg-ink lg:pb-3 lg:[@media(max-height:760px)]:static lg:[@media(max-height:760px)]:mb-4 lg:[@media(max-height:760px)]:pb-0">
           <div className="rounded-xl border border-line bg-panel">
-          <SlideGroup className="no-scrollbar flex gap-0.5 overflow-x-auto p-1">
+          <SlideGroup className="flex flex-wrap gap-0.5 p-1">
             {POOL_ORDER.map((z) => {
               const z0 = tgt(z);
               const on = poolZone === z;
               return (
-                <button key={z} type="button" data-active={on} onClick={() => setPoolZone(z)} className={`flex min-h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-3 text-xs font-semibold transition lg:min-w-0 lg:flex-1 lg:shrink lg:px-1.5 ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`}>
+                <button key={z} type="button" data-active={on} onClick={() => setPoolZone(z)} className={`flex min-h-9 shrink-0 grow items-center justify-center gap-1 whitespace-nowrap rounded-lg px-3 text-xs font-semibold transition ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`}>
                   {z0.label}
                   <span className={`num text-[11px] font-medium ${on ? "text-on-accent/75" : "text-t3"}`}>
                     {z === "main" ? mainTotal : countOf(z)}

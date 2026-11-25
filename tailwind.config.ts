@@ -76,15 +76,15 @@ const config: Config = {
         "card-in": "card-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both",
         shimmer: "shimmer 3s linear infinite",
       },
-      // Moderate corners (8-12px).
+      // Squarer corners: 2-8px.
       borderRadius: {
-        sm: "4px",
-        DEFAULT: "6px",
-        md: "8px",
-        lg: "10px",
-        xl: "12px",
-        "2xl": "12px",
-        "3xl": "12px",
+        sm: "2px",
+        DEFAULT: "2px",
+        md: "3px",
+        lg: "4px",
+        xl: "6px",
+        "2xl": "6px",
+        "3xl": "8px",
       },
       fontFamily: {
         sans: ["var(--font-public-sans)", "ui-sans-serif", "system-ui", "sans-serif"],

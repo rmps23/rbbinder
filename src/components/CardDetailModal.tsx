@@ -93,7 +93,7 @@ export function CardDetailModal({
         {/* card art */}
         <div className="shrink-0 bg-panel2 p-4 md:h-full md:bg-ink md:p-5">
           <div
-            className={`relative mx-auto overflow-hidden rounded-[14px] ${
+            className={`relative mx-auto overflow-hidden rounded-md ${
               isLandscape(card) ? "aspect-[1039/744] w-[min(86vw,440px)] md:h-auto md:w-[min(46vw,520px)]" : "aspect-[744/1039] w-[min(60vw,300px)] md:h-full md:w-auto"
             }`}
           >

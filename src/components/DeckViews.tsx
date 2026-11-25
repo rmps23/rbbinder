@@ -284,6 +284,7 @@ export function ListView({
   onMove: (row: Row, to: DeckZone) => void;
 }) {
   const renderRow = (row: Row, compact: boolean) => {
+    void compact;
     const { entry, card } = row;
     const versions = versionsOf(card);
     const art = (
@@ -312,7 +313,7 @@ export function ListView({
                             </span>
     );
     const actions = (
-      <span className={`flex items-center gap-1.5 ${compact ? "flex-wrap" : ""}`}>
+      <span className="flex items-center gap-1.5">
                               {entry.zone === "main" && card.types.includes("unit") && canChampion(card) && (
                                 <RowButton tone="gold" onClick={() => onMove(row, "champion")} title="Use as your chosen champion">
                                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]" aria-hidden="true"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5L2.6 9.8l6.5-.9L12 3Z" /></svg>
@@ -359,22 +360,11 @@ export function ListView({
     return (
       <li
         key={`${entry.zone}:${entry.cardId}`}
-        className={`items-center gap-3 rounded-xl border border-line bg-panel2 p-2 transition hover:border-line2 ${
-          compact ? "grid grid-cols-[auto_minmax(0,1fr)] items-start" : "grid grid-cols-[auto_minmax(0,1fr)_auto]"
-        }`}
+        className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-line bg-panel2 p-2 transition hover:border-line2"
       >
         {art}
-        {compact ? (
-          <span className="flex min-w-0 flex-col gap-1.5">
-            {label}
-            {actions}
-          </span>
-        ) : (
-          <>
-            {label}
-            {actions}
-          </>
-        )}
+        <span className="min-w-[6.5rem] flex-1">{label}</span>
+        <span className="ml-auto">{actions}</span>
       </li>
     );
   };
@@ -402,7 +392,7 @@ export function ListView({
         {rows.length === 0 ? (
           <p className="rounded-lg border border-dashed border-line2 py-3 text-center text-xs text-t3">Nothing here yet</p>
         ) : (
-          <ul className={two ? "grid grid-cols-1 gap-1.5 min-[560px]:grid-cols-2" : "flex flex-col gap-1.5"}>
+          <ul className={two ? "grid grid-cols-[repeat(auto-fill,minmax(min(100%,400px),1fr))] gap-1.5" : "flex flex-col gap-1.5"}>
             {rows.map((row) => renderRow(row, two || zone.id === "legend" || zone.id === "champion"))}
           </ul>
         )}
@@ -416,7 +406,7 @@ export function ListView({
   return (
     <div className="flex flex-col gap-5">
       {legend && champion && (
-        <div className="grid grid-cols-1 items-start gap-3 min-[440px]:grid-cols-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,400px),1fr))] items-start gap-3">
           {renderSection(legend, false)}
           {renderSection(champion, false)}
         </div>
