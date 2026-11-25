@@ -232,7 +232,7 @@ export default function BinderDetailPage() {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
-  const bookMaxWidth = Math.round(2 * Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, (viewH - 225) * pageAspect)));
+  const bookMaxWidth = Math.round(2 * Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, (viewH - 297) * pageAspect)));
   // The flip book measures itself once on mount, before the wrapper above has its final width,
   // and would stay at its minimum page size. Nudge it to re-measure whenever the target size changes.
   useEffect(() => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHead } from "@/components/PageHead";
 import { useEffect, useState } from "react";
 import { useAppData } from "@/components/AppDataProvider";
 import type { CardsSyncResult } from "@/lib/types";
@@ -211,10 +212,7 @@ export default function MaintenancePage() {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <header>
-        <h1 className="font-display text-2xl font-semibold uppercase tracking-wide text-t1">Data &amp; updates</h1>
-        <p className="mt-1 text-sm text-t3">Keep the card data, links and prices in step with the game.</p>
-      </header>
+      <PageHead kicker="System" title="Data & updates" meta="KEEP THE CARD DATA, LINKS AND PRICES IN STEP WITH THE GAME" />
 
       {/* update everything */}
       <section className="rounded-xl border border-line bg-panel p-4 sm:p-5">

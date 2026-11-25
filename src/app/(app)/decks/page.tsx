@@ -8,6 +8,9 @@ import { useAppData } from "@/components/AppDataProvider";
 import { MetaDecksModal } from "@/components/MetaDecksModal";
 import { DeckTextModal } from "@/components/DeckTextModal";
 import { CardArt } from "@/components/DeckViews";
+import { Select } from "@/components/Select";
+import { PageHead } from "@/components/PageHead";
+import { Ruler } from "@/components/Ruler";
 import { buildDeckIndex, displayName, parseDeck } from "@/lib/deck";
 import { deckFamilies, hasVersions, type DeckFamily } from "@/lib/deckVersions";
 import { closestDeck } from "@/lib/matchStats";
@@ -72,14 +75,7 @@ export default function DecksPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold uppercase tracking-wide text-t1">Decks</h1>
-          <p className="num mt-1 text-sm text-t3">
-            {families.length} deck{families.length === 1 ? "" : "s"} · see which cards you already have in bulk
-          </p>
-        </div>
-      </header>
+      <PageHead kicker="Library" title="Decks" meta={`${families.length} DECK${families.length === 1 ? "" : "S"} · SEE WHICH CARDS YOU ALREADY HAVE IN BULK`} />
 
       <form
         onSubmit={(e) => {
@@ -119,7 +115,7 @@ export default function DecksPage() {
           <p className="mt-1 text-sm text-t3">Name one above, import a list, or browse the meta decks.</p>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        <ul className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {families.map((f) => {
             const d = f.latest;
             const legend = d.entries.find((e) => e.zone === "legend");
@@ -130,7 +126,7 @@ export default function DecksPage() {
               <li key={f.id} className="group relative flex flex-col overflow-hidden rounded-xl border border-line bg-panel transition hover:border-line2">
                 <Link
                   href={`/decks/${d.id}`}
-                  className="flex flex-1 items-center gap-4 p-4 transition hover:bg-panel2"
+                  className="flex flex-1 items-start gap-4 p-4 transition hover:bg-panel2"
                 >
                   {legendCard ? (
                     <CardArt card={legendCard} sizes="120px" quality={90} className="w-20 shrink-0 rounded-lg" />
@@ -147,31 +143,29 @@ export default function DecksPage() {
                         {count}/40 cards
                       </span>
                     </span>
-                    <span className="mt-1.5 block h-1.5 overflow-hidden rounded-sm bg-cavity">
-                      <span className={`block h-full rounded-sm ${full ? "bg-ok" : "bg-brand-gold"}`} style={{ width: `${Math.min(100, (count / 40) * 100)}%` }} />
-                    </span>
-
-                    <span className="mt-2 block text-[11px] text-t3">
-                      {new Date(d.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    <span className="mt-2 block">
+                      <Ruler pct={(count / 40) * 100} ticks={40} className="h-4" color={full ? "rgb(var(--mint))" : undefined} />
                     </span>
                   </span>
                 </Link>
                 {hasVersions(f) && (
-                  <nav aria-label={`Versions of ${f.name}`} className="flex flex-wrap items-center gap-1.5 border-t border-line px-4 py-2">
-                    <span className="label mr-1">Versions</span>
-                    {f.versions.map((v, i) => (
-                      <Link
-                        key={v.id}
-                        href={`/decks/${v.id}`}
-                        title={new Date(v.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                        className={`num inline-flex h-8 min-w-9 items-center justify-center rounded-md border px-2 text-xs font-semibold transition ${
-                          i === 0 ? "border-brand-gold text-t1" : "border-line text-t2 hover:border-line2 hover:text-t1"
-                        }`}
-                      >
-                        v{v.version}
-                      </Link>
-                    ))}
-                  </nav>
+                  <div className="flex items-center gap-3 border-t border-line px-4 py-2">
+                    <span className="label">Versions</span>
+                    <div className="w-44">
+                      <Select
+                        value={d.id}
+                        onChange={(id) => router.push(`/decks/${id}`)}
+                        searchable={false}
+                        ariaLabel={`Versions of ${f.name}`}
+                        className="h-9 text-xs"
+                        menuMinWidth={190}
+                        options={f.versions.map((v) => ({
+                          value: v.id,
+                          label: `v${v.version} · ${new Date(v.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`,
+                        }))}
+                      />
+                    </div>
+                  </div>
                 )}
                 <button
                   type="button"

@@ -120,7 +120,7 @@ export function TooltipLayer() {
         transform: `translate(-50%, ${tip.below ? "0" : "-100%"})`,
         zIndex: 90,
       }}
-      className="pointer-events-none max-w-[260px] animate-fade-in rounded-md border border-line2 bg-panel2 px-2.5 py-1.5 text-center text-xs font-medium leading-snug text-t1"
+      className="pointer-events-none max-w-[260px] animate-fade-in rounded-md border border-line2 bg-ink px-2.5 py-1.5 text-center text-xs font-medium leading-snug text-t1"
     >
       {tip.text}
     </div>

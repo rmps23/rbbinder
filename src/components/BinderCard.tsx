@@ -1,5 +1,9 @@
 "use client";
 
+import { setColor } from "@/lib/style";
+import { Ruler } from "@/components/Ruler";
+import { CountUp } from "@/components/CountUp";
+
 import Link from "next/link";
 import { BINDER_LAYOUTS } from "@/lib/constants";
 import { formatEur } from "@/lib/format";
@@ -44,6 +48,11 @@ export function PocketGrid({ layout, fill, glow }: { layout: Binder["layout"]; f
   );
 }
 
+const hexToRgb = (h: string) => {
+  const n = parseInt(h.replace("#", ""), 16);
+  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
+};
+
 export function BinderCard({
   binder,
   value,
@@ -70,7 +79,8 @@ export function BinderCard({
     <div className="group relative h-full">
       <Link
         href={`/binder/${binder.id}`}
-        className="relative flex h-full animate-card-in flex-col justify-between gap-5 rounded-xl border border-line bg-panel p-5 transition hover:border-line2 hover:bg-panel2"
+        className={`relative flex h-full animate-card-in flex-col justify-between gap-5 rounded-xl border border-line bg-panel p-5 transition hover:border-line2 hover:bg-panel2 ${binder.setId ? "glass-tint" : ""}`}
+        style={binder.setId ? ({ "--tint": hexToRgb(setColor(binder.setId)) } as React.CSSProperties) : undefined}
       >
         <span className="flex items-center gap-4">
           <span
@@ -90,17 +100,15 @@ export function BinderCard({
         <span className="block">
           {value !== null && (
             <span className="mb-3 block">
-              <span className="label block">Value</span>
-              <span className="num block text-2xl font-bold leading-tight text-t1">{formatEur(value)}</span>
+              <span className="block font-mono text-[11px] uppercase tracking-[0.22em] text-t3">Value</span>
+              <span className="num block font-display text-3xl font-bold leading-tight text-t1"><CountUp value={value} format={formatEur} /></span>
             </span>
           )}
           <span className="mb-1.5 flex items-baseline justify-between gap-3 text-xs text-t2">
             <span className="truncate">{progressLabel ?? `${binder.pageCount} pages · ${Math.round(fill * 100)}% full`}</span>
             <b className="num text-t1">{progressLabel ? pct : Math.round(fill * 100)}%</b>
           </span>
-          <span className="block h-1.5 overflow-hidden rounded-sm bg-cavity">
-            <span className="block h-full rounded-sm bg-brand-gold" style={{ width: `${progressLabel ? Math.min(100, completion * 100) : Math.min(100, fill * 100)}%` }} />
-          </span>
+          <Ruler pct={progressLabel ? Math.min(100, completion * 100) : Math.min(100, fill * 100)} ticks={30} className="h-5" color={binder.setId ? setColor(binder.setId) : undefined} />
         </span>
       </Link>
 

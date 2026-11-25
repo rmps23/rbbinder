@@ -5,10 +5,13 @@ const SIZES = {
   lg: { box: 136, stroke: 8, text: "text-[32px]" },
 };
 
+import { useGrown } from "@/lib/useGrown";
+
 export function WinRing({ rate, size = "sm" }: { rate: number | null; size?: keyof typeof SIZES }) {
   const { box, stroke, text } = SIZES[size];
   const r = (box - stroke) / 2;
   const c = 2 * Math.PI * r;
+  const grown = useGrown(rate ?? 0);
   const label = rate === null ? "–" : `${Math.round(rate * 100)}%`;
   return (
     <span className="relative inline-flex shrink-0 items-center justify-center" style={{ width: box, height: box }} role="img" aria-label={rate === null ? "No decided games" : `${label} win rate`}>
@@ -23,9 +26,10 @@ export function WinRing({ rate, size = "sm" }: { rate: number | null; size?: key
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={c}
-            strokeDashoffset={c * (1 - rate)}
+            strokeDashoffset={c * (1 - grown)}
+            data-gfx=""
             className={rate >= 0.5 ? "stroke-ok" : "stroke-bad"}
-            style={{ transition: "stroke-dashoffset 600ms cubic-bezier(0.22,1,0.36,1)" }}
+            style={{ transition: "stroke-dashoffset 1100ms cubic-bezier(0.22,1,0.36,1)" }}
           />
         )}
       </svg>

@@ -1,5 +1,6 @@
 "use client";
 
+import { setColor } from "@/lib/style";
 import { PROMO_SET_IDS } from "@/lib/setCollection";
 import { isFoilOnly } from "@/lib/cardFinish";
 import { FoilSheen } from "@/components/FoilSheen";
@@ -18,6 +19,7 @@ import { availableFinishes } from "@/lib/cardFinish";
 import { isAlternateArt } from "@/lib/cardUtils";
 import { DOMAIN_OPTIONS, RARITY_OPTIONS, TYPE_OPTIONS } from "@/lib/constants";
 import { formatEur } from "@/lib/format";
+import { CountUp } from "@/components/CountUp";
 import { rarityColor } from "@/lib/style";
 import { valueBulk } from "@/lib/valuation";
 import type { RiftCard } from "@/lib/types";
@@ -57,13 +59,17 @@ function CardTile({
   const foilPrice = showFoil ? priceOf(card, "foil") : null;
   const owned = normalQty > 0 || foilQty > 0;
 
+  const qty = normalQty + foilQty;
+
   return (
-    <li className={`flex flex-col overflow-hidden rounded-xl border bg-panel transition ${owned ? "border-line2" : "border-line"}`}>
+    <li className="group flex flex-col gap-2.5">
       <button
         type="button"
         onClick={onInspect}
         aria-label={`${card.name}, open details`}
-        className="relative block aspect-[744/1039] w-full bg-ink"
+        className={`relative block aspect-[744/1039] w-full overflow-hidden rounded-xl bg-ink ring-1 transition duration-300 ${
+          owned ? "ring-white/25 shadow-[0_10px_30px_rgb(0_0_0/0.45)] group-hover:ring-white/50" : "ring-white/10 group-hover:ring-white/30"
+        }`}
       >
         {card.image.url && (
           <CardImage
@@ -72,44 +78,45 @@ function CardTile({
             fill
             sizes="(max-width: 640px) 46vw, (max-width: 1280px) 22vw, 15vw"
             quality={90}
-            className={`object-cover transition duration-200 ${owned ? "" : "opacity-50 hover:opacity-90"}`}
+            className={`object-cover transition duration-300 ${owned ? "" : "opacity-45 group-hover:opacity-90"}`}
           />
         )}
         {(foilQty > 0 || isFoilOnly(card)) && <FoilSheen />}
         <PromoMark card={card} />
+        {owned && (
+          <span className="num absolute right-2 top-2 rounded-full bg-ink/85 px-2 py-0.5 text-xs font-bold text-white backdrop-blur-sm">×{qty}</span>
+        )}
       </button>
 
-      <div className="flex flex-1 flex-col gap-2 p-2.5">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-t1" title={card.name}>
-            {card.name}
-          </p>
-          <p className="num mt-0.5 flex items-center gap-1.5 text-xs text-t3">
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: rarityColor(card.rarity?.id) }} aria-hidden="true" />
-            {card.publicCode}
-          </p>
-        </div>
+      <div className="min-w-0 px-0.5">
+        <p className="truncate text-sm font-semibold text-t1" title={card.name}>
+          {card.name}
+        </p>
+        <p className="num mt-0.5 flex items-center gap-1.5 text-xs text-t3">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: rarityColor(card.rarity?.id) }} aria-hidden="true" />
+          {card.publicCode}
+        </p>
+      </div>
 
-        <div className="mt-auto flex flex-col gap-1.5 border-t border-line pt-2">
-          {showNormal && (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] leading-tight text-t3">
-                {showFoil ? "Normal" : "Normal only"}
-                <span className="num block text-xs text-t2">{normalPrice !== null ? formatEur(normalPrice) : "–"}</span>
-              </span>
-              <QuantityStepper compact value={normalQty} onChange={(q) => setBulkQty(card.id, "normal", q)} accent="cyan" />
-            </div>
-          )}
-          {showFoil && (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] leading-tight text-t3">
-                {showNormal ? "✦ Foil" : "✦ Foil only"}
-                <span className="num block text-xs text-t2">{foilPrice !== null ? formatEur(foilPrice) : "–"}</span>
-              </span>
-              <QuantityStepper compact value={foilQty} onChange={(q) => setBulkQty(card.id, "foil", q)} accent="gold" />
-            </div>
-          )}
-        </div>
+      <div className="mt-auto grid gap-1.5 rounded-lg bg-[rgb(var(--track)/0.07)] p-2">
+        {showNormal && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] leading-tight text-t3">
+              {showFoil ? "Normal" : "Normal only"}
+              <span className="num block text-xs font-semibold text-t1">{normalPrice !== null ? formatEur(normalPrice) : "–"}</span>
+            </span>
+            <QuantityStepper compact value={normalQty} onChange={(q) => setBulkQty(card.id, "normal", q)} accent="cyan" />
+          </div>
+        )}
+        {showFoil && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] leading-tight text-t3">
+              {showNormal ? "✦ Foil" : "✦ Foil only"}
+              <span className="num block text-xs font-semibold text-t1">{foilPrice !== null ? formatEur(foilPrice) : "–"}</span>
+            </span>
+            <QuantityStepper compact value={foilQty} onChange={(q) => setBulkQty(card.id, "foil", q)} accent="gold" />
+          </div>
+        )}
       </div>
     </li>
   );
@@ -185,157 +192,150 @@ export function BulkView() {
 
   const empty = stats.total.copies === 0;
   const tab = (on: boolean) =>
-    `flex min-h-12 min-w-[84px] shrink-0 flex-col items-center justify-center rounded-lg px-3.5 py-1 transition ${
-      on ? "text-on-accent" : "text-t2 hover:text-t1"
-    }`;
+    `flex h-10 shrink-0 items-center gap-2 rounded-md px-3.5 text-sm transition ${on ? "text-on-accent" : "text-t2 hover:text-t1"}`;
+  const filterCount = [domainId, rarityId, typeId].filter(Boolean).length + (altArt !== "all" ? 1 : 0);
 
   return (
-    <div className="flex flex-col gap-4">
-      <section className="rounded-xl border border-line bg-panel">
-        {/* summary */}
-        <header className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4 p-4 sm:px-5">
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-            <h1 className="font-display text-2xl font-semibold uppercase tracking-wide text-t1">Bulk</h1>
-            <dl className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <div>
-                <dt className="label">Value</dt>
-                <dd className="num mt-1 text-3xl font-bold leading-none text-t1">{prices ? formatEur(stats.total.value) : "…"}</dd>
-              </div>
-              <div className="hidden h-9 w-px bg-line sm:block" aria-hidden="true" />
-              <div>
-                <dt className="label">Cards</dt>
-                <dd className="num mt-1 text-xl font-bold leading-none text-t1">{stats.total.copies}</dd>
-              </div>
-              <div>
-                <dt className="label">Unique</dt>
-                <dd className="num mt-1 text-xl font-bold leading-none text-t1">{stats.total.unique}</dd>
-              </div>
-              <div>
-                <dt className="label">Normal</dt>
-                <dd className="num mt-1 text-xl font-bold leading-none text-ok">{stats.normal}</dd>
-              </div>
-              <div>
-                <dt className="label">✦ Foil</dt>
-                <dd className="num mt-1 text-xl font-bold leading-none text-foil">{stats.foil}</dd>
-              </div>
+    <div className="flex flex-col gap-5">
+      {/* summary: floats on the page, no box */}
+      <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 pb-1">
+        <div className="flex min-w-0 flex-col gap-3">
+          <div>
+            <h1 className="font-mono text-[11px] uppercase tracking-[0.22em] text-t3"><span className="mr-2 text-brand-gold">/</span>Bulk · value</h1>
+            <p className="num mt-2 font-display text-6xl font-bold leading-none text-t1">{prices ? <CountUp value={stats.total.value} format={formatEur} /> : "…"}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="flex h-1.5 w-48 overflow-hidden rounded-full bg-[rgb(var(--track)/0.18)]" aria-hidden="true">
+              <div className="h-full bg-ok" style={{ width: `${(stats.normal / Math.max(1, stats.normal + stats.foil)) * 100}%` }} />
+              <div className="h-full flex-1 bg-foil" />
+            </div>
+            <p className="num flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-t3">
+              <span><b className="font-semibold text-t1">{stats.total.copies}</b> cards</span>
+              <span><b className="font-semibold text-t1">{stats.total.unique}</b> unique</span>
+              <span className="inline-flex items-center gap-1.5">
+                <i aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-ok" />
+                <b className="font-semibold text-t1">{stats.normal}</b> normal
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <i aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-foil" />
+                <b className="font-semibold text-t1">{stats.foil}</b> foil
+              </span>
               {stats.total.unpriced > 0 && (
-                <div title="Cards without a price">
-                  <dt className="label">Unpriced</dt>
-                  <dd className="num mt-1 text-xl font-bold leading-none text-t3">{stats.total.unpriced}</dd>
-                </div>
+                <span title="Cards without a price">
+                  <b className="font-semibold text-t1">{stats.total.unpriced}</b> unpriced
+                </span>
               )}
-            </dl>
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <PriceModeSwitch />
-            <BulkScanner />
-          </div>
-        </header>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <PriceModeSwitch />
+          <BulkScanner />
+        </div>
+      </header>
 
-        {/* expansions + result count */}
-        <div className="flex items-center gap-4 border-t border-line px-3 py-2 sm:px-4">
+      {/* one floating bar: expansions, search, filters */}
+      <div className="surface-calm z-20 flex flex-col gap-2.5 rounded-2xl p-2.5 md:sticky md:top-[5.25rem]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <SlideGroup role="tablist" aria-label="Expansion" className="no-scrollbar flex min-w-0 flex-1 gap-1 overflow-x-auto">
             <button type="button" role="tab" data-active={!setId} aria-selected={!setId} className={tab(!setId)} onClick={() => setSetId("")}>
-              <span className="font-display text-sm font-semibold uppercase tracking-wider">All sets</span>
-              <span className={`num text-[11px] font-medium ${!setId ? "text-on-accent/75" : "text-t3"}`}>{prices ? formatEur(stats.total.value) : "…"}</span>
+              <span className="font-display font-semibold uppercase tracking-wider">All</span>
+              <span className={`num text-xs ${!setId ? "text-on-accent/75" : "text-t3"}`}>{prices ? formatEur(stats.total.value) : "…"}</span>
             </button>
             {availableSets.map((s) => {
               const v = stats.bySet.get(s.id);
               const on = setId === s.id;
               return (
                 <button key={s.id} type="button" role="tab" data-active={on} aria-selected={on} title={s.name} className={tab(on)} onClick={() => setSetId(on ? "" : s.id)}>
-                  <span className="font-display text-sm font-semibold tracking-wider">{s.id}</span>
-                  <span className={`num text-[11px] font-medium ${on ? "text-on-accent/75" : "text-t3"}`}>{v ? formatEur(v.value) : "–"}</span>
+                  <i aria-hidden="true" className="h-2 w-2 shrink-0 rotate-45" style={{ background: setColor(s.id) }} />
+                  <span className="font-display font-semibold tracking-wider">{s.id}</span>
+                  <span className={`num text-xs ${on ? "text-on-accent/75" : "text-t3"}`}>{v ? formatEur(v.value) : "–"}</span>
                 </button>
               );
             })}
             <button type="button" role="tab" data-active={setId === OTHERS} aria-selected={setId === OTHERS} title="Promos, bundles and other sets" className={tab(setId === OTHERS)} onClick={() => setSetId(setId === OTHERS ? "" : OTHERS)}>
-              <span className="font-display text-sm font-semibold tracking-wider">Others</span>
-              <span className={`num text-[11px] font-medium ${setId === OTHERS ? "text-on-accent/75" : "text-t3"}`}>{stats.othersCopies ? formatEur(stats.othersValue) : "–"}</span>
+              <span className="font-display font-semibold tracking-wider">Others</span>
+              <span className={`num text-xs ${setId === OTHERS ? "text-on-accent/75" : "text-t3"}`}>{stats.othersCopies ? formatEur(stats.othersValue) : "–"}</span>
             </button>
           </SlideGroup>
-          <p className="num hidden shrink-0 items-center gap-3 text-sm text-t3 md:flex">
-            {filtered.length} card{filtered.length === 1 ? "" : "s"}
-            {filtersOn && (
-              <button type="button" onClick={clearFilters} className="font-semibold text-brand-gold hover:underline">
-                Clear
-              </button>
-            )}
-          </p>
+
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="relative w-full min-w-0 sm:w-64">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-t3">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                type="text"
+                aria-label="Search by name or code"
+                placeholder="Search…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-10 w-full rounded-md border border-white/10 bg-[rgb(var(--track)/0.05)] pl-10 pr-9 text-sm text-t1 placeholder:text-t3"
+              />
+              {search && (
+                <button type="button" aria-label="Clear search" onClick={() => setSearch("")} className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-t3 hover:text-t1">
+                  ✕
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              aria-expanded={showFilters}
+              className={`flex h-10 shrink-0 items-center gap-2 rounded-md border px-4 text-sm font-semibold transition ${
+                showFilters ? "border-white/40 text-t1" : "border-white/10 text-t2 hover:border-white/25 hover:text-t1"
+              }`}
+            >
+              Filters
+              {filterCount > 0 && (
+                <span className="num flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-gold px-1 text-[11px] font-bold text-on-accent">{filterCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={onlyOwned}
+              onClick={() => setOnlyOwned((v) => !v)}
+              className="flex h-10 shrink-0 items-center gap-2.5 rounded-md px-2 text-sm font-semibold text-t2 transition hover:text-t1"
+            >
+              <span className={`relative h-5 w-9 rounded-full transition-colors ${onlyOwned ? "bg-brand-gold" : "bg-[rgb(var(--track)/0.25)]"}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full ${onlyOwned ? "left-[18px] bg-on-accent" : "left-0.5 bg-white"} transition-all`} />
+              </span>
+              Only mine
+            </button>
+          </div>
         </div>
 
-        {/* filters */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-line p-3 sm:px-4">
-          <div className="relative min-w-0 flex-1 sm:min-w-[220px]">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-t3">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              type="text"
-              aria-label="Search by name or code"
-              placeholder="Search by name or code…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-11 w-full rounded-lg border border-line bg-ink pl-10 pr-10 text-sm text-t1 placeholder:text-t3"
-            />
-            {search && (
-              <button type="button" aria-label="Clear search" onClick={() => setSearch("")} className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-t3 hover:bg-cavity hover:text-t1">
-                ✕
-              </button>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            aria-expanded={showFilters}
-            className={`flex h-11 shrink-0 items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold transition md:hidden ${
-              showFilters ? "border-brand-gold text-t1" : "border-line text-t2"
-            }`}
-          >
-            Filters
-            {[domainId, rarityId, typeId].filter(Boolean).length + (altArt !== "all" ? 1 : 0) + (onlyOwned ? 0 : 1) > 0 && (
-              <span className="num flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-gold px-1 text-[11px] font-bold text-on-accent">
-                {[domainId, rarityId, typeId].filter(Boolean).length + (altArt !== "all" ? 1 : 0) + (onlyOwned ? 0 : 1)}
-              </span>
-            )}
-          </button>
-          <div className={`${showFilters ? "grid" : "hidden"} w-full grid-cols-2 gap-2 md:contents`}>
-          <div className="md:w-36">
-            <Select value={domainId} onChange={setDomainId} searchable={false} ariaLabel="Domain" className="h-11 text-sm" menuMinWidth={160} options={[{ value: "", label: "All domains" }, ...DOMAIN_OPTIONS.map((d) => ({ value: d.id, label: d.label }))]} />
-          </div>
-          <div className="md:w-36">
-            <Select value={rarityId} onChange={setRarityId} searchable={false} ariaLabel="Rarity" className="h-11 text-sm" menuMinWidth={160} options={[{ value: "", label: "All rarities" }, ...RARITY_OPTIONS.map((r) => ({ value: r.id, label: r.label }))]} />
-          </div>
-          <div className="md:w-36">
-            <Select value={typeId} onChange={setTypeId} searchable={false} ariaLabel="Type" className="h-11 text-sm" menuMinWidth={160} options={[{ value: "", label: "All types" }, ...TYPE_OPTIONS.map((t) => ({ value: t.id, label: t.label }))]} />
-          </div>
-          <div className="md:w-36">
-            <Select value={altArt} onChange={(v) => setAltArt(v as AltArt)} searchable={false} ariaLabel="Art" className="h-11 text-sm" menuMinWidth={160} options={ART_OPTIONS} />
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={onlyOwned}
-            onClick={() => setOnlyOwned((v) => !v)}
-            className="col-span-2 flex h-11 items-center gap-2.5 rounded-lg border border-line bg-ink px-4 text-sm font-semibold text-t2 transition hover:border-line2"
-          >
-            <span className={`relative h-5 w-9 rounded-full transition-colors ${onlyOwned ? "bg-brand-gold" : "bg-cavity"}`}>
-              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${onlyOwned ? "left-[18px]" : "left-0.5"}`} />
-            </span>
-            Only my bulk
-          </button>
-          </div>
-          <p className="num flex w-full items-center justify-between text-xs text-t3 md:hidden">
-            {filtered.length} card{filtered.length === 1 ? "" : "s"}
+        {showFilters && (
+          <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-2.5 md:flex md:flex-wrap md:items-center">
+            <div className="md:w-40">
+              <Select value={domainId} onChange={setDomainId} searchable={false} ariaLabel="Domain" className="h-10 text-sm" menuMinWidth={160} options={[{ value: "", label: "All domains" }, ...DOMAIN_OPTIONS.map((d) => ({ value: d.id, label: d.label }))]} />
+            </div>
+            <div className="md:w-40">
+              <Select value={rarityId} onChange={setRarityId} searchable={false} ariaLabel="Rarity" className="h-10 text-sm" menuMinWidth={160} options={[{ value: "", label: "All rarities" }, ...RARITY_OPTIONS.map((r) => ({ value: r.id, label: r.label }))]} />
+            </div>
+            <div className="md:w-40">
+              <Select value={typeId} onChange={setTypeId} searchable={false} ariaLabel="Type" className="h-10 text-sm" menuMinWidth={160} options={[{ value: "", label: "All types" }, ...TYPE_OPTIONS.map((t) => ({ value: t.id, label: t.label }))]} />
+            </div>
+            <div className="md:w-40">
+              <Select value={altArt} onChange={(v) => setAltArt(v as AltArt)} searchable={false} ariaLabel="Art" className="h-10 text-sm" menuMinWidth={160} options={ART_OPTIONS} />
+            </div>
             {filtersOn && (
-              <button type="button" onClick={clearFilters} className="font-semibold text-brand-gold">
-                Clear filters
+              <button type="button" onClick={clearFilters} className="col-span-2 h-10 px-2 text-sm font-semibold text-t2 hover:text-t1 md:col-span-1">
+                Clear all
               </button>
             )}
-          </p>
-        </div>
-      </section>
+          </div>
+        )}
+      </div>
+
+      <p className="num -mb-2 px-1 text-xs text-t3">
+        <b className="text-t1">{filtered.length}</b> card{filtered.length === 1 ? "" : "s"}
+        {filtersOn && (
+          <button type="button" onClick={clearFilters} className="ml-3 font-semibold text-t2 hover:text-t1">Clear filters</button>
+        )}
+      </p>
 
       {/* list */}
       {filtered.length === 0 ? (
@@ -346,7 +346,7 @@ export function BulkView() {
         </p>
       ) : (
         <>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {filtered.slice(0, visible).map((card) => (
               <CardTile key={card.id} card={card} normalQty={bulk[card.id]?.normal ?? 0} foilQty={bulk[card.id]?.foil ?? 0} onInspect={() => setInspect(card)} />
             ))}

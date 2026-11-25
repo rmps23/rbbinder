@@ -7,10 +7,13 @@ import { useRouter } from "next/navigation";
 import { useAppData } from "@/components/AppDataProvider";
 import { BinderCard } from "@/components/BinderCard";
 import { Select } from "@/components/Select";
+import { PageHead } from "@/components/PageHead";
+import { CountUp } from "@/components/CountUp";
 import { BINDER_LAYOUTS } from "@/lib/constants";
 import { formatEur } from "@/lib/format";
 import { binderProgress } from "@/lib/binderProgress";
 import { useBinders } from "@/lib/useBinders";
+import { setRank } from "@/lib/style";
 import { valueContents } from "@/lib/valuation";
 import type { Binder, BinderLayout } from "@/lib/types";
 
@@ -61,20 +64,27 @@ export default function BindersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-t1">Binders</h1>
-          <p className="mt-1 text-sm text-t3">
-            {binders.length} binder{binders.length === 1 ? "" : "s"} · {copies} cards placed
-            {values ? ` · ${formatEur(values.total)}` : ""}
-          </p>
-        </div>
-        <button
-          onClick={() => setCreating((v) => !v)}
-          className="btn-3d min-h-11 rounded-lg px-6 font-display text-xs font-semibold uppercase tracking-wide"
-        >
-          {creating ? "Close" : "+ New binder"}
-        </button>
+      <div className="mb-8">
+        <PageHead
+          kicker="Library"
+          title="Binders"
+          meta={`${binders.length} BINDER${binders.length === 1 ? "" : "S"} · ${copies} CARDS PLACED`}
+          right={
+            <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+              {values && (
+                <div>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-t3">Total value</p>
+                  <p className="num mt-1 font-display text-5xl font-bold leading-none text-t1">
+                    <CountUp value={values.total} format={formatEur} />
+                  </p>
+                </div>
+              )}
+              <button onClick={() => setCreating((v) => !v)} className="btn-3d min-h-11 rounded-lg px-6 font-display text-xs font-semibold uppercase tracking-wide">
+                {creating ? "Close" : "+ New binder"}
+              </button>
+            </div>
+          }
+        />
       </div>
 
       {creating && (
@@ -145,7 +155,7 @@ export default function BindersPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {binders.map((b) => {
+          {[...binders].sort((a, b) => setRank(a.setId) - setRank(b.setId)).map((b) => {
             const p = binderProgress(b, cards, sets);
             return (
               <BinderCard

@@ -17,16 +17,17 @@ export function SlideGroup({
   children: React.ReactNode;
 } & Omit<React.HTMLAttributes<HTMLDivElement>, "className" | "children">) {
   const ref = useRef<HTMLDivElement>(null);
-  const [box, setBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [box, setBox] = useState<{ left: number; top: number; width: number; height: number; radius: string } | null>(null);
   const indicator = useRef<HTMLSpanElement>(null);
-  const prev = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
+  const prev = useRef<{ left: number; top: number; width: number; height: number; radius: string } | null>(null);
 
   const measure = () => {
     const root = ref.current;
     const el = root?.querySelector<HTMLElement>('[data-active="true"]');
     if (!root || !el) return setBox(null);
-    const next = { left: el.offsetLeft, top: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight };
-    setBox((b) => (b && b.left === next.left && b.top === next.top && b.width === next.width && b.height === next.height ? b : next));
+    // the highlight copies the active child's own corner radius, so the two always match
+    const next = { left: el.offsetLeft, top: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight, radius: getComputedStyle(el).borderTopLeftRadius };
+    setBox((b) => (b && b.left === next.left && b.top === next.top && b.width === next.width && b.height === next.height && b.radius === next.radius ? b : next));
   };
 
   // re-measure after every render (cheap, and bails out when nothing moved)
@@ -70,7 +71,7 @@ export function SlideGroup({
           aria-hidden="true"
           data-slide-indicator=""
           className={`pointer-events-none absolute z-0 rounded-[inherit] ${indicatorClassName}`}
-          style={{ left: 0, top: 0, width: box.width, height: box.height, transform: `translate(${box.left}px, ${box.top}px)`, borderRadius: "0.5rem" }}
+          style={{ left: 0, top: 0, width: box.width, height: box.height, transform: `translate(${box.left}px, ${box.top}px)`, borderRadius: box.radius }}
         />
       )}
       {children}

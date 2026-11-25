@@ -418,7 +418,7 @@ export function DeckBuilder({ id }: { id: string }) {
   const tgt = (z: DeckZone) => ZONES.find((x) => x.id === z)!;
   
   return (
-    <div className="lg:flex lg:h-[calc(100dvh-3rem)] lg:flex-col">
+    <div className="lg:flex lg:h-[calc(100dvh-3rem-4.5rem)] lg:flex-col">
       {/* header */}
       <header className="mb-3 rounded-xl border border-line bg-panel px-3 py-2 lg:shrink-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">

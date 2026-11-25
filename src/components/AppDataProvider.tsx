@@ -5,6 +5,7 @@ import { HIDDEN_SET_IDS } from "@/lib/setCollection";
 import { cacheGet, cacheSet } from "@/lib/clientCache";
 import { setFinishData, type Finish } from "@/lib/cardFinish";
 import { setChampionNames } from "@/lib/deckRules";
+import { setRank } from "@/lib/style";
 import imageFixes from "@/lib/cardImageFixes.json";
 import type { BulkMap, BulkVariant, PriceMode, PricesResponse, RiftCard, SetInfo } from "@/lib/types";
 
@@ -208,7 +209,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   // Set lists everywhere (dashboard, bulk tabs, set pickers) skip the hidden sets.
-  const visibleSets = useMemo(() => sets.filter((s) => !HIDDEN_SET_IDS.has(s.id)), [sets]);
+  const visibleSets = useMemo(() => sets.filter((s) => !HIDDEN_SET_IDS.has(s.id)).sort((a, b) => setRank(a.id) - setRank(b.id)), [sets]);
 
   return (
     <Ctx.Provider value={{ cards, sets: visibleSets, bulk, loading, prices, priceOf, imageFallbackOf, setBulkQty, reloadCards, reloadPrices, priceMode, setPriceMode }}>{children}</Ctx.Provider>

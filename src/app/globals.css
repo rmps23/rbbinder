@@ -8,28 +8,45 @@
    Card colours (rarity/domain/foil) are fixed elsewhere. */
 :root {
   color-scheme: dark;
-  --ink: 9 9 9;             /* page background #090909 (neutral black) */
-  --panel: 16 16 16;        /* cards #101010 */
-  --panel2: 23 23 23;       /* elevated #171717 */
-  --cavity: 31 31 31;       /* wells / bars #1F1F1F */
-  --line: 38 38 38;         /* border #262626 */
-  --line2: 58 58 58;        /* strong border #3A3A3A */
-  --t1: 236 236 236;        /* text primary */
-  --t2: 170 170 170;        /* text secondary */
-  --t3: 142 142 142;        /* text muted */
-  --accent: 74 192 222;     /* #4AC0DE */
-  --accent-soft: 125 211 232; /* hover */
-  --on-accent: 6 35 43;     /* text on accent */
+  --ink: 17 18 21;             /* page background */
+  --panel: 23 24 28;        /* calm glass surfaces (nearly opaque in tailwind) */
+  --panel2: 31 32 37;
+  --cavity: 36 38 43;
+  --line: 48 51 57;
+  --line2: 74 78 86;
+  --t1: 246 246 247;        /* text primary */
+  --t2: 206 216 196;        /* text secondary: a pale tint, never grey */
+  --t3: 152 166 136;        /* text muted */
+  --track: 206 216 196;     /* bar and ring tracks */
+  --accent: 198 241 53;    /* signal lime: the one colour that is ours; sets and domains keep their own */
+  --accent-soft: 216 250 104; /* hover */
+  --on-accent: 14 15 17;     /* text on accent */
   --mint: 61 214 160;       /* positive #3DD6A0 */
   --danger: 255 107 122;    /* negative #FF6B7A */
   --warn: 245 184 75;       /* highlight / warning #F5B84B */
-  --scroll: 58 58 58;
+  --violet: 183 148 246;    /* #B794F6 */
+  --rose: 244 114 182;      /* #F472B6 */
+  --scroll: 98 94 90;
+  --dots: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='1.5' cy='1.5' r='1.1' fill='white'/%3E%3C/svg%3E");
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.075 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url%28%23n%29'/%3E%3C/svg%3E");
 }
 
 body {
   background-color: rgb(var(--ink));
   color: rgb(var(--t1));
   font-family: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Background: a soft light from the top and a vignette; the flowing contour lines live in <SiteBackdrop />. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(85% 50% at 50% -12%, rgb(255 255 255 / 0.11), transparent 70%),
+    radial-gradient(120% 90% at 50% 40%, transparent 50%, rgb(0 0 0 / 0.4) 100%);
 }
 
 .num { font-variant-numeric: tabular-nums; }
@@ -39,11 +56,11 @@ body {
 .btn-3d {
   background: rgb(var(--accent));
   color: rgb(var(--on-accent));
-  box-shadow: 0 3px 0 rgb(37 120 142);
+  box-shadow: 0 3px 0 rgb(112 140 24);
   transition: transform 120ms, box-shadow 120ms, background-color 120ms;
 }
-.btn-3d:hover { background: rgb(var(--accent-soft)); transform: translateY(-1px); box-shadow: 0 4px 0 rgb(37 120 142); }
-.btn-3d:active { transform: translateY(2px); box-shadow: 0 1px 0 rgb(37 120 142); }
+.btn-3d:hover { background: rgb(var(--accent-soft)); transform: translateY(-1px); box-shadow: 0 4px 0 rgb(112 140 24); }
+.btn-3d:active { transform: translateY(2px); box-shadow: 0 1px 0 rgb(112 140 24); }
 
 :focus-visible { outline: 1px solid rgb(var(--accent) / 0.85); outline-offset: 1px; }
 
@@ -61,7 +78,19 @@ select:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  /* No movement (keyframes, slides, zooms), but colour/opacity/shadow still fade so hovers don't snap.
+     Graphics (anything marked data-gfx: bars, rings, hexagons, counters) keep their own animations. */
+  *:not([data-gfx]):not([data-gfx] *),
+  *:not([data-gfx]):not([data-gfx] *)::before,
+  *:not([data-gfx]):not([data-gfx] *)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-property: color, background-color, border-color, opacity, box-shadow, fill, stroke, filter !important;
+    transition-duration: 220ms !important;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+  .fan-card, .btn-3d { transition-property: color, background-color, border-color, opacity, box-shadow, filter, transform !important; }
 }
 
 ::-webkit-scrollbar {
@@ -115,3 +144,150 @@ select:focus-visible {
   from { background-position: 0% 50%; }
   to { background-position: 100% 50%; }
 }
+
+/* Rune brackets: an L-shaped corner on the top-left and bottom-right of every glass surface. */
+:root { --brackets: linear-gradient(transparent, transparent); }
+
+/* Glass, three levels:
+   - base (any bg-panel): frosted near-black with a soft light from above, no colour
+   - .glass-hot: the one highlight per page, tinted with the accent
+   - .glass-tint: tinted with --tint (an "r g b" triplet set inline), for things that own a colour (a set, a deck) */
+[class~="bg-panel"] {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0.01));
+  -webkit-backdrop-filter: blur(26px) saturate(1.2);
+  backdrop-filter: blur(26px) saturate(1.2);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 14px 36px rgb(0 0 0 / 0.25);
+}
+.glass-hot {
+  background: var(--brackets), linear-gradient(135deg, rgb(var(--accent) / 0.16), rgb(255 255 255 / 0.03) 55%, rgb(255 255 255 / 0.05));
+  border-color: rgb(var(--accent) / 0.22);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 8px 32px rgb(0 0 0 / 0.3);
+}
+.glass-tint {
+  background: var(--brackets), linear-gradient(135deg, rgb(var(--tint) / 0.12), rgb(var(--tint) / 0.03) 70%);
+  border-color: rgb(var(--tint) / 0.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: inset 0 1px 0 rgb(var(--tint) / 0.1);
+}
+
+/* ---------- Dashboard ("rift command") ---------- */
+.site-backdrop { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgb(0 0 0 / 0.35) 100%); mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgb(0 0 0 / 0.35) 100%); }
+.site-backdrop-lines { position: absolute; left: 0; top: 0; width: 200vw; height: 100%; animation: site-drift 140s linear infinite; }
+@keyframes site-drift { to { transform: translateX(-100vw); } }
+
+.hero-stage {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.11), rgb(255 255 255 / 0.03) 42%, rgb(255 255 255 / 0.015) 62%, rgb(255 255 255 / 0.05));
+  -webkit-backdrop-filter: blur(30px) saturate(1.9) brightness(1.08);
+  backdrop-filter: blur(30px) saturate(1.9) brightness(1.08);
+  box-shadow:
+    0 30px 80px rgb(0 0 0 / 0.45),
+    0 2px 6px rgb(0 0 0 / 0.3),
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -24px 48px rgb(0 0 0 / 0.22);
+}
+/* edge light: bright on the top-left, fading, catching again bottom-right (a 1px gradient border) */
+.hero-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.08) 28%, rgb(255 255 255 / 0.04) 70%, rgb(255 255 255 / 0.28));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+/* specular sheen and a whisper of grain, like frosted glass */
+.hero-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(90% 70% at 0% 0%, rgb(255 255 255 / 0.16), transparent 55%),
+    var(--grain);
+  background-size: auto, 180px 180px;
+  opacity: 0.9;
+}
+.hero-stage > * { position: relative; z-index: 1; }
+.hero-number {
+  background: linear-gradient(180deg, #ffffff 30%, #aeb6ca);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 24px rgb(150 170 220 / 0.18));
+}
+.tile {
+  background: linear-gradient(145deg, rgb(var(--tint) / 0.16), rgb(var(--tint) / 0.03) 65%), rgb(255 255 255 / 0.02);
+  border: 1px solid rgb(var(--tint) / 0.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07);
+  transition: border-color 240ms, box-shadow 240ms;
+}
+.tile:hover { border-color: rgb(var(--tint) / 0.65); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 0 28px rgb(var(--tint) / 0.22); }
+.rune-spin { transform-origin: 150px 150px; animation: rune-spin 120s linear infinite; }
+@keyframes rune-spin { to { transform: rotate(360deg); } }
+.fan-card { transform: translateY(var(--y)) rotate(var(--r)); transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1); }
+.fan-card:hover, .fan-card:focus-visible { transform: translateY(-18px) rotate(0deg) scale(1.07); z-index: 20 !important; }
+
+/* Honeycomb tiles on the dashboard hero */
+.hex-rim, .hex-body { clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.hex-rim { background: linear-gradient(160deg, rgb(var(--c) / 0.9), rgb(var(--c) / 0.15)); }
+.hex-body { background: rgb(20 21 25 / 0.94); }
+.hex-fill { background: linear-gradient(180deg, rgb(var(--c) / 0.55), rgb(var(--c) / 0.28)); transition: height 1100ms cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 0 -8px 20px rgb(var(--c) / 0.35); }
+.hex { transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), filter 240ms; filter: drop-shadow(0 6px 14px rgb(0 0 0 / 0.4)); }
+.hex:hover { filter: drop-shadow(0 0 16px rgb(var(--c) / 0.6)) brightness(1.12); }
+
+/* A quiet surface for dense reading: nearly opaque, blurs the dot grid out of existence. */
+.surface-calm {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0.01)), rgb(22 23 27 / 0.86);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  -webkit-backdrop-filter: blur(26px) saturate(1.2);
+  backdrop-filter: blur(26px) saturate(1.2);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 20px 50px rgb(0 0 0 / 0.3);
+}
+
+/* Dashboard palette: no grey fills or text. Secondary text is a pale tint, tracks and surfaces carry a hint of colour.
+   (Greys stay for borders only.) */
+
+
+/* Small waves on the surface of the liquid in each hexagon: two layers drifting in opposite directions. */
+.hex-fill { --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6'%3E%3Cpath d='M0 6 L0 3.00 L2 4.10 L4 4.91 L6 5.20 L8 4.91 L10 4.10 L12 3.00 L14 1.90 L16 1.09 L18 0.80 L20 1.09 L22 1.90 L24 3.00 L24 6 Z' fill='black'/%3E%3C/svg%3E"); }
+.hex-fill::before, .hex-fill::after { content: ""; position: absolute; left: 0; right: 0; top: -5px; height: 6px; -webkit-mask: var(--wave) repeat-x 0 0 / 24px 6px; mask: var(--wave) repeat-x 0 0 / 24px 6px; }
+.hex-fill::before { background: rgb(var(--c) / 0.55); animation: hex-wave 3.4s linear infinite; }
+.hex-fill::after { background: rgb(var(--c) / 0.3); top: -7px; animation: hex-wave-rev 5.2s linear infinite; }
+@keyframes hex-wave { to { -webkit-mask-position: 24px 0; mask-position: 24px 0; } }
+@keyframes hex-wave-rev { from { -webkit-mask-position: 24px 0; mask-position: 24px 0; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+
+/* ---------- Graphics motion ---------- */
+@keyframes gfx-rise { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: none; } }
+.gfx-rise { animation: gfx-rise 650ms cubic-bezier(0.22, 1, 0.36, 1) backwards; animation-delay: calc(var(--i, 0) * 70ms); }
+.gfx-w { transition: width 1100ms cubic-bezier(0.22, 1, 0.36, 1); }
+.gfx-clip { transition: clip-path 1100ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* A full-bleed band: the lower half of the dashboard sits on a floor that runs edge to edge, with a lime hairline on top. */
+.floor {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  --gutter: 1rem;
+  padding-inline: max(var(--gutter), calc((100vw - 1680px) / 2 + var(--gutter)));
+  background: rgb(17 18 21 / 0.9);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  backdrop-filter: blur(24px) saturate(1.2);
+  border-top: 1px solid rgb(var(--accent) / 0.55);
+  border-bottom: 1px solid rgb(var(--line));
+}
+@media (min-width: 640px) { .floor { --gutter: 1.5rem; } }
+@media (min-width: 1024px) { .floor { --gutter: 2rem; } }

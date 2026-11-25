@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppData } from "@/components/AppDataProvider";
+import { PageHead } from "@/components/PageHead";
 import { MatchImportModal } from "@/components/MatchImportModal";
 import { LegendFace, MatchRow, ResultDot, type MatchActions } from "@/components/MatchRow";
 import { Select } from "@/components/Select";
@@ -319,15 +320,16 @@ export default function MatchesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-t1">Match history</h1>
-          <p className="text-sm text-t2">Your RiftAtlas games and how each deck is doing.</p>
-        </div>
-        <button type="button" onClick={() => setImporting(true)} className="btn-3d h-11 rounded-lg px-5 font-display text-xs font-semibold uppercase tracking-wide">
-          Import replays
-        </button>
-      </header>
+      <PageHead
+        kicker="Games"
+        title="Match history"
+        meta="YOUR RIFTATLAS GAMES AND HOW EACH DECK IS DOING"
+        right={
+          <button type="button" onClick={() => setImporting(true)} className="btn-3d h-11 rounded-lg px-5 font-display text-xs font-semibold uppercase tracking-wide">
+            Import replays
+          </button>
+        }
+      />
 
       {error && (
         <p role="alert" className="rounded-lg bg-bad/10 px-3 py-2 text-sm text-bad">
@@ -388,7 +390,7 @@ export default function MatchesPage() {
           {/* A column per side, so neither stretches the other. On a phone: summary, guide, win rates, games. */}
           <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
             <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
-              <section aria-label="Summary" className="order-1 flex min-w-0 flex-col gap-6 rounded-xl border border-line bg-panel p-5 sm:flex-row sm:items-center sm:gap-8 sm:p-6">
+              <section aria-label="Summary" className="order-1 flex min-w-0 flex-col gap-6 py-2 sm:flex-row sm:items-center sm:gap-8">
                 <div className="flex items-center gap-6">
                   <WinRing rate={winRate(stats.total)} size="lg" />
                   <div>
