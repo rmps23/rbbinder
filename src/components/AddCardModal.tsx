@@ -174,7 +174,7 @@ export function AddCardModal({
                       i === targetIndex ? "border-brand-gold/70 ring-1 ring-brand-gold/50" : "border-line"
                     }`}
                   >
-                    <div className="relative aspect-[744/1039] w-full bg-[#0a0c10]">
+                    <div className="relative aspect-[744/1039] w-full bg-[#050505]">
                       {card.image.url ? (
                         <CardImage
                           card={card}

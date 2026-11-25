@@ -76,7 +76,7 @@ const CoverPage = forwardRef<HTMLDivElement>((_, ref) => (
       style={{
         background:
           "linear-gradient(270deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 9%, transparent 24%), " +
-          "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%), #1f2838",
+          "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%), #1d1d1d",
       }}
     />
   </div>

@@ -16,7 +16,7 @@ export type Row = { entry: DeckEntry; card: RiftCard };
 export function CardArt({ card, sizes, className = "", quality, foil }: { card: RiftCard; sizes: string; className?: string; quality?: number; foil?: boolean }) {
   return (
     <div
-      className={`relative overflow-hidden bg-[#0a0c10] ring-1 ring-line2 ${isLandscape(card) ? "aspect-[1039/744]" : "aspect-[744/1039]"} ${className}`}
+      className={`relative overflow-hidden bg-[#050505] ring-1 ring-line2 ${isLandscape(card) ? "aspect-[1039/744]" : "aspect-[744/1039]"} ${className}`}
     >
       {card.image.url ? (
         <CardImage card={card} fill sizes={sizes} quality={quality} className="object-cover" />
@@ -84,7 +84,7 @@ function PreviewLayer({ store }: { store: PreviewStore }) {
       aria-hidden
     >
       {card.image.url ? (
-        <CardImage card={card} alt="" fill sizes={`${PREVIEW_W}px`} className="bg-[#0a0c10] object-cover" priority />
+        <CardImage card={card} alt="" fill sizes={`${PREVIEW_W}px`} className="bg-[#050505] object-cover" priority />
       ) : (
         <span className="flex h-full items-center justify-center bg-panel p-4 text-center text-sm text-t2">{displayName(card)}</span>
       )}

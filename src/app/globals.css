@@ -3,27 +3,27 @@
 @tailwind utilities;
 
 /* Colour palette as space-separated RGB triplets (so Tailwind opacity modifiers keep working).
-   Deliberately quiet: neutral zinc surfaces, an off-white accent for primary actions and a muted
+   Deliberately quiet: neutral black/grey surfaces (no blue tint), an off-white accent for primary actions and a muted
    grey secondary. --ink page background, --panel/--panel2 surfaces, --danger destructive.
    Card colours (rarity/domain/foil) are fixed elsewhere. */
 :root {
   color-scheme: dark;
-  --ink: 14 15 18;          /* page background #0E0F12 */
-  --panel: 21 23 27;        /* cards #15171B */
-  --panel2: 28 31 36;       /* elevated #1C1F24 */
-  --cavity: 38 42 48;       /* wells / bars #262A30 */
-  --line: 43 48 55;         /* border #2B3037 */
-  --line2: 59 66 75;        /* strong border #3B424B */
-  --t1: 232 232 232;        /* text primary */
-  --t2: 166 173 181;        /* text secondary */
-  --t3: 140 148 157;        /* text muted */
+  --ink: 9 9 9;             /* page background #090909 (neutral black) */
+  --panel: 16 16 16;        /* cards #101010 */
+  --panel2: 23 23 23;       /* elevated #171717 */
+  --cavity: 31 31 31;       /* wells / bars #1F1F1F */
+  --line: 38 38 38;         /* border #262626 */
+  --line2: 58 58 58;        /* strong border #3A3A3A */
+  --t1: 236 236 236;        /* text primary */
+  --t2: 170 170 170;        /* text secondary */
+  --t3: 142 142 142;        /* text muted */
   --accent: 74 192 222;     /* #4AC0DE */
   --accent-soft: 125 211 232; /* hover */
   --on-accent: 6 35 43;     /* text on accent */
   --mint: 61 214 160;       /* positive #3DD6A0 */
   --danger: 255 107 122;    /* negative #FF6B7A */
   --warn: 245 184 75;       /* highlight / warning #F5B84B */
-  --scroll: 59 66 75;
+  --scroll: 58 58 58;
 }
 
 body {

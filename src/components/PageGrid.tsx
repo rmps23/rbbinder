@@ -59,6 +59,6 @@ export function pageBackground(side: "left" | "right"): string {
     `linear-gradient(${side === "left" ? 270 : 90}deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 9%, transparent 24%), ` +
     "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.05), transparent 60%), " +
     "linear-gradient(180deg, rgba(255,255,255,0.035) 0%, transparent 30%, rgba(0,0,0,0.16) 100%), " +
-    "#2a3446"
+    "#2a2a2a"
   );
 }

@@ -150,7 +150,7 @@ export function BinderSlotTile({
       role={touch || onInspect ? "button" : undefined}
       tabIndex={touch || onInspect ? 0 : undefined}
       aria-label={touch || onInspect ? `${card.name}, open details` : undefined}
-      className={`group relative aspect-[744/1039] w-full overflow-hidden rounded-lg border border-line bg-[#0a0c10] transition ${
+      className={`group relative aspect-[744/1039] w-full overflow-hidden rounded-lg border border-line bg-[#050505] transition ${
         touch ? "cursor-pointer active:scale-[0.97]" : "cursor-pointer active:cursor-grabbing"
       } ${dropZone === "swap" ? "ring-2 ring-brand-gold/60" : ""} ${selected ? "ring-2 ring-ok" : ""} ${
         moveActive && !selected ? "ring-1 ring-brand-gold/50" : ""
