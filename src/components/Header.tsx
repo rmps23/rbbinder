@@ -101,71 +101,62 @@ export function Header() {
     router.refresh();
   }
 
-  // Top bar links: the icon always carries the section's colour; the active one is lit in it.
-  const barLink = "flex h-11 items-center gap-2.5 whitespace-nowrap rounded-lg px-4 text-[15px] font-semibold transition-colors";
+  const iconBtn = "flex h-10 w-10 shrink-0 items-center justify-center rounded-[3px] text-[rgb(var(--t2))] transition-colors hover:bg-white/10 hover:text-white";
 
   return (
     <>
-      {/* Desktop: a slim top bar */}
-      <header className="sticky top-0 z-40 hidden h-[4.5rem] border-b border-line bg-ink/75 backdrop-blur-xl md:block">
-        <div className="mx-auto flex h-full max-w-[1680px] items-center gap-6 px-4 sm:px-6 lg:px-8">
-        <Link href="/" aria-label="RBBinder home" className="flex shrink-0 items-center gap-2.5">
-          <span className="font-logo text-base font-medium uppercase tracking-[0.3em] text-t1">
-            <b className="font-bold text-brand-gold">RB</b>Binder
-          </span>
-        </Link>
-
-        <nav aria-label="Main" className="min-w-0 flex-1">
-          <SlideGroup className="inline-flex gap-1 rounded-xl p-1" indicatorClassName="bg-t1/10">
-            {LINKS.map((l) => {
-              const active = l.match(pathname);
-              return (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  data-active={active}
-                  aria-current={active ? "page" : undefined}
-                  className={`${barLink} ${active ? "" : "hover:text-t1"}`}
-                  style={{ color: active ? "rgb(var(--t1))" : "rgb(var(--t2))" }}
-                >
-                  <span className="shrink-0" style={{ color: active ? "rgb(var(--accent))" : undefined }}>{l.icon}</span>
-                  <span className="hidden xl:inline">{l.label}</span>
-                  <span className="xl:hidden">{l.short}</span>
-                </Link>
-              );
-            })}
-          </SlideGroup>
-        </nav>
-
-        <div className="flex shrink-0 items-center gap-2">
-          {me?.isAdmin && (
-            <Link
-              href="/maintenance"
-              aria-label="Data and updates"
-              title="Data & updates"
-              aria-current={pathname.startsWith("/maintenance") ? "page" : undefined}
-              className={`flex h-11 w-11 items-center justify-center rounded-lg border transition ${
-                pathname.startsWith("/maintenance") ? "border-brand-gold text-brand-gold" : "border-line text-t2 hover:border-line2 hover:text-t1"
-              }`}
-            >
-              <svg viewBox="0 0 24 24" {...ICON} className="h-5 w-5" aria-hidden="true">
-                <path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9" />
-                <path d="M18.5 3v4.5H14M5.5 21v-4.5H10" />
-              </svg>
+      {/* Desktop: a floating glass bar across the top, with cut corners */}
+      <header className="sticky top-0 z-40 hidden h-[4.5rem] md:block">
+        <div className="mx-auto h-full max-w-[1680px] px-4 pt-2.5 sm:px-6 lg:px-8">
+          <div className="navbar-glass flex h-14 items-center gap-3 pl-5 pr-3">
+            <Link href="/" aria-label="RBBinder home" className="flex shrink-0 items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/logo-mark.svg" alt="" className="h-11 w-auto" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/logo-wordmark.svg" alt="RBBinder" className="h-auto w-[46px]" />
             </Link>
-          )}
-          <NotificationsBell className="!h-11 !w-11" />
-          <button
-            onClick={logout}
-            aria-label="Sign out"
-            title={me?.email ? `Sign out (${me.email})` : "Sign out"}
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-line text-t2 transition hover:border-bad/60 hover:bg-bad/10 hover:text-bad"
-          >
-            <svg viewBox="0 0 24 24" {...ICON} className="h-5 w-5" aria-hidden="true">
-              <path d="M15 12H3m0 0 3-3m-3 3 3 3M9 5V4a1 1 0 0 1 1-1h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8a1 1 0 0 1-1-1v-1" />
-            </svg>
-          </button>
-        </div>
+
+            <i aria-hidden="true" className="mx-2 hidden h-6 w-px -skew-x-[22deg] bg-white/15 lg:block" />
+
+            <nav aria-label="Main" className="flex min-w-0 flex-1 items-center gap-1">
+              {LINKS.map((l) => {
+                const active = l.match(pathname);
+                return (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    title={l.label}
+                    aria-label={l.label}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex h-10 items-center gap-2 whitespace-nowrap rounded-[3px] px-3 text-sm font-semibold transition-colors lg:px-4 ${
+                      active ? "nav-active text-white" : "text-[rgb(var(--t2))] hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {l.icon}
+                    <span className="hidden xl:inline">{l.label}</span>
+                    <span className="hidden lg:inline xl:hidden">{l.short}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="flex shrink-0 items-center gap-1">
+              {me?.isAdmin && (
+                <Link href="/maintenance" title="Data & updates" aria-label="Data and updates" aria-current={pathname.startsWith("/maintenance") ? "page" : undefined} className={`${iconBtn} ${pathname.startsWith("/maintenance") ? "nav-active !text-white" : ""}`}>
+                  <svg viewBox="0 0 24 24" {...ICON} className="h-5 w-5" aria-hidden="true">
+                    <path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9" />
+                    <path d="M18.5 3v4.5H14M5.5 21v-4.5H10" />
+                  </svg>
+                </Link>
+              )}
+              <NotificationsBell className="!h-10 !w-10 !rounded-[3px] !border-transparent" />
+              <button onClick={logout} aria-label="Sign out" title={me?.email ? `Sign out (${me.email})` : "Sign out"} className={iconBtn}>
+                <svg viewBox="0 0 24 24" {...ICON} className="h-5 w-5" aria-hidden="true">
+                  <path d="M15 12H3m0 0 3-3m-3 3 3 3M9 5V4a1 1 0 0 1 1-1h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8a1 1 0 0 1-1-1v-1" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 

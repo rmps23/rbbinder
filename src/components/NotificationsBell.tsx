@@ -85,7 +85,7 @@ export function NotificationsBell({ className = "", asNav = false }: { className
             <path d="M6 9a6 6 0 0 1 12 0c0 6 2 7.5 2 7.5H4S6 15 6 9ZM10 20a2 2 0 0 0 4 0" />
           </svg>
           {total > 0 && (
-            <span className="num absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-gold px-1 text-[10px] font-bold leading-none text-on-accent">
+            <span className="num absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-sm bg-brand-gold px-1 text-[10px] font-bold leading-none text-on-accent">
               {total > 99 ? "99+" : total}
             </span>
           )}

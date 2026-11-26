@@ -9,7 +9,10 @@ export function PageHead({ title, kicker, meta, right }: { title: string; kicker
             {kicker}
           </p>
         )}
-        <h1 className="font-display text-3xl font-semibold uppercase tracking-wide text-t1">{title}</h1>
+        <h1 className="flex items-center font-display text-3xl font-semibold uppercase tracking-wide text-t1">
+          <i aria-hidden="true" className="mr-3 inline-block h-7 w-[6px] -skew-x-[22deg] bg-[rgb(var(--accent))]" />
+          {title}
+        </h1>
         {meta && <p className="mt-1.5 font-mono text-xs text-t3">{meta}</p>}
       </div>
       {right}

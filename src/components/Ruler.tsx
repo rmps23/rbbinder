@@ -7,7 +7,7 @@ import { useGrown } from "@/lib/useGrown";
 export function Ruler({ pct, ticks = 60, className = "h-8", color = "rgb(var(--accent))" }: { pct: number; ticks?: number; className?: string; color?: string }) {
   const g = useGrown(Math.min(100, Math.max(0, pct)));
   return (
-    <div data-gfx="" aria-hidden="true" className={`flex items-end gap-[3px] ${className}`}>
+    <div data-gfx="" aria-hidden="true" className={`flex -skew-x-[20deg] items-end gap-[3px] ${className}`}>
       {Array.from({ length: ticks }, (_, i) => {
         const on = ((i + 0.5) / ticks) * 100 <= g;
         return (
@@ -16,6 +16,7 @@ export function Ruler({ pct, ticks = 60, className = "h-8", color = "rgb(var(--a
             className="flex-1 transition-colors duration-300"
             style={{
               height: i % 5 === 0 ? "100%" : "52%",
+              clipPath: i % 5 === 0 ? "polygon(0 16%, 50% 0, 100% 16%, 100% 100%, 0 100%)" : undefined,
               background: on ? color : "rgb(var(--track) / 0.2)",
               transitionDelay: `${Math.min(i * 14, 900)}ms`,
             }}

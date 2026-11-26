@@ -813,7 +813,7 @@ export default function BinderDetailPage() {
             aria-label="Previous pages"
             className="group z-10 flex min-w-14 flex-1 items-center justify-center rounded-lg text-t3 transition hover:bg-cavity/60 hover:text-t1 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-t3"
           >
-            <span className="flex h-14 w-14 items-center justify-center rounded-full border border-line bg-panel2 transition group-hover:border-line2 group-enabled:group-hover:bg-cavity">
+            <span className="flex h-14 w-14 items-center justify-center rounded-md border border-line bg-panel2 transition group-hover:border-line2 group-enabled:group-hover:bg-cavity">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
             </span>
           </button>
@@ -861,7 +861,7 @@ export default function BinderDetailPage() {
               aria-label="Add a new page"
               className="group z-10 flex min-w-14 flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line2 text-t2 transition hover:border-brand-gold hover:bg-brand-gold/10 hover:text-brand-gold"
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-full border border-current">
+              <span className="flex h-14 w-14 items-center justify-center rounded-md border border-current">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-7 w-7" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
               </span>
               <span className="text-xs font-semibold uppercase tracking-[0.08em]">New page</span>
@@ -874,7 +874,7 @@ export default function BinderDetailPage() {
               aria-label="Next pages"
               className="group z-10 flex min-w-14 flex-1 items-center justify-center rounded-lg text-t3 transition hover:bg-cavity/60 hover:text-t1 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-t3"
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-full border border-line bg-panel2 transition group-hover:border-line2 group-enabled:group-hover:bg-cavity">
+              <span className="flex h-14 w-14 items-center justify-center rounded-md border border-line bg-panel2 transition group-hover:border-line2 group-enabled:group-hover:bg-cavity">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
               </span>
             </button>

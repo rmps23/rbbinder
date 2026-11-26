@@ -44,7 +44,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className={`flex max-h-[92vh] w-full ${maxWidth} flex-col overflow-hidden rounded-2xl border border-line2 bg-panel outline-none`}
+        className={`flex max-h-[92vh] w-full ${maxWidth} flex-col overflow-hidden rounded-2xl border border-line2 bg-panel outline-none notch`}
       >
         <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
           <h2 className="font-display text-lg font-semibold uppercase tracking-wide text-t1">{title}</h2>

@@ -21,7 +21,7 @@ export function ResultTag({ result }: { result: MatchResult }) {
 // One letter per game, for the latest results.
 export function ResultDot({ result, title }: { result: MatchResult; title?: string }) {
   return (
-    <span title={title} className={`flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-bold ${RESULT[result].cls}`}>
+    <span title={title} className={`notch-sm flex h-6 w-6 items-center justify-center text-[11px] font-bold ${RESULT[result].cls}`}>
       {RESULT[result].letter}
     </span>
   );

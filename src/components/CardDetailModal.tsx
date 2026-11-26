@@ -77,7 +77,7 @@ export function CardDetailModal({
         aria-modal="true"
         aria-label={card.name}
         onClick={(e) => e.stopPropagation()}
-        className="relative flex max-h-[92vh] w-full max-w-[980px] flex-col overflow-hidden rounded-2xl border border-line2 bg-panel outline-none md:h-[min(84vh,700px)] md:flex-row"
+        className="relative flex max-h-[92vh] w-full max-w-[980px] notch flex-col overflow-hidden rounded-2xl border border-line2 bg-panel outline-none md:h-[min(84vh,700px)] md:flex-row"
       >
         <button
           type="button"

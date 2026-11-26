@@ -14,12 +14,10 @@ const primary =
 function Brand() {
   return (
     <>
-      <div className="mb-1 flex items-center gap-2.5">
+      <div className="mb-2 flex items-center">
+        <h1 className="sr-only">RBBinder</h1>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
-        <h1 className="font-logo text-xl font-medium uppercase tracking-[0.25em] text-t1">
-          <b className="font-bold text-brand-gold">RB</b>Binder
-        </h1>
+        <img src="/brand/logo-horizontal.svg" alt="RBBinder" className="h-20 w-auto" />
       </div>
       <p className="mb-5 text-sm text-t3">Riftbound TCG collection</p>
     </>

@@ -154,7 +154,7 @@ export function Select({
             ref={menuRef}
             tabIndex={-1}
             style={{ position: "fixed", left: pos.left, width: pos.width, top: pos.up ? undefined : pos.top, bottom: pos.up ? window.innerHeight - pos.top : undefined, zIndex: 80 }}
-            className="animate-fade-in overflow-hidden rounded-xl border border-line2 bg-panel outline-none"
+            className="animate-fade-in notch-sm overflow-hidden rounded-xl border border-line2 bg-panel outline-none"
             onKeyDown={onKeyDown}
           >
             {searchable && (

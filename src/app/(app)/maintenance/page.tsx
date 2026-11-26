@@ -246,7 +246,7 @@ export default function MaintenancePage() {
                     className={`absolute right-1/2 top-4 h-0.5 w-full -translate-y-1/2 ${stepState(ORDER[i - 1], i - 1) === "done" ? "bg-ok" : "bg-cavity"}`}
                   />
                 )}
-                <span className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-panel text-xs font-bold ${tone} ${state === "done" || state === "failed" ? "" : ""}`} aria-hidden="true">
+                <span className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-md border-2 bg-panel text-xs font-bold ${tone} ${state === "done" || state === "failed" ? "" : ""}`} aria-hidden="true">
                   {state === "done" ? "✓" : state === "failed" ? "!" : state === "running" ? spinner : i + 1}
                 </span>
                 <span className={`mt-2 px-1 text-[11px] font-semibold leading-tight ${state === "waiting" ? "text-t3" : "text-t1"}`}>

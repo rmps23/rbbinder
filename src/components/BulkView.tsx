@@ -84,7 +84,7 @@ function CardTile({
         {(foilQty > 0 || isFoilOnly(card)) && <FoilSheen />}
         <PromoMark card={card} />
         {owned && (
-          <span className="num absolute right-2 top-2 rounded-full bg-ink/85 px-2 py-0.5 text-xs font-bold text-white backdrop-blur-sm">×{qty}</span>
+          <span className="num absolute right-2 top-2 rounded-sm bg-ink/85 px-2 py-0.5 text-xs font-bold text-white backdrop-blur-sm">×{qty}</span>
         )}
       </button>
 
@@ -205,7 +205,7 @@ export function BulkView() {
             <p className="num mt-2 font-display text-6xl font-bold leading-none text-t1">{prices ? <CountUp value={stats.total.value} format={formatEur} /> : "…"}</p>
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <div className="flex h-1.5 w-48 overflow-hidden rounded-full bg-[rgb(var(--track)/0.18)]" aria-hidden="true">
+            <div className="flex h-1.5 w-48 overflow-hidden rounded-sm bg-[rgb(var(--track)/0.18)]" aria-hidden="true">
               <div className="h-full bg-ok" style={{ width: `${(stats.normal / Math.max(1, stats.normal + stats.foil)) * 100}%` }} />
               <div className="h-full flex-1 bg-foil" />
             </div>
@@ -274,7 +274,7 @@ export function BulkView() {
                 className="h-10 w-full rounded-md border border-white/10 bg-[rgb(var(--track)/0.05)] pl-10 pr-9 text-sm text-t1 placeholder:text-t3"
               />
               {search && (
-                <button type="button" aria-label="Clear search" onClick={() => setSearch("")} className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-t3 hover:text-t1">
+                <button type="button" aria-label="Clear search" onClick={() => setSearch("")} className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-t3 hover:text-t1">
                   ✕
                 </button>
               )}
@@ -289,7 +289,7 @@ export function BulkView() {
             >
               Filters
               {filterCount > 0 && (
-                <span className="num flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-gold px-1 text-[11px] font-bold text-on-accent">{filterCount}</span>
+                <span className="num flex h-5 min-w-5 items-center justify-center rounded-sm bg-brand-gold px-1 text-[11px] font-bold text-on-accent">{filterCount}</span>
               )}
             </button>
             <button

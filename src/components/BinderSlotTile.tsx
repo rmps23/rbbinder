@@ -76,7 +76,7 @@ export function BinderSlotTile({
         <span className="num absolute left-2 top-2 rounded-md border border-line2 bg-cavity px-2 py-0.5 text-xs font-bold text-t1">#{position + 1}</span>
         <span
           aria-hidden="true"
-          className={`flex items-center justify-center rounded-full border border-current transition group-hover:bg-brand-gold/10 ${compact ? "h-8 w-8" : "h-11 w-11"}`}
+          className={`flex items-center justify-center rounded-md border border-current transition group-hover:bg-brand-gold/10 ${compact ? "h-8 w-8" : "h-11 w-11"}`}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={compact ? "h-4 w-4" : "h-5 w-5"}>
             <path d="M12 5v14M5 12h14" />

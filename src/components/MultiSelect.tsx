@@ -140,7 +140,7 @@ export function MultiSelect({
             ref={menuRef}
             onKeyDown={onKeyDown}
             style={{ position: "fixed", left: pos.left, width: pos.width, top: pos.up ? undefined : pos.top, bottom: pos.up ? window.innerHeight - pos.top : undefined, zIndex: 80 }}
-            className="animate-fade-in overflow-hidden rounded-xl border border-line2 bg-panel"
+            className="animate-fade-in notch-sm overflow-hidden rounded-xl border border-line2 bg-panel"
           >
             <div className="border-b border-line p-2">
               <div className="relative">
