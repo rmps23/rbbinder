@@ -8,7 +8,7 @@ import { SlideGroup } from "@/components/SlideGroup";
 import { PromoMark } from "@/components/PromoMark";
 import { BulkSkeleton } from "@/components/Skeletons";
 import { CardImage } from "@/components/CardImage";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useAppData } from "@/components/AppDataProvider";
 import { BulkScanner } from "@/components/BulkScanner";
 import { CardDetailModal } from "@/components/CardDetailModal";
@@ -39,18 +39,24 @@ const ART_OPTIONS = [
   { value: "only", label: "Alt art" },
 ];
 
-function CardTile({
+type AppData = ReturnType<typeof useAppData>;
+
+// Memoized, with what it needs passed in: changing one card's count leaves the others alone.
+const CardTile = memo(function CardTile({
   card,
   normalQty,
   foilQty,
+  priceOf,
+  setBulkQty,
   onInspect,
 }: {
   card: RiftCard;
   normalQty: number;
   foilQty: number;
-  onInspect: () => void;
+  priceOf: AppData["priceOf"];
+  setBulkQty: AppData["setBulkQty"];
+  onInspect: (card: RiftCard) => void;
 }) {
-  const { priceOf, setBulkQty } = useAppData();
   const finishes = availableFinishes(card);
   // only offer the finishes the card exists in - but never hide one you already own
   const showNormal = finishes.normal || normalQty > 0;
@@ -65,7 +71,7 @@ function CardTile({
     <li className="group flex flex-col gap-2.5">
       <button
         type="button"
-        onClick={onInspect}
+        onClick={() => onInspect(card)}
         aria-label={`${card.name}, open details`}
         className={`relative block aspect-[744/1039] w-full overflow-hidden rounded-xl bg-ink ring-1 transition duration-300 ${
           owned ? "ring-white/25 shadow-[0_10px_30px_rgb(0_0_0/0.45)] group-hover:ring-white/50" : "ring-white/10 group-hover:ring-white/30"
@@ -84,7 +90,7 @@ function CardTile({
         {(foilQty > 0 || isFoilOnly(card)) && <FoilSheen />}
         <PromoMark card={card} />
         {owned && (
-          <span className="num absolute right-2 top-2 rounded-sm bg-ink/85 px-2 py-0.5 text-xs font-bold text-white backdrop-blur-sm">×{qty}</span>
+          <span className="num absolute right-2 top-2 rounded-sm bg-ink/85 px-2 py-0.5 text-xs font-bold text-white">×{qty}</span>
         )}
       </button>
 
@@ -120,10 +126,10 @@ function CardTile({
       </div>
     </li>
   );
-}
+});
 
 export function BulkView() {
-  const { cards, sets, bulk, prices, priceOf, loading } = useAppData();
+  const { cards, sets, bulk, prices, priceOf, setBulkQty, loading } = useAppData();
 
   const [search, setSearch] = useState("");
   const [setId, setSetId] = useState("");
@@ -348,7 +354,7 @@ export function BulkView() {
         <>
           <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {filtered.slice(0, visible).map((card) => (
-              <CardTile key={card.id} card={card} normalQty={bulk[card.id]?.normal ?? 0} foilQty={bulk[card.id]?.foil ?? 0} onInspect={() => setInspect(card)} />
+              <CardTile key={card.id} card={card} normalQty={bulk[card.id]?.normal ?? 0} foilQty={bulk[card.id]?.foil ?? 0} priceOf={priceOf} setBulkQty={setBulkQty} onInspect={setInspect} />
             ))}
           </ul>
           {visible < filtered.length && (
