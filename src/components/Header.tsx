@@ -107,7 +107,7 @@ export function Header() {
   return (
     <>
       {/* Desktop: a slim top bar */}
-      <header className="sticky top-0 z-40 hidden h-[4.5rem] border-b border-line bg-ink/75 backdrop-blur-xl md:block">
+      <header className="sticky top-0 z-40 hidden h-[4.5rem] border-b border-line bg-ink md:block">
         <div className="mx-auto flex h-full max-w-[1680px] items-center gap-6 px-4 sm:px-6 lg:px-8">
         <Link href="/" aria-label="RBBinder home" className="flex shrink-0 items-center gap-2.5">
           <span className="font-logo text-base font-medium uppercase tracking-[0.3em] text-t1">

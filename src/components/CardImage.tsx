@@ -2,7 +2,7 @@
 
 import Image, { type ImageProps } from "next/image";
 import { useEffect, useState } from "react";
-import { useAppData } from "@/components/AppDataProvider";
+import { useImageFallback } from "@/components/AppDataProvider";
 import type { RiftCard } from "@/lib/types";
 
 // TCGplayer has no picture for some promo/alternate printings (the CDN answers 403). When a card's own
@@ -41,8 +41,7 @@ export function CardImage({
   onError,
   ...rest
 }: Omit<ImageProps, "src" | "alt"> & { card: RiftCard; alt?: string }) {
-  const { imageFallbackOf } = useAppData();
-  const fallback = imageFallbackOf(card);
+  const fallback = useImageFallback()(card);
   const [failed, setFailed] = useState(() => brokenSet().has(card.id));
 
   useEffect(() => {

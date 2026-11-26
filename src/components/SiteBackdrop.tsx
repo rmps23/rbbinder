@@ -1,5 +1,6 @@
-// Site background: fine, flowing contour lines (like a topographic map) that drift very slowly sideways, with a few
-// lines picking up the set colours. Fixed behind everything; fades out towards the bottom so lists stay easy to read.
+// Site background: fine, flowing contour lines (like a topographic map), with a few lines picking up the set colours.
+// Fixed behind everything; fades out towards the bottom so lists stay easy to read. Still on purpose: moving, it made
+// the whole page be drawn again on every frame.
 const W = 1600;
 const H = 900;
 const LINES = 24;
@@ -17,26 +18,9 @@ function line(i: number): string {
 }
 
 export function SiteBackdrop() {
-  const copy = (dx: number, key: string) => (
-    <g key={key} transform={`translate(${dx} 0)`}>
-      {Array.from({ length: LINES }, (_, i) => {
-        const tinted = i % 6 === 3;
-        return (
-          <path
-            key={i}
-            d={line(i)}
-            fill="none"
-            stroke={tinted ? TINTS[(i / 6) | 0] : "url(#site-line)"}
-            strokeWidth={tinted ? 1.4 : 1}
-            strokeOpacity={tinted ? 0.34 : 0.5}
-          />
-        );
-      })}
-    </g>
-  );
   return (
     <div aria-hidden="true" className="site-backdrop">
-      <svg viewBox={`0 0 ${W * 2} ${H}`} preserveAspectRatio="none" className="site-backdrop-lines">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="site-backdrop-lines">
         <defs>
           <linearGradient id="site-line" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={W} y2="0">
             <stop offset="0" stopColor="#fff" stopOpacity="0.05" />
@@ -44,8 +28,19 @@ export function SiteBackdrop() {
             <stop offset="1" stopColor="#fff" stopOpacity="0.05" />
           </linearGradient>
         </defs>
-        {copy(0, "a")}
-        {copy(W, "b")}
+        {Array.from({ length: LINES }, (_, i) => {
+          const tinted = i % 6 === 3;
+          return (
+            <path
+              key={i}
+              d={line(i)}
+              fill="none"
+              stroke={tinted ? TINTS[(i / 6) | 0] : "url(#site-line)"}
+              strokeWidth={tinted ? 1.4 : 1}
+              strokeOpacity={tinted ? 0.34 : 0.5}
+            />
+          );
+        })}
       </svg>
     </div>
   );

@@ -464,7 +464,7 @@ export default function MatchesPage() {
               </div>
 
               {/* win rates */}
-              <section aria-label="Win rates" className="order-3 overflow-hidden rounded-xl border border-line bg-panel lg:sticky lg:top-4">
+              <section aria-label="Win rates" className="order-3 overflow-hidden rounded-xl border border-line bg-panel lg:sticky lg:top-[5.5rem]">
                 <div className="border-b border-line p-3">
                   <SlideGroup role="tablist" aria-label="Win rate by" className="flex gap-1 rounded-lg border border-line bg-ink p-1">
                     {TABS.map((x) => (

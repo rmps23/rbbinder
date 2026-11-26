@@ -52,7 +52,8 @@ export async function proxy(req: NextRequest) {
       },
     },
   });
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return signedOut(req);
+  // Checks the token's signature here (the project signs with ES256) instead of asking Supabase on every request.
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims.sub) return signedOut(req);
   return res;
 }

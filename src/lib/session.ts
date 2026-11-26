@@ -53,23 +53,34 @@ export async function createSupabaseServer() {
   });
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+// Checks the token's signature without a trip to Supabase. `verify` also asks Supabase whether the account and the
+// session still exist - for the admin jobs.
+export async function getSessionUser(opts: { verify?: boolean } = {}): Promise<SessionUser | null> {
   if (!accountsEnabled()) {
     const token = (await cookies()).get(SESSION_COOKIE)?.value;
     return (await verifySessionToken(token)) ? { id: LOCAL_USER, email: null, isAdmin: true } : null;
   }
   const supabase = await createSupabaseServer();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  const email = data.user.email ?? null;
-  const user = { id: data.user.id, email, isAdmin: isAdminEmail(email) };
+  let id: string | undefined;
+  let email: string | null = null;
+  if (opts.verify) {
+    const { data } = await supabase.auth.getUser();
+    id = data.user?.id;
+    email = data.user?.email ?? null;
+  } else {
+    const { data } = await supabase.auth.getClaims();
+    id = data?.claims.sub;
+    email = data?.claims.email ?? null;
+  }
+  if (!id) return null;
+  const user = { id, email, isAdmin: isAdminEmail(email) };
   if (user.isAdmin) await claimOrphans(user.id);
   return user;
 }
 
 // Route handler guard: the signed-in user, or a 401/403 response to return.
 export async function requireUser(opts: { admin?: boolean } = {}): Promise<SessionUser | NextResponse> {
-  const user = await getSessionUser();
+  const user = await getSessionUser({ verify: opts.admin });
   if (!user) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   if (opts.admin && !user.isAdmin) return NextResponse.json({ error: "Only an admin can do this." }, { status: 403 });
   return user;

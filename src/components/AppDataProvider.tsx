@@ -28,6 +28,11 @@ type AppData = {
 };
 
 const Ctx = createContext<AppData | null>(null);
+// On its own: every card picture reads it, and they shouldn't redraw when a count changes.
+const ImageCtx = createContext<AppData["imageFallbackOf"]>(() => null);
+
+// The card catalog as kept in this browser, with the tag that tells whether it's still the current one.
+type Catalog = { cards: RiftCard[]; sets: SetInfo[]; finishes?: Parameters<typeof setFinishData>[0]; etag: string };
 
 // Pictures TCGplayer doesn't have (its CDN answers 403), taken from Riftcodex by card code / TCGplayer id.
 const IMAGE_FIXES = imageFixes as Record<string, string>;
@@ -67,20 +72,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   // Stale-while-revalidate: the last known data is shown instantly from IndexedDB while fresh data loads.
   const gotFresh = useRef(false);
   const gotFreshPrices = useRef(false);
-  const finishesRef = useRef<unknown>(undefined);
-  type Snapshot = { cards: RiftCard[]; sets: SetInfo[]; finishes?: unknown; bulk: BulkMap };
-
   useEffect(() => {
-    cacheGet<Snapshot>("app:v1").then((snap) => {
-      if (!snap || gotFresh.current) return;
-      finishesRef.current = snap.finishes;
-      if (snap.finishes) setFinishData(snap.finishes as Parameters<typeof setFinishData>[0]);
-      setChampionNames(snap.cards ?? []);
-      setCards(withImageFixes(snap.cards ?? []));
-      setSets(snap.sets ?? []);
-      setBulk(snap.bulk ?? {});
-      setLoading(false);
-    });
     cacheGet<PricesResponse>("prices:v1").then((p) => {
       if (p && !gotFreshPrices.current) setPrices(p);
     });
@@ -88,21 +80,38 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    const show = (c: Catalog) => {
+      if (c.finishes) setFinishData(c.finishes);
+      setChampionNames(c.cards);
+      setCards(withImageFixes(c.cards));
+      setSets(c.sets);
+    };
     async function load() {
-      const [cardsRes, bulkRes] = await Promise.all([fetch("/api/cards"), fetch("/api/bulk")]);
+      const bulkReq = fetch("/api/bulk").catch(() => null);
+      const [catalog, knownBulk] = await Promise.all([cacheGet<Catalog>("catalog:v1"), cacheGet<BulkMap>("bulk:v1")]);
       if (cancelled) return;
-      const cardsJson = cardsRes.ok ? await cardsRes.json() : { cards: [], sets: [] };
-      finishesRef.current = cardsJson.finishes;
-      if (cardsJson.finishes) setFinishData(cardsJson.finishes);
-      const bulkJson = bulkRes.ok ? await bulkRes.json() : {};
+      if (catalog && !gotFresh.current) {
+        show(catalog);
+        setBulk(knownBulk ?? {});
+        setLoading(false);
+      }
+      // the catalog we have is usually still the current one (304): then there's nothing to read or redraw
+      const [cardsRes, bulkRes] = await Promise.all([
+        fetch(cardsVersion ? "/api/cards?fresh=1" : "/api/cards", catalog ? { headers: { "if-none-match": catalog.etag } } : undefined).catch(() => null),
+        bulkReq,
+      ]);
+      const [cardsJson, bulkJson] = await Promise.all([cardsRes?.ok ? cardsRes.json() : null, bulkRes?.ok ? bulkRes.json() : null]);
       if (cancelled) return;
-      gotFresh.current = true;
-      setChampionNames(cardsJson.cards ?? []);
-      setCards(withImageFixes(cardsJson.cards ?? []));
-      setSets(cardsJson.sets ?? []);
-      setBulk(bulkJson);
+      if (bulkJson) {
+        gotFresh.current = true;
+        setBulk(bulkJson);
+      }
+      if (cardsJson) {
+        const next: Catalog = { cards: cardsJson.cards ?? [], sets: cardsJson.sets ?? [], finishes: cardsJson.finishes, etag: cardsRes?.headers.get("etag") ?? "" };
+        show(next);
+        cacheSet("catalog:v1", next);
+      }
       setLoading(false);
-      if (cardsRes.ok && bulkRes.ok) cacheSet("app:v1", { cards: cardsJson.cards ?? [], sets: cardsJson.sets ?? [], finishes: cardsJson.finishes, bulk: bulkJson });
     }
     load();
     return () => {
@@ -110,11 +119,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     };
   }, [cardsVersion]);
 
-  // Keep the cached snapshot's bulk in step with local edits, so a quick reload never flashes old counts.
+  // Keep the cached counts in step with local edits, so a quick reload never flashes old ones.
   useEffect(() => {
-    if (!gotFresh.current || cards.length === 0) return;
-    cacheSet("app:v1", { cards, sets, finishes: finishesRef.current, bulk });
-  }, [bulk, cards, sets]);
+    if (gotFresh.current) cacheSet("bulk:v1", bulk);
+  }, [bulk]);
 
   // Prices load in parallel with the main data and never hold up the page.
   useEffect(() => {
@@ -211,10 +219,18 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   // Set lists everywhere (dashboard, bulk tabs, set pickers) skip the hidden sets.
   const visibleSets = useMemo(() => sets.filter((s) => !HIDDEN_SET_IDS.has(s.id)).sort((a, b) => setRank(a.id) - setRank(b.id)), [sets]);
 
+  const value = useMemo(
+    () => ({ cards, sets: visibleSets, bulk, loading, prices, priceOf, imageFallbackOf, setBulkQty, reloadCards, reloadPrices, priceMode, setPriceMode }),
+    [cards, visibleSets, bulk, loading, prices, priceOf, imageFallbackOf, setBulkQty, reloadCards, reloadPrices, priceMode, setPriceMode]
+  );
   return (
-    <Ctx.Provider value={{ cards, sets: visibleSets, bulk, loading, prices, priceOf, imageFallbackOf, setBulkQty, reloadCards, reloadPrices, priceMode, setPriceMode }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={value}>
+      <ImageCtx.Provider value={imageFallbackOf}>{children}</ImageCtx.Provider>
+    </Ctx.Provider>
   );
 }
+
+export const useImageFallback = () => useContext(ImageCtx);
 
 export function useAppData() {
   const ctx = useContext(Ctx);

@@ -117,28 +117,29 @@ select:focus-visible {
 .promo-foil {
   background: linear-gradient(115deg, #ffd6e8, #fff3b0, #c3f7e0, #b8dcff, #e3c8ff, #ffd6e8);
   background-size: 300% 100%;
-  animation: promo-foil 5s linear infinite;
 }
+*:hover > .promo-foil { animation: promo-foil 5s linear infinite; }
 @keyframes promo-foil {
   from { background-position: 0% 50%; }
   to { background-position: 300% 50%; }
 }
 
-/* Foil look for foil cards: a soft rainbow sheen that drifts across the art. Sits on top of the card picture. */
+/* Foil look for foil cards: a soft rainbow sheen on top of the card picture. It only drifts under the mouse - moving
+   it on every foil card in a list repaints them all, all the time. */
 .foil-sheen {
   background:
     linear-gradient(115deg, transparent 18%, rgba(255, 170, 220, 0.34) 32%, rgba(170, 230, 255, 0.38) 44%, rgba(255, 245, 170, 0.34) 56%, rgba(200, 170, 255, 0.34) 68%, transparent 82%);
   background-size: 280% 100%;
+  background-position: 45% 50%;
   mix-blend-mode: soft-light;
   opacity: 0.9;
-  animation: foil-drift 7s ease-in-out infinite alternate;
 }
+*:hover > .foil-sheen { animation: foil-drift 7s ease-in-out infinite alternate; }
 .foil-sheen::after {
   content: "";
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 7px);
-  mix-blend-mode: overlay;
 }
 @keyframes foil-drift {
   from { background-position: 0% 50%; }
@@ -148,14 +149,13 @@ select:focus-visible {
 /* Rune brackets: an L-shaped corner on the top-left and bottom-right of every glass surface. */
 :root { --brackets: linear-gradient(transparent, transparent); }
 
-/* Glass, three levels:
+/* Glass, three levels. No backdrop blur on anything that repeats, scrolls or sits over something that moves: it's
+   blurred again on every frame, for a difference these near-opaque surfaces barely show.
    - base (any bg-panel): frosted near-black with a soft light from above, no colour
    - .glass-hot: the one highlight per page, tinted with the accent
    - .glass-tint: tinted with --tint (an "r g b" triplet set inline), for things that own a colour (a set, a deck) */
 [class~="bg-panel"] {
   background-image: linear-gradient(180deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0.01));
-  -webkit-backdrop-filter: blur(26px) saturate(1.2);
-  backdrop-filter: blur(26px) saturate(1.2);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 14px 36px rgb(0 0 0 / 0.25);
 }
 .glass-hot {
@@ -176,8 +176,7 @@ select:focus-visible {
 /* ---------- Dashboard ("rift command") ---------- */
 .site-backdrop { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
   -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgb(0 0 0 / 0.35) 100%); mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgb(0 0 0 / 0.35) 100%); }
-.site-backdrop-lines { position: absolute; left: 0; top: 0; width: 200vw; height: 100%; animation: site-drift 140s linear infinite; }
-@keyframes site-drift { to { transform: translateX(-100vw); } }
+.site-backdrop-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 .hero-stage {
   position: relative;
@@ -231,8 +230,6 @@ select:focus-visible {
 .tile {
   background: linear-gradient(145deg, rgb(var(--tint) / 0.16), rgb(var(--tint) / 0.03) 65%), rgb(255 255 255 / 0.02);
   border: 1px solid rgb(var(--tint) / 0.25);
-  -webkit-backdrop-filter: blur(18px) saturate(1.3);
-  backdrop-filter: blur(18px) saturate(1.3);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07);
   transition: border-color 240ms, box-shadow 240ms;
 }
@@ -250,12 +247,10 @@ select:focus-visible {
 .hex { transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), filter 240ms; filter: drop-shadow(0 6px 14px rgb(0 0 0 / 0.4)); }
 .hex:hover { filter: drop-shadow(0 0 16px rgb(var(--c) / 0.6)) brightness(1.12); }
 
-/* A quiet surface for dense reading: nearly opaque, blurs the dot grid out of existence. */
+/* A quiet surface for dense reading: nearly opaque. */
 .surface-calm {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0.01)), rgb(22 23 27 / 0.86);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0.01)), rgb(22 23 27 / 0.97);
   border: 1px solid rgb(255 255 255 / 0.08);
-  -webkit-backdrop-filter: blur(26px) saturate(1.2);
-  backdrop-filter: blur(26px) saturate(1.2);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 20px 50px rgb(0 0 0 / 0.3);
 }
 
@@ -263,11 +258,13 @@ select:focus-visible {
    (Greys stay for borders only.) */
 
 
-/* Small waves on the surface of the liquid in each hexagon: two layers drifting in opposite directions. */
+/* Small waves on the surface of the liquid in each hexagon: two layers that drift in opposite directions on hover. */
 .hex-fill { --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6'%3E%3Cpath d='M0 6 L0 3.00 L2 4.10 L4 4.91 L6 5.20 L8 4.91 L10 4.10 L12 3.00 L14 1.90 L16 1.09 L18 0.80 L20 1.09 L22 1.90 L24 3.00 L24 6 Z' fill='black'/%3E%3C/svg%3E"); }
 .hex-fill::before, .hex-fill::after { content: ""; position: absolute; left: 0; right: 0; top: -5px; height: 6px; -webkit-mask: var(--wave) repeat-x 0 0 / 24px 6px; mask: var(--wave) repeat-x 0 0 / 24px 6px; }
-.hex-fill::before { background: rgb(var(--c) / 0.55); animation: hex-wave 3.4s linear infinite; }
-.hex-fill::after { background: rgb(var(--c) / 0.3); top: -7px; animation: hex-wave-rev 5.2s linear infinite; }
+.hex-fill::before { background: rgb(var(--c) / 0.55); }
+.hex-fill::after { background: rgb(var(--c) / 0.3); top: -7px; }
+.hex:hover .hex-fill::before { animation: hex-wave 3.4s linear infinite; }
+.hex:hover .hex-fill::after { animation: hex-wave-rev 5.2s linear infinite; }
 @keyframes hex-wave { to { -webkit-mask-position: 24px 0; mask-position: 24px 0; } }
 @keyframes hex-wave-rev { from { -webkit-mask-position: 24px 0; mask-position: 24px 0; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
 
@@ -283,9 +280,7 @@ select:focus-visible {
   margin-left: calc(50% - 50vw);
   --gutter: 1rem;
   padding-inline: max(var(--gutter), calc((100vw - 1680px) / 2 + var(--gutter)));
-  background: rgb(17 18 21 / 0.9);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  backdrop-filter: blur(24px) saturate(1.2);
+  background: rgb(17 18 21 / 0.95);
   border-top: 1px solid rgb(var(--accent) / 0.55);
   border-bottom: 1px solid rgb(var(--line));
 }

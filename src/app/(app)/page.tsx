@@ -298,7 +298,7 @@ export default function DashboardPage() {
             <div className="flex gap-4">
               <button type="button" onClick={() => inspect(stats.top[0].card)} title={`${displayName(stats.top[0].card)} - open details`} className="group relative w-[42%] shrink-0 text-left">
                 <CardArt card={stats.top[0].card} sizes="260px" quality={90} className="rounded-lg shadow-[0_16px_36px_rgb(0_0_0/0.5)] transition group-hover:shadow-[0_16px_44px_rgb(255_255_255/0.12)]" />
-                <span className="num absolute bottom-2 left-2 rounded-md bg-ink/85 px-2 py-0.5 font-display text-sm font-semibold text-t1 backdrop-blur-sm">{formatEur(stats.top[0].price)}</span>
+                <span className="num absolute bottom-2 left-2 rounded-md bg-ink/90 px-2 py-0.5 font-display text-sm font-semibold text-t1">{formatEur(stats.top[0].price)}</span>
               </button>
               <ol data-gfx="" className="flex min-w-0 flex-1 flex-col gap-5 pt-1">
                 {stats.top.slice(1, 4).map(({ card, price }, i) => (
